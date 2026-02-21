@@ -1,0 +1,170 @@
+---
+title: "Getting Started with circuitscaper"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with circuitscaper}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Installation
+
+circuitscaper requires Julia (>= 1.9) with the Circuitscape and Omniscape
+packages. You can install everything from R:
+
+```{r install}
+# Install circuitscaper (from GitHub during development)
+# remotes::install_github("matthewkling/circuitscaper")
+
+library(circuitscaper)
+
+# First time only: install Julia and required packages
+cs_install_julia()
+```
+
+If you already have Julia installed, `cs_setup()` will find it automatically
+or you can point to it:
+
+```{r setup}
+cs_setup(julia_home = "/path/to/julia/bin")
+```
+
+## Circuitscape: Pairwise Mode
+
+The most common Circuitscape analysis computes effective resistance and
+cumulative current flow between all pairs of focal nodes.
+
+```{r pairwise}
+library(terra)
+library(circuitscaper)
+
+# Resistance surface
+resistance <- rast("path/to/resistance.tif")
+
+# Focal nodes (integer IDs)
+locations <- rast("path/to/focal_nodes.tif")
+
+# Run pairwise analysis
+result <- cs_pairwise(resistance, locations)
+
+# Current flow map
+plot(result$current_map)
+
+# Pairwise resistance matrix
+result$resistance_matrix
+```
+
+## Circuitscape: One-to-All Mode
+
+In one-to-all mode, each focal node takes a turn as the source while all
+others serve as grounds simultaneously.
+
+```{r one-to-all}
+result <- cs_one_to_all(resistance, locations)
+plot(result$current_map)
+```
+
+## Circuitscape: All-to-One Mode
+
+All-to-one is the reverse: all focal nodes are sources and each takes a turn
+as the ground.
+
+```{r all-to-one}
+result <- cs_all_to_one(resistance, locations)
+plot(result$current_map)
+```
+
+## Circuitscape: Advanced Mode
+
+Advanced mode gives full control over source and ground placement.
+
+```{r advanced}
+source_layer <- rast("path/to/sources.tif")
+ground_layer <- rast("path/to/grounds.tif")
+
+result <- cs_advanced(resistance, source_layer, ground_layer,
+                      write_voltage = TRUE)
+
+# Access individual layers
+plot(result[["cumulative_current"]])
+plot(result[["voltage"]])
+```
+
+## Omniscape: Moving-Window Connectivity
+
+Omniscape computes omnidirectional connectivity using a moving window approach.
+
+```{r omniscape}
+result <- os_run(resistance, radius = 100, block_size = 5)
+
+plot(result[["normalized_current"]])
+plot(result[["flow_potential"]])
+```
+
+### With Source Strength Weights
+
+```{r omniscape-source}
+source_strength <- rast("path/to/habitat_quality.tif")
+
+result <- os_run(resistance, radius = 100,
+                 source_strength = source_strength,
+                 block_size = 5)
+
+plot(result[["normalized_current"]])
+```
+
+### Parallel Processing
+
+For large landscapes, enable Julia multithreading:
+
+```{r omniscape-parallel}
+# Must be called before any other circuitscaper functions in the session
+result <- os_run(resistance, radius = 100,
+                 block_size = 5,
+                 parallelize = TRUE,
+                 julia_threads = 4)
+```
+
+## Comparing Scenarios
+
+Use `os_compare()` to assess changes between two Omniscape runs (e.g.,
+current vs. future climate).
+
+```{r compare}
+baseline <- os_run(resistance_current, radius = 100, block_size = 5)
+future <- os_run(resistance_future, radius = 100, block_size = 5)
+
+comparison <- os_compare(baseline, future)
+plot(comparison[["difference"]])
+plot(comparison[["ratio"]])
+```
+
+## Saving Outputs
+
+By default, intermediate files are written to a temporary directory and
+cleaned up. To persist output files, use `output_dir`:
+
+```{r output-dir}
+result <- cs_pairwise(resistance, locations,
+                      output_dir = "my_output_directory")
+```
+
+## Tips
+
+- **CRS preservation**: circuitscaper captures the CRS from your input raster
+  and reattaches it to outputs, even though Circuitscape's ASCII grid format
+  doesn't carry CRS information.
+
+- **Solver choice**: The default `"cg+amg"` solver works well for most cases.
+  For small problems, `"cholmod"` (direct solver) may be faster.
+
+- **Verbose output**: Set `verbose = TRUE` to see Circuitscape's solver
+  progress, useful for debugging or monitoring long runs.

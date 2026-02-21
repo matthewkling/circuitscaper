@@ -1,0 +1,32 @@
+Package: circuitscaper
+Title: R Interface to Circuitscape and Omniscape via Julia
+Version: 0.1.0
+Authors@R: person("Matthew", "Kling", email = "mattkling@gmail.com",
+                  role = c("aut", "cre"))
+Author: Matthew Kling [aut, cre]
+Maintainer: Matthew Kling <mattkling@gmail.com>
+Description: Provides an R-native interface to the Circuitscape.jl and
+    Omniscape.jl Julia packages for landscape connectivity modeling using
+    circuit theory. Users work entirely in R with familiar objects
+    (SpatRaster, file paths) while Julia handles computation invisibly.
+    Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one,
+    advanced) and Omniscape moving-window analysis.
+License: MIT + file LICENSE
+URL: https://github.com/matthewkling/circuitscaper
+BugReports: https://github.com/matthewkling/circuitscaper/issues
+Depends:
+    R (>= 4.0)
+Imports:
+    terra,
+    JuliaCall,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Config/testthat/edition: 3
+SystemRequirements: Julia (>= 1.9), Circuitscape.jl, Omniscape.jl
