@@ -66,6 +66,69 @@ cs_setup <- function(julia_home = NULL, quiet = TRUE, ...) {
     JuliaCall::julia_source(patch_file)
   }
 
+  # Warm up Julia's JIT compiler by running a tiny Circuitscape problem.
+
+  # Without this, the first real cs_*() call pays a ~20 s compilation penalty.
+  if (!quiet) message("Warming up Circuitscape JIT compiler...")
+  warmup_jl <- '
+    let
+      d = mktempdir()
+      try
+        # 3x3 resistance grid
+        open(joinpath(d, "r.asc"), "w") do f
+          println(f, "ncols         3")
+          println(f, "nrows         3")
+          println(f, "xllcorner     0")
+          println(f, "yllcorner     0")
+          println(f, "cellsize      1")
+          println(f, "NODATA_value  -9999")
+          for _ in 1:3; println(f, "1 1 1"); end
+        end
+        # focal nodes
+        open(joinpath(d, "p.asc"), "w") do f
+          println(f, "ncols         3")
+          println(f, "nrows         3")
+          println(f, "xllcorner     0")
+          println(f, "yllcorner     0")
+          println(f, "cellsize      1")
+          println(f, "NODATA_value  -9999")
+          println(f, "1 0 0")
+          println(f, "0 0 0")
+          println(f, "0 0 2")
+        end
+        # minimal INI
+        ini = joinpath(d, "w.ini")
+        open(ini, "w") do f
+          println(f, "[Circuitscape mode]")
+          println(f, "scenario = pairwise")
+          println(f, "[Habitat raster]")
+          println(f, "habitat_file = ", joinpath(d, "r.asc"))
+          println(f, "[Options for pairwise and one-to-all and all-to-one modes]")
+          println(f, "point_file = ", joinpath(d, "p.asc"))
+          println(f, "use_included_pairs = false")
+          println(f, "[Output options]")
+          println(f, "write_cur_maps = false")
+          println(f, "write_volt_maps = false")
+          println(f, "write_cum_cur_map_only = false")
+          println(f, "output_file = ", joinpath(d, "out"))
+        end
+        redirect_stdout(devnull) do
+          redirect_stderr(devnull) do
+            Circuitscape.compute(ini)
+          end
+        end
+      finally
+        rm(d; recursive = true, force = true)
+      end
+    end
+  '
+  tryCatch(
+    JuliaCall::julia_eval(warmup_jl),
+    error = function(e) {
+      if (!quiet) warning("JIT warmup failed (non-fatal): ", conditionMessage(e))
+    }
+  )
+
   .cs_env$julia_ready <- TRUE
   invisible(TRUE)
 }
