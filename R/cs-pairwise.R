@@ -25,6 +25,12 @@
 #'     resistances.}
 #' }
 #'
+#' @references
+#' Circuitscape user guide:
+#' \url{https://docs.circuitscape.org/Circuitscape.jl/latest/usage/}
+#'
+#' @seealso [cs_one_to_all()], [cs_all_to_one()], [cs_advanced()], [cs_setup()]
+#'
 #' @examples
 #' \dontrun{
 #' library(terra)

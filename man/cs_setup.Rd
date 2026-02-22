@@ -41,3 +41,11 @@ cs_setup(julia_home = "/usr/local/julia/bin")
 }
 
 }
+\references{
+Circuitscape: \url{https://docs.circuitscape.org/Circuitscape.jl/latest/}
+
+Omniscape: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
+}
+\seealso{
+\code{\link[=cs_install_julia]{cs_install_julia()}}, \code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=os_run]{os_run()}}
+}

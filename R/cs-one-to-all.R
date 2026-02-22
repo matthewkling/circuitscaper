@@ -12,6 +12,12 @@
 #'   \item{resistance_matrix}{A numeric matrix of effective resistances.}
 #' }
 #'
+#' @references
+#' Circuitscape user guide:
+#' \url{https://docs.circuitscape.org/Circuitscape.jl/latest/usage/}
+#'
+#' @seealso [cs_pairwise()], [cs_all_to_one()], [cs_advanced()], [cs_setup()]
+#'
 #' @examples
 #' \dontrun{
 #' library(terra)

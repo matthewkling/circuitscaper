@@ -36,3 +36,6 @@ plot(comparison[["ratio"]])
 }
 
 }
+\seealso{
+\code{\link[=os_run]{os_run()}}
+}

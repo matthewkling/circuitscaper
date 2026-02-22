@@ -21,6 +21,13 @@
 #' Once Julia is initialized, it stays warm for the R session. Subsequent calls
 #' to `cs_setup()` return immediately.
 #'
+#' @references
+#' Circuitscape: \url{https://docs.circuitscape.org/Circuitscape.jl/latest/}
+#'
+#' Omniscape: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
+#'
+#' @seealso [cs_install_julia()], [cs_pairwise()], [os_run()]
+#'
 #' @examples
 #' \dontrun{
 #' cs_setup()

@@ -60,3 +60,10 @@ result$resistance_matrix
 }
 
 }
+\references{
+Circuitscape user guide:
+\url{https://docs.circuitscape.org/Circuitscape.jl/latest/usage/}
+}
+\seealso{
+\code{\link[=cs_one_to_all]{cs_one_to_all()}}, \code{\link[=cs_all_to_one]{cs_all_to_one()}}, \code{\link[=cs_advanced]{cs_advanced()}}, \code{\link[=cs_setup]{cs_setup()}}
+}

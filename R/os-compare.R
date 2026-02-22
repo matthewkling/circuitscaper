@@ -15,6 +15,8 @@
 #'   \item{ratio}{`future / baseline`}
 #' }
 #'
+#' @seealso [os_run()]
+#'
 #' @examples
 #' \dontrun{
 #' baseline <- os_run(resistance_current, radius = 50)

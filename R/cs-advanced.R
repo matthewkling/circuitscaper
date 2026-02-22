@@ -22,6 +22,12 @@
 #'   `"cumulative_current"`. If `write_voltage = TRUE`, also includes
 #'   `"voltage"`.
 #'
+#' @references
+#' Circuitscape user guide:
+#' \url{https://docs.circuitscape.org/Circuitscape.jl/latest/usage/}
+#'
+#' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_all_to_one()], [cs_setup()]
+#'
 #' @examples
 #' \dontrun{
 #' library(terra)
