@@ -73,8 +73,14 @@ parse_cs_output <- function(dir, prefix, input_crs = "") {
     stop("No output raster files found in: ", dir, call. = FALSE)
   }
 
-  # Read and stack rasters
-  layers <- lapply(raster_files, terra::rast)
+  # Read and stack rasters, forcing values into memory so the result
+
+  # survives temp directory cleanup (terra::rast is lazy by default)
+  layers <- lapply(raster_files, function(f) {
+    r <- terra::rast(f)
+    r[] <- terra::values(r)
+    r
+  })
   result <- if (length(layers) == 1) layers[[1]] else do.call(c, layers)
 
   # Name layers based on file names
@@ -143,7 +149,12 @@ parse_os_output <- function(dir, input_crs = "") {
     layer_names <- gsub("\\.(asc|tif)$", "", basename(all_files))
   }
 
-  layers <- lapply(raster_files, terra::rast)
+  # Force values into memory so the result survives temp directory cleanup
+  layers <- lapply(raster_files, function(f) {
+    r <- terra::rast(f)
+    r[] <- terra::values(r)
+    r
+  })
   result <- if (length(layers) == 1) layers[[1]] else do.call(c, layers)
   names(result) <- layer_names
 
