@@ -36,7 +36,7 @@
 #' library(terra)
 #' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
 #' locs <- rast(nrows = 10, ncols = 10, vals = 0)
-#' locs[1, 1] <- 1; locs[10, 10] <- 2
+#' locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
 #' result <- cs_pairwise(res, locs)
 #' plot(result$current_map)
 #' result$resistance_matrix
