@@ -89,7 +89,7 @@ A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 with the following layers:
 
-- cumulative_current:
+- current:
 
   Current density at each cell.
 
