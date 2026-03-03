@@ -64,3 +64,49 @@ test_that("validate_raster_match passes for matching rasters", {
 
   expect_invisible(validate_raster_match(r1, r2, "r1", "r2"))
 })
+
+
+test_that("write_ini normalizes Windows backslashes", {
+  tmp <- tempfile(fileext = ".ini")
+  on.exit(unlink(tmp))
+
+  config <- list(
+    "Habitat raster" = list(
+      habitat_file = "C:\\Users\\test\\data\\resistance.asc"
+    )
+  )
+
+  write_ini(config, tmp)
+  lines <- readLines(tmp)
+  expect_true("habitat_file = C:/Users/test/data/resistance.asc" %in% lines)
+})
+
+
+test_that("validate_resistance_values warns on zeros", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, rep(1, 24)))
+  expect_warning(validate_resistance_values(r, "resistances"), "zero values")
+})
+
+test_that("validate_resistance_values warns on negative values", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(-1, rep(1, 24)))
+  expect_warning(validate_resistance_values(r, "resistances"), "negative values")
+})
+
+test_that("validate_resistance_values silent on valid raster", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = rep(1, 25))
+  expect_silent(validate_resistance_values(r, "resistances"))
+})
+
+test_that("validate_resistance_values no-ops on file path", {
+  expect_silent(validate_resistance_values("some/path.tif", "resistances"))
+})
+
+test_that("validate_resistance_values no zero warning for conductances", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, rep(1, 24)))
+  # Zeros in conductance surfaces are fine (they mean no connectivity)
+  expect_silent(validate_resistance_values(r, "conductances"))
+})

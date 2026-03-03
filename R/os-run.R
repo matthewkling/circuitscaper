@@ -32,9 +32,10 @@
 #' @param calc_flow_potential Logical. Compute flow potential. Default `TRUE`.
 #' @param condition Optional [terra::SpatRaster] or file path. Conditional layer
 #'   for targeted connectivity analysis.
-#' @param condition_type Character. Determines how the condition layer is used.
-#'   Only relevant if `condition` is provided. See the Omniscape documentation
-#'   for options.
+#' @param condition_type Character. How the condition layer filters connectivity:
+#'   `"within"` (connectivity only between cells sharing the same condition
+#'   value) or `"equal"` (connectivity only between cells with equal condition
+#'   values, evaluated pairwise). Only relevant if `condition` is provided.
 #' @param parallelize Logical. Use Julia multithreading. Default `FALSE`.
 #'   Julia's thread count is fixed at startup. If Julia was already initialized
 #'   without enough threads, a warning is issued. To avoid this, call
@@ -116,6 +117,10 @@ os_run <- function(resistance,
   # Validate arguments
   match.arg(resistance_is, c("resistances", "conductances"))
   match.arg(solver, c("cg+amg", "cholmod"))
+  if (!is.null(condition_type)) {
+    condition_type <- match.arg(condition_type, c("within", "equal"))
+  }
+  validate_resistance_values(resistance, resistance_is)
 
   # Set up working directory
   use_temp <- is.null(output_dir)
@@ -168,15 +173,24 @@ os_run <- function(resistance,
   )
 
   # Run Omniscape
-  if (verbose) {
-    JuliaCall::julia_call("Omniscape.run_omniscape", ini_path)
-  } else {
-    JuliaCall::julia_eval(
-      paste0('redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
-             'Omniscape.run_omniscape("', gsub("\\\\", "/", ini_path), '"); ',
-             'end; end')
-    )
-  }
+  tryCatch({
+    if (verbose) {
+      JuliaCall::julia_call("Omniscape.run_omniscape", ini_path)
+    } else {
+      JuliaCall::julia_eval(
+        paste0('redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
+               'Omniscape.run_omniscape("', gsub("\\\\", "/", ini_path), '"); ',
+               'end; end')
+      )
+    }
+  }, error = function(e) {
+    msg <- conditionMessage(e)
+    julia_msg <- sub(".*Julia exception: ", "", msg)
+    julia_msg <- sub("\n.*", "", julia_msg)
+    stop("Omniscape computation failed: ", julia_msg, "\n",
+         "Check that resistance has no zero values and that the radius ",
+         "is appropriate for the raster dimensions.", call. = FALSE)
+  })
 
   # Parse and return output rasters from the Omniscape output subdirectory
   os_output_dir <- file.path(work_dir, "omniscape_output")

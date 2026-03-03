@@ -16,6 +16,9 @@ write_ini <- function(config, path) {
       val <- items[[key]]
       if (is.logical(val)) {
         val <- if (val) "true" else "false"
+      } else if (is.character(val)) {
+        # Normalize Windows backslashes to forward slashes for Julia/Circuitscape
+        val <- gsub("\\\\", "/", val)
       }
       lines <- c(lines, paste0(key, " = ", val))
     }
@@ -52,6 +55,41 @@ validate_raster_match <- function(r1, r2, name1 = "raster1", name2 = "raster2") 
   }
 
   invisible(TRUE)
+}
+
+
+#' Validate Resistance Surface Values
+#'
+#' Warns if a SpatRaster resistance surface contains zero or negative values,
+#' which can cause computational issues in Circuitscape/Omniscape.
+#'
+#' @param resistance A SpatRaster or file path. Only checked if SpatRaster.
+#' @param resistance_is Character. "resistances" or "conductances".
+#' @return NULL invisibly. Called for side effects (warnings).
+#' @noRd
+validate_resistance_values <- function(resistance, resistance_is = "resistances") {
+  if (!inherits(resistance, "SpatRaster")) return(invisible(NULL))
+
+  vals <- terra::values(resistance)
+  vals <- vals[!is.na(vals)]
+
+  if (length(vals) == 0) {
+    warning("Resistance raster has no non-NA values.", call. = FALSE)
+    return(invisible(NULL))
+  }
+
+  if (any(vals < 0)) {
+    warning("Resistance raster contains negative values, which are not ",
+            "physically meaningful for ", resistance_is, ".", call. = FALSE)
+  }
+
+  if (resistance_is == "resistances" && any(vals == 0)) {
+    warning("Resistance raster contains zero values, which represent ",
+            "infinite conductance and may cause computational issues.",
+            call. = FALSE)
+  }
+
+  invisible(NULL)
 }
 
 

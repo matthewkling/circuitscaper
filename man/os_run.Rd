@@ -63,9 +63,10 @@ Default \code{TRUE}.}
 \item{condition}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Conditional layer
 for targeted connectivity analysis.}
 
-\item{condition_type}{Character. Determines how the condition layer is used.
-Only relevant if \code{condition} is provided. See the Omniscape documentation
-for options.}
+\item{condition_type}{Character. How the condition layer filters connectivity:
+\code{"within"} (connectivity only between cells sharing the same condition
+value) or \code{"equal"} (connectivity only between cells with equal condition
+values, evaluated pairwise). Only relevant if \code{condition} is provided.}
 
 \item{parallelize}{Logical. Use Julia multithreading. Default \code{FALSE}.
 Julia's thread count is fixed at startup. If Julia was already initialized

@@ -67,6 +67,7 @@ cs_advanced <- function(resistance,
   # Validate arguments
   match.arg(resistance_is, c("resistances", "conductances"))
   match.arg(solver, c("cg+amg", "cholmod"))
+  validate_resistance_values(resistance, resistance_is)
 
   # Set up working directory
   use_temp <- is.null(output_dir)
@@ -106,15 +107,24 @@ cs_advanced <- function(resistance,
   )
 
   # Run Circuitscape
-  if (verbose) {
-    JuliaCall::julia_call("Circuitscape.compute", ini_path)
-  } else {
-    JuliaCall::julia_eval(
-      paste0('redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
-             'Circuitscape.compute("', gsub("\\\\", "/", ini_path), '"); ',
-             'end; end')
-    )
-  }
+  tryCatch({
+    if (verbose) {
+      JuliaCall::julia_call("Circuitscape.compute", ini_path)
+    } else {
+      JuliaCall::julia_eval(
+        paste0('redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
+               'Circuitscape.compute("', gsub("\\\\", "/", ini_path), '"); ',
+               'end; end')
+      )
+    }
+  }, error = function(e) {
+    msg <- conditionMessage(e)
+    julia_msg <- sub(".*Julia exception: ", "", msg)
+    julia_msg <- sub("\n.*", "", julia_msg)
+    stop("Circuitscape computation failed: ", julia_msg, "\n",
+         "Check that resistance has no zero values and that source/ground ",
+         "layers fall on non-NA cells.", call. = FALSE)
+  })
 
   # Parse and return output rasters
   parse_cs_output(work_dir, prefix, input_crs)

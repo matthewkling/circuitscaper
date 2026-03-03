@@ -191,6 +191,10 @@ cs_install_julia <- function(version = "latest") {
   JuliaCall::julia_install_package("Omniscape")
 
   message("Julia, Circuitscape, and Omniscape installed successfully.")
+
+  # Set up the session so subsequent cs_*/os_* calls don't redo setup
+  cs_setup(quiet = TRUE)
+
   invisible(TRUE)
 }
 
