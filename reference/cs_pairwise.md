@@ -13,6 +13,8 @@ cs_pairwise(
   four_neighbors = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
+  write_voltage = FALSE,
+  cumulative_only = TRUE,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -70,6 +72,19 @@ cs_pairwise(
   Optional character file path. A text file specifying which pairs of
   focal nodes to include or exclude from analysis. See the Circuitscape
   documentation for the file format. Default `NULL` (all pairs).
+
+- write_voltage:
+
+  Logical. Write voltage maps. Default `FALSE`. When `TRUE`,
+  per-iteration voltage layers (named `voltage_1`, `voltage_2`, ...) are
+  included in the output raster.
+
+- cumulative_only:
+
+  Logical. If `TRUE` (default), only the cumulative current map is
+  returned. If `FALSE`, per-iteration current layers (named `current_1`,
+  `current_2`, ...) are also included. Use with caution for large
+  numbers of focal nodes, as this can produce many layers.
 
 - solver:
 
