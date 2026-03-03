@@ -129,9 +129,10 @@ for targeted connectivity analysis.</p></dd>
 
 
 <dt id="arg-condition-type">condition_type<a class="anchor" aria-label="anchor" href="#arg-condition-type"></a></dt>
-<dd><p>Character. Determines how the condition layer is used.
-Only relevant if <code>condition</code> is provided. See the Omniscape documentation
-for options.</p></dd>
+<dd><p>Character. How the condition layer filters connectivity:
+<code>"within"</code> (connectivity only between cells sharing the same condition
+value) or <code>"equal"</code> (connectivity only between cells with equal condition
+values, evaluated pairwise). Only relevant if <code>condition</code> is provided.</p></dd>
 
 
 <dt id="arg-parallelize">parallelize<a class="anchor" aria-label="anchor" href="#arg-parallelize"></a></dt>

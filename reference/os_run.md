@@ -90,9 +90,10 @@ os_run(
 
 - condition_type:
 
-  Character. Determines how the condition layer is used. Only relevant
-  if `condition` is provided. See the Omniscape documentation for
-  options.
+  Character. How the condition layer filters connectivity: `"within"`
+  (connectivity only between cells sharing the same condition value) or
+  `"equal"` (connectivity only between cells with equal condition
+  values, evaluated pairwise). Only relevant if `condition` is provided.
 
 - parallelize:
 
