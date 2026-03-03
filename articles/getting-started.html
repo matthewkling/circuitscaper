@@ -83,6 +83,31 @@ find it automatically or you can point to it:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>julia_home <span class="op">=</span> <span class="st">"/path/to/julia/bin"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="choosing-a-mode">Choosing a Mode<a class="anchor" aria-label="anchor" href="#choosing-a-mode"></a>
+</h2>
+<p>circuitscaper provides four Circuitscape modes and one Omniscape
+mode. Here’s how to choose:</p>
+<p><strong>Pairwise</strong> is the most common starting point. Use it
+when you have discrete sites (habitat patches, populations) and want to
+know how well-connected they are to each other. The resistance matrix is
+useful as a distance metric for analyses such as isolation by resistance
+in population genetics.</p>
+<p><strong>One-to-all / All-to-one</strong> are variants that produce
+different current maps. One-to-all emphasizes how current disperses
+outward from each site; all-to-one emphasizes how current converges on
+each site. Use these when you care about the spatial pattern of
+connectivity for individual nodes, not just the pairwise
+resistances.</p>
+<p><strong>Advanced</strong> is for when you want full control over
+source and ground placement rather than using focal nodes. This is
+useful for modeling directional movement between a defined source area
+and a destination.</p>
+<p><strong>Omniscape</strong> is fundamentally different — it doesn’t
+require focal nodes at all. It uses a moving window to compute
+omnidirectional connectivity everywhere in the landscape. Use it for
+wall-to-wall connectivity mapping.</p>
+</div>
+<div class="section level2">
 <h2 id="circuitscape-pairwise-mode">Circuitscape: Pairwise Mode<a class="anchor" aria-label="anchor" href="#circuitscape-pairwise-mode"></a>
 </h2>
 <p>The most common Circuitscape analysis computes effective resistance
@@ -91,10 +116,10 @@ and cumulative current flow between all pairs of focal nodes.</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Resistance surface</span></span>
+<span><span class="co"># Resistance surface (higher values = harder to traverse)</span></span>
 <span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/resistance.tif"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Focal nodes (integer IDs)</span></span>
+<span><span class="co"># Focal nodes (integer IDs; cells with 0 or NA are not nodes)</span></span>
 <span><span class="va">locations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/focal_nodes.tif"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run pairwise analysis</span></span>
@@ -110,31 +135,32 @@ and cumulative current flow between all pairs of focal nodes.</p>
 <h2 id="circuitscape-one-to-all-mode">Circuitscape: One-to-All Mode<a class="anchor" aria-label="anchor" href="#circuitscape-one-to-all-mode"></a>
 </h2>
 <p>In one-to-all mode, each focal node takes a turn as the source while
-all others serve as grounds simultaneously.</p>
+all others are grounded simultaneously. The result includes a per-node
+current map for each focal node plus a cumulative map summing across all
+iterations.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_one_to_all.html">cs_one_to_all</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"cumulative_current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="circuitscape-all-to-one-mode">Circuitscape: All-to-One Mode<a class="anchor" aria-label="anchor" href="#circuitscape-all-to-one-mode"></a>
 </h2>
-<p>All-to-one is the reverse: all focal nodes are sources and each takes
-a turn as the ground.</p>
+<p>All-to-one is the reverse: all other focal nodes inject current and
+each node takes a turn as the ground.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_all_to_one.html">cs_all_to_one</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"cumulative_current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="circuitscape-advanced-mode">Circuitscape: Advanced Mode<a class="anchor" aria-label="anchor" href="#circuitscape-advanced-mode"></a>
 </h2>
-<p>Advanced mode gives full control over source and ground
-placement.</p>
+<p>Advanced mode gives full control over source and ground placement. It
+returns both a current map and a voltage map.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">source_layer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/sources.tif"</span><span class="op">)</span></span>
 <span><span class="va">ground_layer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/grounds.tif"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_advanced.html">cs_advanced</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">source_layer</span>, <span class="va">ground_layer</span>,</span>
-<span>                      write_voltage <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_advanced.html">cs_advanced</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">source_layer</span>, <span class="va">ground_layer</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Access individual layers</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"cumulative_current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
@@ -144,7 +170,8 @@ placement.</p>
 <h2 id="omniscape-moving-window-connectivity">Omniscape: Moving-Window Connectivity<a class="anchor" aria-label="anchor" href="#omniscape-moving-window-connectivity"></a>
 </h2>
 <p>Omniscape computes omnidirectional connectivity using a moving window
-approach.</p>
+approach. It does not require focal nodes — every cell can serve as a
+source.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">100</span>, block_size <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span></span>

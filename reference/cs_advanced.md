@@ -23,7 +23,8 @@ cs_advanced(
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. The resistance (or conductance) surface.
+  or file path. The resistance (or conductance) surface. Higher values
+  represent greater resistance to movement.
 
 - source:
 

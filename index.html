@@ -58,7 +58,8 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>circuitscaper provides a clean, R-native interface to Circuitscape and Omniscape for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar <code><a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a></code> objects while Julia handles computation invisibly.</p>
+<p>Circuitscape models landscape connectivity by treating the landscape as an electrical circuit. Each cell in a raster grid becomes a node in the circuit, and cells with lower resistance allow more “current” (representing movement probability or gene flow) to pass through. This approach captures not just the single best path between sites, but all possible pathways simultaneously, making it especially useful for identifying corridors and pinch points. Omniscape extends this by applying Circuitscape in a moving window across the landscape, producing wall-to-wall connectivity maps without requiring predefined focal sites.</p>
+<p>circuitscaper provides a clean, R-native interface to both tools. Users work entirely in R with familiar <code><a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a></code> objects while Julia handles computation invisibly.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -78,13 +79,17 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
 <span></span>
+<span><span class="co"># Load resistance and focal node rasters</span></span>
+<span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/resistance.tif"</span><span class="op">)</span></span>
+<span><span class="va">locations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/focal_nodes.tif"</span><span class="op">)</span></span>
+<span></span>
 <span><span class="co"># Pairwise Circuitscape</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance_raster</span>, <span class="va">focal_nodes</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">resistance_matrix</span></span>
 <span></span>
-<span><span class="co"># Omniscape</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance_raster</span>, radius <span class="op">=</span> <span class="fl">100</span>, block_size <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
+<span><span class="co"># Omniscape moving-window connectivity</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">100</span>, block_size <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"normalized_current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -134,6 +139,17 @@
 <li>R &gt;= 4.0</li>
 <li>Julia &gt;= 1.9 (installed automatically via <code><a href="reference/cs_install_julia.html">cs_install_julia()</a></code>)</li>
 <li>R packages: terra, JuliaCall</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="learn-more">Learn More<a class="anchor" aria-label="anchor" href="#learn-more"></a>
+</h2>
+<ul>
+<li><a href="https://docs.circuitscape.org/Circuitscape.jl/latest/" class="external-link">Circuitscape user guide</a></li>
+<li><a href="https://docs.circuitscape.org/Omniscape.jl/latest/" class="external-link">Omniscape documentation</a></li>
+<li>McRae, B.H. (2006). Isolation by resistance. <em>Evolution</em>, 60(8), 1551-1561.</li>
+<li>McRae, B.H. &amp; Beier, P. (2007). Circuit theory predicts gene flow in plant and animal populations. <em>PNAS</em>, 104(50), 19885-19890.</li>
+<li>McRae, B.H., Dickson, B.G., Keitt, T.H. &amp; Shah, V.B. (2008). Using circuit theory to model connectivity in ecology, evolution, and conservation. <em>Ecology</em>, 89(10), 2712-2724.</li>
 </ul>
 </div>
 </div>

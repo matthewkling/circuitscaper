@@ -23,6 +23,32 @@ will find it automatically or you can point to it:
 cs_setup(julia_home = "/path/to/julia/bin")
 ```
 
+## Choosing a Mode
+
+circuitscaper provides four Circuitscape modes and one Omniscape mode.
+Here’s how to choose:
+
+**Pairwise** is the most common starting point. Use it when you have
+discrete sites (habitat patches, populations) and want to know how
+well-connected they are to each other. The resistance matrix is useful
+as a distance metric for analyses such as isolation by resistance in
+population genetics.
+
+**One-to-all / All-to-one** are variants that produce different current
+maps. One-to-all emphasizes how current disperses outward from each
+site; all-to-one emphasizes how current converges on each site. Use
+these when you care about the spatial pattern of connectivity for
+individual nodes, not just the pairwise resistances.
+
+**Advanced** is for when you want full control over source and ground
+placement rather than using focal nodes. This is useful for modeling
+directional movement between a defined source area and a destination.
+
+**Omniscape** is fundamentally different — it doesn’t require focal
+nodes at all. It uses a moving window to compute omnidirectional
+connectivity everywhere in the landscape. Use it for wall-to-wall
+connectivity mapping.
+
 ## Circuitscape: Pairwise Mode
 
 The most common Circuitscape analysis computes effective resistance and
@@ -32,10 +58,10 @@ cumulative current flow between all pairs of focal nodes.
 library(terra)
 library(circuitscaper)
 
-# Resistance surface
+# Resistance surface (higher values = harder to traverse)
 resistance <- rast("path/to/resistance.tif")
 
-# Focal nodes (integer IDs)
+# Focal nodes (integer IDs; cells with 0 or NA are not nodes)
 locations <- rast("path/to/focal_nodes.tif")
 
 # Run pairwise analysis
@@ -51,33 +77,35 @@ result$resistance_matrix
 ## Circuitscape: One-to-All Mode
 
 In one-to-all mode, each focal node takes a turn as the source while all
-others serve as grounds simultaneously.
+others are grounded simultaneously. The result includes a per-node
+current map for each focal node plus a cumulative map summing across all
+iterations.
 
 ``` r
 result <- cs_one_to_all(resistance, locations)
-plot(result$current_map)
+plot(result[["cumulative_current"]])
 ```
 
 ## Circuitscape: All-to-One Mode
 
-All-to-one is the reverse: all focal nodes are sources and each takes a
-turn as the ground.
+All-to-one is the reverse: all other focal nodes inject current and each
+node takes a turn as the ground.
 
 ``` r
 result <- cs_all_to_one(resistance, locations)
-plot(result$current_map)
+plot(result[["cumulative_current"]])
 ```
 
 ## Circuitscape: Advanced Mode
 
-Advanced mode gives full control over source and ground placement.
+Advanced mode gives full control over source and ground placement. It
+returns both a current map and a voltage map.
 
 ``` r
 source_layer <- rast("path/to/sources.tif")
 ground_layer <- rast("path/to/grounds.tif")
 
-result <- cs_advanced(resistance, source_layer, ground_layer,
-                      write_voltage = TRUE)
+result <- cs_advanced(resistance, source_layer, ground_layer)
 
 # Access individual layers
 plot(result[["cumulative_current"]])
@@ -87,7 +115,8 @@ plot(result[["voltage"]])
 ## Omniscape: Moving-Window Connectivity
 
 Omniscape computes omnidirectional connectivity using a moving window
-approach.
+approach. It does not require focal nodes — every cell can serve as a
+source.
 
 ``` r
 result <- os_run(resistance, radius = 100, block_size = 5)

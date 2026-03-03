@@ -7,9 +7,18 @@ JuliaCall.
 
 ## Overview
 
-circuitscaper provides a clean, R-native interface to Circuitscape and
-Omniscape for landscape connectivity modeling using circuit theory.
-Users work entirely in R with familiar
+Circuitscape models landscape connectivity by treating the landscape as
+an electrical circuit. Each cell in a raster grid becomes a node in the
+circuit, and cells with lower resistance allow more “current”
+(representing movement probability or gene flow) to pass through. This
+approach captures not just the single best path between sites, but all
+possible pathways simultaneously, making it especially useful for
+identifying corridors and pinch points. Omniscape extends this by
+applying Circuitscape in a moving window across the landscape, producing
+wall-to-wall connectivity maps without requiring predefined focal sites.
+
+circuitscaper provides a clean, R-native interface to both tools. Users
+work entirely in R with familiar
 [`terra::SpatRaster`](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 objects while Julia handles computation invisibly.
 
@@ -30,13 +39,17 @@ cs_install_julia()
 library(circuitscaper)
 library(terra)
 
+# Load resistance and focal node rasters
+resistance <- rast("path/to/resistance.tif")
+locations <- rast("path/to/focal_nodes.tif")
+
 # Pairwise Circuitscape
-result <- cs_pairwise(resistance_raster, focal_nodes)
+result <- cs_pairwise(resistance, locations)
 plot(result$current_map)
 result$resistance_matrix
 
-# Omniscape
-result <- os_run(resistance_raster, radius = 100, block_size = 5)
+# Omniscape moving-window connectivity
+result <- os_run(resistance, radius = 100, block_size = 5)
 plot(result[["normalized_current"]])
 ```
 
@@ -58,3 +71,17 @@ plot(result[["normalized_current"]])
 - Julia \>= 1.9 (installed automatically via
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md))
 - R packages: terra, JuliaCall
+
+## Learn More
+
+- [Circuitscape user
+  guide](https://docs.circuitscape.org/Circuitscape.jl/latest/)
+- [Omniscape
+  documentation](https://docs.circuitscape.org/Omniscape.jl/latest/)
+- McRae, B.H. (2006). Isolation by resistance. *Evolution*, 60(8),
+  1551-1561.
+- McRae, B.H. & Beier, P. (2007). Circuit theory predicts gene flow in
+  plant and animal populations. *PNAS*, 104(50), 19885-19890.
+- McRae, B.H., Dickson, B.G., Keitt, T.H. & Shah, V.B. (2008). Using
+  circuit theory to model connectivity in ecology, evolution, and
+  conservation. *Ecology*, 89(10), 2712-2724.

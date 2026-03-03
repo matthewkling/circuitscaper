@@ -12,6 +12,7 @@ os_run(
   source_strength = NULL,
   block_size = 1L,
   source_threshold = 0,
+  r_cutoff = Inf,
   resistance_is = "resistances",
   calc_normalized_current = TRUE,
   calc_flow_potential = TRUE,
@@ -31,27 +32,42 @@ os_run(
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. The resistance (or conductance) surface.
+  or file path. The resistance (or conductance) surface. Higher values
+  represent greater resistance to movement.
 
 - radius:
 
-  Numeric. Moving window radius in pixels.
+  Numeric. Moving window radius in pixels. This determines the maximum
+  distance over which connectivity is evaluated from each source pixel.
 
 - source_strength:
 
   Optional
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Source strength weights. If `NULL` (default), all
-  non-nodata pixels are treated as sources with equal weight.
+  or file path. Source strength weights, often derived from habitat
+  quality or suitability, where higher values indicate stronger sources
+  of movement. If `NULL` (default), source strength is set to the
+  inverse of resistance (i.e., all non-nodata pixels become sources,
+  weighted by conductance). Use `r_cutoff` to exclude high-resistance
+  cells from acting as sources in that case.
 
 - block_size:
 
   Integer. Aggregation block size for source points. Default `1` (no
-  aggregation). Increasing this significantly speeds computation.
+  aggregation). A `block_size` of e.g. 3 coarsens the source grid into
+  3x3 blocks, reducing the number of solves (and thus computation time)
+  substantially with typically negligible effects on results.
 
 - source_threshold:
 
   Numeric. Minimum source strength to include a pixel. Default `0`.
+
+- r_cutoff:
+
+  Numeric. Maximum resistance value for a cell to be included as a
+  source when `source_strength = NULL`. Cells with resistance above this
+  value are excluded as sources. Default `Inf` (no cutoff). Only
+  relevant when `source_strength` is not provided.
 
 - resistance_is:
 

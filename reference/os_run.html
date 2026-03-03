@@ -51,6 +51,7 @@ connectivity using a moving window approach based on circuit theory.</p>
 <span>  source_strength <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  block_size <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  source_threshold <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  r_cutoff <span class="op">=</span> <span class="cn">Inf</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
 <span>  calc_normalized_current <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  calc_flow_potential <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -70,27 +71,42 @@ connectivity using a moving window approach based on circuit theory.</p>
 
 <dl><dt id="arg-resistance">resistance<a class="anchor" aria-label="anchor" href="#arg-resistance"></a></dt>
 <dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. The resistance (or
-conductance) surface.</p></dd>
+conductance) surface. Higher values represent greater resistance to
+movement.</p></dd>
 
 
 <dt id="arg-radius">radius<a class="anchor" aria-label="anchor" href="#arg-radius"></a></dt>
-<dd><p>Numeric. Moving window radius in pixels.</p></dd>
+<dd><p>Numeric. Moving window radius in pixels. This determines the
+maximum distance over which connectivity is evaluated from each source
+pixel.</p></dd>
 
 
 <dt id="arg-source-strength">source_strength<a class="anchor" aria-label="anchor" href="#arg-source-strength"></a></dt>
 <dd><p>Optional <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Source
-strength weights. If <code>NULL</code> (default), all non-nodata pixels are treated as
-sources with equal weight.</p></dd>
+strength weights, often derived from habitat quality or suitability, where
+higher values indicate stronger sources of movement. If <code>NULL</code> (default),
+source strength is set to the inverse of resistance (i.e., all non-nodata
+pixels become sources, weighted by conductance). Use <code>r_cutoff</code> to exclude
+high-resistance cells from acting as sources in that case.</p></dd>
 
 
 <dt id="arg-block-size">block_size<a class="anchor" aria-label="anchor" href="#arg-block-size"></a></dt>
 <dd><p>Integer. Aggregation block size for source points. Default
-<code>1</code> (no aggregation). Increasing this significantly speeds computation.</p></dd>
+<code>1</code> (no aggregation). A <code>block_size</code> of e.g. 3 coarsens the source grid
+into 3x3 blocks, reducing the number of solves (and thus computation time)
+substantially with typically negligible effects on results.</p></dd>
 
 
 <dt id="arg-source-threshold">source_threshold<a class="anchor" aria-label="anchor" href="#arg-source-threshold"></a></dt>
 <dd><p>Numeric. Minimum source strength to include a pixel.
 Default <code>0</code>.</p></dd>
+
+
+<dt id="arg-r-cutoff">r_cutoff<a class="anchor" aria-label="anchor" href="#arg-r-cutoff"></a></dt>
+<dd><p>Numeric. Maximum resistance value for a cell to be included
+as a source when <code>source_strength = NULL</code>. Cells with resistance above
+this value are excluded as sources. Default <code>Inf</code> (no cutoff). Only
+relevant when <code>source_strength</code> is not provided.</p></dd>
 
 
 <dt id="arg-resistance-is">resistance_is<a class="anchor" aria-label="anchor" href="#arg-resistance-is"></a></dt>

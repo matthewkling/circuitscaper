@@ -23,13 +23,16 @@ cs_one_to_all(
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. The resistance (or conductance) surface.
+  or file path. The resistance (or conductance) surface. Higher values
+  represent greater resistance to movement. Use the `resistance_is`
+  argument if your surface represents conductances instead.
 
 - locations:
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Focal nodes/regions raster with integer IDs.
+  or file path. Focal nodes raster with positive integer IDs identifying
+  each node. Cells with value 0 or `NA` are not treated as focal nodes.
 
 - resistance_is:
 

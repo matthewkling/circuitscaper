@@ -62,12 +62,15 @@ other focal nodes simultaneously.</p>
 
 <dl><dt id="arg-resistance">resistance<a class="anchor" aria-label="anchor" href="#arg-resistance"></a></dt>
 <dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. The resistance (or
-conductance) surface.</p></dd>
+conductance) surface. Higher values represent greater resistance to
+movement. Use the <code>resistance_is</code> argument if your surface represents
+conductances instead.</p></dd>
 
 
 <dt id="arg-locations">locations<a class="anchor" aria-label="anchor" href="#arg-locations"></a></dt>
-<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Focal nodes/regions
-raster with integer IDs.</p></dd>
+<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Focal nodes raster
+with positive integer IDs identifying each node. Cells with value 0 or
+<code>NA</code> are not treated as focal nodes.</p></dd>
 
 
 <dt id="arg-resistance-is">resistance_is<a class="anchor" aria-label="anchor" href="#arg-resistance-is"></a></dt>
