@@ -46,6 +46,48 @@ test_that("build_cs_config handles advanced mode", {
   expect_true(any(grepl("write_volt_maps = true", content)))
 })
 
+test_that("build_cs_config handles advanced mode options", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "advanced",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    source_file = "/path/to/source.asc",
+    ground_file = "/path/to/ground.asc",
+    ground_is = "conductances",
+    use_unit_currents = TRUE,
+    use_direct_grounds = TRUE,
+    write_voltage = TRUE
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("ground_file_is_resistances = false", content)))
+  expect_true(any(grepl("use_unit_currents = true", content)))
+  expect_true(any(grepl("use_direct_grounds = true", content)))
+})
+
+test_that("build_cs_config advanced mode defaults match Circuitscape", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "advanced",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    source_file = "/path/to/source.asc",
+    ground_file = "/path/to/ground.asc"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("ground_file_is_resistances = true", content)))
+  expect_true(any(grepl("use_unit_currents = false", content)))
+  expect_true(any(grepl("use_direct_grounds = false", content)))
+})
+
 test_that("build_cs_config handles conductances option", {
   tmp_dir <- tempfile("cs_test_")
   dir.create(tmp_dir)

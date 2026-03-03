@@ -7,10 +7,18 @@
 #'   movement.
 #' @param source A [terra::SpatRaster] or file path. Source current strengths
 #'   (amps per cell). Cells with value 0 or NA are not sources.
-#' @param ground A [terra::SpatRaster] or file path. Ground conductances
-#'   (siemens per cell). Cells with value 0 or NA are not grounds.
+#' @param ground A [terra::SpatRaster] or file path. Ground node values.
+#'   Interpretation depends on `ground_is`: resistances to ground (default)
+#'   or conductances to ground. Cells with value 0 or NA are not grounds.
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
+#' @param ground_is Character. Whether the ground raster values represent
+#'   `"resistances"` (default) or `"conductances"` to ground.
+#' @param use_unit_currents Logical. If `TRUE`, all current sources are set to
+#'   1 amp regardless of the values in the source raster. Default `FALSE`.
+#' @param use_direct_grounds Logical. If `TRUE`, all ground nodes are tied
+#'   directly to ground (zero resistance), regardless of the values in the
+#'   ground raster. Default `FALSE`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
@@ -57,6 +65,9 @@ cs_advanced <- function(resistance,
                         source,
                         ground,
                         resistance_is = "resistances",
+                        ground_is = "resistances",
+                        use_unit_currents = FALSE,
+                        use_direct_grounds = FALSE,
                         four_neighbors = FALSE,
                         solver = "cg+amg",
                         output_dir = NULL,
@@ -66,6 +77,7 @@ cs_advanced <- function(resistance,
 
   # Validate arguments
   match.arg(resistance_is, c("resistances", "conductances"))
+  match.arg(ground_is, c("resistances", "conductances"))
   match.arg(solver, c("cg+amg", "cholmod"))
   validate_resistance_values(resistance, resistance_is)
 
@@ -101,6 +113,9 @@ cs_advanced <- function(resistance,
     source_file = src_path,
     ground_file = gnd_path,
     resistance_is = resistance_is,
+    ground_is = ground_is,
+    use_unit_currents = use_unit_currents,
+    use_direct_grounds = use_direct_grounds,
     four_neighbors = four_neighbors,
     solver = solver,
     write_voltage = TRUE

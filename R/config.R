@@ -11,6 +11,9 @@
 #' @param source_file Character. Path to source raster (advanced mode).
 #' @param ground_file Character. Path to ground raster (advanced mode).
 #' @param resistance_is Character. "resistances" or "conductances".
+#' @param ground_is Character. "resistances" or "conductances" (advanced mode).
+#' @param use_unit_currents Logical. Set all sources to 1 amp (advanced mode).
+#' @param use_direct_grounds Logical. Tie grounds directly to ground (advanced mode).
 #' @param four_neighbors Logical. Use 4-neighbor connectivity.
 #' @param solver Character. Solver type.
 #' @param write_voltage Logical. Write voltage maps (advanced mode).
@@ -25,6 +28,9 @@ build_cs_config <- function(mode,
                             source_file = NULL,
                             ground_file = NULL,
                             resistance_is = "resistances",
+                            ground_is = "resistances",
+                            use_unit_currents = FALSE,
+                            use_direct_grounds = FALSE,
                             four_neighbors = FALSE,
                             solver = "cg+amg",
                             write_voltage = FALSE) {
@@ -63,11 +69,11 @@ build_cs_config <- function(mode,
 
   # Options
   config[["Options for advanced mode"]] <- list(
-    ground_file_is_resistances = "true",
+    ground_file_is_resistances = if (ground_is == "resistances") "true" else "false",
     source_file = if (!is.null(source_file)) source_file else "",
     ground_file = if (!is.null(ground_file)) ground_file else "",
-    use_unit_currents = "false",
-    use_direct_grounds = "false"
+    use_unit_currents = if (use_unit_currents) "true" else "false",
+    use_direct_grounds = if (use_direct_grounds) "true" else "false"
   )
 
   config[["Calculation options"]] <- list(

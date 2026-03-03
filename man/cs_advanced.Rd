@@ -9,6 +9,9 @@ cs_advanced(
   source,
   ground,
   resistance_is = "resistances",
+  ground_is = "resistances",
+  use_unit_currents = FALSE,
+  use_direct_grounds = FALSE,
   four_neighbors = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
@@ -23,11 +26,22 @@ movement.}
 \item{source}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Source current strengths
 (amps per cell). Cells with value 0 or NA are not sources.}
 
-\item{ground}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Ground conductances
-(siemens per cell). Cells with value 0 or NA are not grounds.}
+\item{ground}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Ground node values.
+Interpretation depends on \code{ground_is}: resistances to ground (default)
+or conductances to ground. Cells with value 0 or NA are not grounds.}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
 \code{"resistances"} (default) or \code{"conductances"}.}
+
+\item{ground_is}{Character. Whether the ground raster values represent
+\code{"resistances"} (default) or \code{"conductances"} to ground.}
+
+\item{use_unit_currents}{Logical. If \code{TRUE}, all current sources are set to
+1 amp regardless of the values in the source raster. Default \code{FALSE}.}
+
+\item{use_direct_grounds}{Logical. If \code{TRUE}, all ground nodes are tied
+directly to ground (zero resistance), regardless of the values in the
+ground raster. Default \code{FALSE}.}
 
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}
