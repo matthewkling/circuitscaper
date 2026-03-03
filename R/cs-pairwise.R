@@ -1,7 +1,7 @@
 #' Pairwise Circuitscape Analysis
 #'
-#' Compute effective resistance and cumulative current flow between all pairs of
-#' focal nodes using Circuitscape's pairwise mode.
+#' Compute pairwise effective resistances and cumulative current flow between
+#' all pairs of focal nodes.
 #'
 #' @param resistance A [terra::SpatRaster] or file path. The resistance (or
 #'   conductance) surface.
@@ -17,12 +17,29 @@
 #'   automatically.
 #' @param verbose Logical. Print Circuitscape solver output. Default `FALSE`.
 #'
+#' @details
+#' Pairwise mode iterates over every unique pair of focal nodes. For each pair,
+#' one node is injected with 1 amp of current and the other is connected to
+#' ground. The effective resistance between the pair is recorded, and the
+#' resulting current flow is accumulated across all pairs into a cumulative
+#' current map that highlights important movement corridors.
+#'
+#' This is the most common Circuitscape mode and is typically used to quantify
+#' connectivity between discrete habitat patches or populations. The resistance
+#' matrix can be used as a distance metric in analyses such as isolation by
+#' resistance.
+#'
 #' @return A named list with:
 #' \describe{
-#'   \item{current_map}{A [terra::SpatRaster] with named layers for each output
-#'     map (e.g., `"cumulative_current"`).}
-#'   \item{resistance_matrix}{A numeric matrix of pairwise effective
-#'     resistances.}
+#'   \item{current_map}{A [terra::SpatRaster] with a single layer:
+#'     \describe{
+#'       \item{cumulative_current}{Current flow summed across all pairs,
+#'         indicating the relative importance of each cell as a movement
+#'         corridor.}
+#'     }
+#'   }
+#'   \item{resistance_matrix}{A symmetric numeric matrix of pairwise effective
+#'     resistances between focal nodes, with node IDs as row and column names.}
 #' }
 #'
 #' @references

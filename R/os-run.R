@@ -34,13 +34,21 @@
 #'   there. Default `NULL` uses a temporary directory.
 #' @param verbose Logical. Print Omniscape output. Default `FALSE`.
 #'
-#' @return A [terra::SpatRaster] with named layers. Possible layers depending on
-#'   options:
+#' @return A [terra::SpatRaster] with the following layers (depending on
+#'   options):
 #' \describe{
-#'   \item{cumulative_current}{Cumulative current flow.}
-#'   \item{flow_potential}{Flow potential (if `calc_flow_potential = TRUE`).}
-#'   \item{normalized_current}{Normalized current flow (if
-#'     `calc_normalized_current = TRUE`).}
+#'   \item{cumulative_current}{Raw cumulative current flow. Always present.
+#'     Higher values indicate cells that carry more current across all
+#'     moving-window iterations.}
+#'   \item{flow_potential}{Expected current under homogeneous resistance
+#'     (if `calc_flow_potential = TRUE`). Reflects the spatial configuration
+#'     of sources independently of landscape resistance.}
+#'   \item{normalized_current}{Cumulative current divided by flow potential
+#'     (if `calc_normalized_current = TRUE`). Values greater than 1 indicate
+#'     cells where connectivity is higher than expected given the source
+#'     geometry; values less than 1 indicate relative barriers. This is
+#'     typically the most informative layer for identifying corridors and
+#'     pinch points.}
 #' }
 #'
 #' @references

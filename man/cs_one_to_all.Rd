@@ -36,12 +36,28 @@ automatically.}
 \item{verbose}{Logical. Print Circuitscape solver output. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster-class]{terra::SpatRaster} with named layers for each output map,
-including per-node current maps and a cumulative current map.
+A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
+\describe{
+\item{cumulative_current}{Current flow summed across all iterations.}
+\item{curmap_\emph{N}}{Per-node current map for focal node \emph{N}, where
+\emph{N} is the integer node ID from the \code{locations} raster. One layer
+per focal node.}
+}
 }
 \description{
-For each focal node, that node is the source and all others are grounds
-simultaneously. Computes effective resistance and current flow maps.
+For each focal node in turn, inject current at that node and ground all
+other focal nodes simultaneously.
+}
+\details{
+One-to-all mode iterates over each focal node. In each iteration, the focal
+node is injected with 1 amp of current and all remaining focal nodes are
+simultaneously connected to ground. This produces a current map showing how
+current spreads from that node through the landscape to reach the others.
+
+This mode is useful for mapping how well each site is connected to the rest
+of the focal node network, emphasizing current dispersal from each source.
+The cumulative map sums across all iterations and highlights cells that are
+important for connectivity across the full set of nodes.
 }
 \examples{
 \dontrun{

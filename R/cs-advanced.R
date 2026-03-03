@@ -1,13 +1,13 @@
 #' Advanced Circuitscape Analysis
 #'
-#' Advanced mode with user-specified source and ground layers. Unlike the other
-#' modes, there is no focal node concept — the user provides explicit source
-#' current strengths and ground conductances.
+#' Solve a single circuit with user-specified source and ground layers.
 #'
 #' @param resistance A [terra::SpatRaster] or file path. The resistance (or
 #'   conductance) surface.
-#' @param source A [terra::SpatRaster] or file path. Source current strengths.
-#' @param ground A [terra::SpatRaster] or file path. Ground conductances.
+#' @param source A [terra::SpatRaster] or file path. Source current strengths
+#'   (amps per cell). Cells with value 0 or NA are not sources.
+#' @param ground A [terra::SpatRaster] or file path. Ground conductances
+#'   (siemens per cell). Cells with value 0 or NA are not grounds.
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
@@ -18,9 +18,21 @@
 #'   there. Default `NULL` uses a temporary directory.
 #' @param verbose Logical. Print Circuitscape solver output. Default `FALSE`.
 #'
-#' @return A [terra::SpatRaster] with named layers. Always includes
-#'   `"cumulative_current"`. If `write_voltage = TRUE`, also includes
-#'   `"voltage"`.
+#' @details
+#' Unlike the other Circuitscape modes, advanced mode does not iterate over
+#' focal nodes. Instead, the user provides explicit source current and ground
+#' conductance rasters, and a single circuit is solved. This gives full control
+#' over the current injection pattern and is useful for modeling specific
+#' scenarios such as directional movement between a defined source area and
+#' destination.
+#'
+#' @return A [terra::SpatRaster] with the following layers:
+#' \describe{
+#'   \item{cumulative_current}{Current density at each cell.}
+#'   \item{voltage}{Voltage at each cell (only if `write_voltage = TRUE`).
+#'     Voltage is analogous to movement probability and decreases with
+#'     distance from sources.}
+#' }
 #'
 #' @references
 #' Circuitscape user guide:
