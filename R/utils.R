@@ -92,23 +92,3 @@ read_resistance_matrix <- function(dir, prefix) {
   # one-to-all and all-to-one modes don't produce resistance files
   NULL
 }
-
-
-#' Suppress Julia Output
-#'
-#' Wraps a Julia call to suppress stdout/stderr when verbose = FALSE.
-#'
-#' @param expr Expression to evaluate.
-#' @param verbose Logical.
-#' @return Result of `expr`.
-#' @noRd
-run_julia_quiet <- function(expr, verbose = FALSE) {
-  if (verbose) {
-    expr
-  } else {
-    suppressMessages(utils::capture.output(expr, type = "output"))
-    # Re-run to get the actual return value
-    # (capture.output returns the printed output, not the value)
-    invisible(NULL)
-  }
-}
