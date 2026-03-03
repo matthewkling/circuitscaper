@@ -29,10 +29,20 @@ cs_one_to_all(
 
 - locations:
 
-  A
-  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Focal nodes raster with positive integer IDs identifying
-  each node. Cells with value 0 or `NA` are not treated as focal nodes.
+  Focal node locations, provided as any of:
+
+  - A
+    [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
+    with positive integer IDs identifying each node. Cells with value 0
+    or `NA` are not treated as focal nodes.
+
+  - A file path to a raster file (e.g., `.tif`, `.asc`).
+
+  - A two-column matrix or data.frame of x/y coordinates. Each row
+    becomes a focal node, auto-assigned IDs 1, 2, 3, ... in row order.
+    Coordinates are snapped to the nearest cell of the `resistance`
+    raster (which must be a SpatRaster in this case). See
+    [`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md).
 
 - resistance_is:
 

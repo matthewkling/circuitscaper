@@ -111,7 +111,9 @@ wall-to-wall connectivity mapping.</p>
 <h2 id="circuitscape-pairwise-mode">Circuitscape: Pairwise Mode<a class="anchor" aria-label="anchor" href="#circuitscape-pairwise-mode"></a>
 </h2>
 <p>The most common Circuitscape analysis computes effective resistance
-and cumulative current flow between all pairs of focal nodes.</p>
+and cumulative current flow between all pairs of focal nodes. You can
+provide focal nodes as coordinates (a matrix or data.frame of x/y
+values) or as a raster with integer IDs.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
@@ -119,10 +121,14 @@ and cumulative current flow between all pairs of focal nodes.</p>
 <span><span class="co"># Resistance surface (higher values = harder to traverse)</span></span>
 <span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/resistance.tif"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Focal nodes (integer IDs; cells with 0 or NA are not nodes)</span></span>
-<span><span class="va">locations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/focal_nodes.tif"</span><span class="op">)</span></span>
+<span><span class="co"># Option 1: Focal nodes as coordinates (simplest)</span></span>
+<span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">120.5</span>, <span class="fl">37.2</span>,</span>
+<span>                    <span class="op">-</span><span class="fl">119.8</span>, <span class="fl">36.9</span>,</span>
+<span>                    <span class="op">-</span><span class="fl">121.1</span>, <span class="fl">37.8</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Run pairwise analysis</span></span>
+<span><span class="co"># Option 2: Focal nodes as a raster (integer IDs; 0 and NA are not nodes)</span></span>
+<span><span class="va">locations</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/focal_nodes.tif"</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Current flow map</span></span>

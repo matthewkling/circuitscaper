@@ -8,6 +8,8 @@
   : All-to-One Circuitscape Analysis
 - [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
   : Install Julia and Required Packages
+- [`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md)
+  : Create a Focal Node Raster from Coordinates
 - [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
   : One-to-All Circuitscape Analysis
 - [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
