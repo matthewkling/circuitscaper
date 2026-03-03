@@ -10,6 +10,9 @@ cs_advanced(
   source,
   ground,
   resistance_is = "resistances",
+  ground_is = "resistances",
+  use_unit_currents = FALSE,
+  use_direct_grounds = FALSE,
   four_neighbors = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
@@ -37,13 +40,30 @@ cs_advanced(
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Ground conductances (siemens per cell). Cells with value
-  0 or NA are not grounds.
+  or file path. Ground node values. Interpretation depends on
+  `ground_is`: resistances to ground (default) or conductances to
+  ground. Cells with value 0 or NA are not grounds.
 
 - resistance_is:
 
   Character. Whether the resistance surface represents `"resistances"`
   (default) or `"conductances"`.
+
+- ground_is:
+
+  Character. Whether the ground raster values represent `"resistances"`
+  (default) or `"conductances"` to ground.
+
+- use_unit_currents:
+
+  Logical. If `TRUE`, all current sources are set to 1 amp regardless of
+  the values in the source raster. Default `FALSE`.
+
+- use_direct_grounds:
+
+  Logical. If `TRUE`, all ground nodes are tied directly to ground (zero
+  resistance), regardless of the values in the ground raster. Default
+  `FALSE`.
 
 - four_neighbors:
 

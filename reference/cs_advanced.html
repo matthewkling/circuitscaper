@@ -47,6 +47,9 @@
 <span>  <span class="va">source</span>,</span>
 <span>  <span class="va">ground</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
+<span>  ground_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
+<span>  use_unit_currents <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  use_direct_grounds <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  four_neighbors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  solver <span class="op">=</span> <span class="st">"cg+amg"</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -70,13 +73,30 @@ movement.</p></dd>
 
 
 <dt id="arg-ground">ground<a class="anchor" aria-label="anchor" href="#arg-ground"></a></dt>
-<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Ground conductances
-(siemens per cell). Cells with value 0 or NA are not grounds.</p></dd>
+<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Ground node values.
+Interpretation depends on <code>ground_is</code>: resistances to ground (default)
+or conductances to ground. Cells with value 0 or NA are not grounds.</p></dd>
 
 
 <dt id="arg-resistance-is">resistance_is<a class="anchor" aria-label="anchor" href="#arg-resistance-is"></a></dt>
 <dd><p>Character. Whether the resistance surface represents
 <code>"resistances"</code> (default) or <code>"conductances"</code>.</p></dd>
+
+
+<dt id="arg-ground-is">ground_is<a class="anchor" aria-label="anchor" href="#arg-ground-is"></a></dt>
+<dd><p>Character. Whether the ground raster values represent
+<code>"resistances"</code> (default) or <code>"conductances"</code> to ground.</p></dd>
+
+
+<dt id="arg-use-unit-currents">use_unit_currents<a class="anchor" aria-label="anchor" href="#arg-use-unit-currents"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, all current sources are set to
+1 amp regardless of the values in the source raster. Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-use-direct-grounds">use_direct_grounds<a class="anchor" aria-label="anchor" href="#arg-use-direct-grounds"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, all ground nodes are tied
+directly to ground (zero resistance), regardless of the values in the
+ground raster. Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-four-neighbors">four_neighbors<a class="anchor" aria-label="anchor" href="#arg-four-neighbors"></a></dt>
