@@ -13,6 +13,8 @@ cs_advanced(
   ground_is = "resistances",
   use_unit_currents = FALSE,
   use_direct_grounds = FALSE,
+  short_circuit = NULL,
+  source_ground_conflict = "keepall",
   four_neighbors = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
@@ -64,6 +66,21 @@ cs_advanced(
   Logical. If `TRUE`, all ground nodes are tied directly to ground (zero
   resistance), regardless of the values in the ground raster. Default
   `FALSE`.
+
+- short_circuit:
+
+  Optional
+  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
+  or file path. Raster identifying short-circuit regions (aka polygons).
+  Cells sharing the same positive integer value are treated as
+  short-circuit regions with zero resistance between them. Default
+  `NULL` (no short-circuit regions).
+
+- source_ground_conflict:
+
+  Character. How to resolve cells that appear in both the source and
+  ground rasters: `"keepall"` (default, keep both), `"rmvsrc"` (remove
+  source), `"rmvgnd"` (remove ground), or `"rmvall"` (remove both).
 
 - four_neighbors:
 

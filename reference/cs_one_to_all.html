@@ -49,6 +49,8 @@ other focal nodes simultaneously.</p>
 <span>  <span class="va">locations</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
 <span>  four_neighbors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  short_circuit <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  included_pairs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  solver <span class="op">=</span> <span class="st">"cg+amg"</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -87,6 +89,19 @@ are snapped to the nearest cell of the <code>resistance</code> raster. See
 8-neighbor (queen). Default <code>FALSE</code>.</p></dd>
 
 
+<dt id="arg-short-circuit">short_circuit<a class="anchor" aria-label="anchor" href="#arg-short-circuit"></a></dt>
+<dd><p>Optional <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Raster
+identifying short-circuit regions (aka polygons). Cells sharing the same
+positive integer value are treated as short-circuit regions with zero
+resistance between them. Default <code>NULL</code> (no short-circuit regions).</p></dd>
+
+
+<dt id="arg-included-pairs">included_pairs<a class="anchor" aria-label="anchor" href="#arg-included-pairs"></a></dt>
+<dd><p>Optional character file path. A text file specifying
+which pairs of focal nodes to include or exclude from analysis. See the
+Circuitscape documentation for the file format. Default <code>NULL</code> (all pairs).</p></dd>
+
+
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>
 <dd><p>Character. Solver to use: <code>"cg+amg"</code> (default) or <code>"cholmod"</code>.</p></dd>
 
@@ -106,7 +121,7 @@ automatically.</p></dd>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with the following layers:</p><dl><dt>cumulative_current</dt>
 <dd><p>Current flow summed across all iterations.</p></dd>
 
-<dt>curmap_<em>N</em></dt>
+<dt>current_<em>N</em></dt>
 <dd><p>Per-node current map for focal node <em>N</em>, where
 <em>N</em> is the integer node ID from the <code>locations</code> raster. One layer
 per focal node.</p></dd>

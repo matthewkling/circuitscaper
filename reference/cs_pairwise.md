@@ -11,6 +11,8 @@ cs_pairwise(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  short_circuit = NULL,
+  included_pairs = NULL,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -53,6 +55,21 @@ cs_pairwise(
 
   Logical. Use 4-neighbor (rook) connectivity instead of 8-neighbor
   (queen). Default `FALSE`.
+
+- short_circuit:
+
+  Optional
+  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
+  or file path. Raster identifying short-circuit regions (aka polygons).
+  Cells sharing the same positive integer value are treated as
+  short-circuit regions with zero resistance between them. Default
+  `NULL` (no short-circuit regions).
+
+- included_pairs:
+
+  Optional character file path. A text file specifying which pairs of
+  focal nodes to include or exclude from analysis. See the Circuitscape
+  documentation for the file format. Default `NULL` (all pairs).
 
 - solver:
 
