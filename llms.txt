@@ -7,18 +7,23 @@ JuliaCall.
 
 ## Overview
 
-Circuitscape models landscape connectivity by treating the landscape as
-an electrical circuit. Each cell in a raster grid becomes a node in the
-circuit, and cells with lower resistance allow more “current”
-(representing movement probability or gene flow) to pass through. This
-approach captures not just the single best path between sites, but all
-possible pathways simultaneously, making it especially useful for
-identifying corridors and pinch points. Omniscape extends this by
-applying Circuitscape in a moving window across the landscape, producing
-wall-to-wall connectivity maps without requiring predefined focal sites.
+[Circuitscape](https://circuitscape.org) and
+[Omniscape](https://docs.circuitscape.org/Omniscape.jl/latest/) are
+open-source Julia packages for modeling landscape connectivity using
+circuit theory, developed by Brad McRae, Viral Shah, Ranjan
+Anantharaman, and collaborators. Circuitscape treats the landscape as an
+electrical circuit, where each raster cell is a node and cells with
+lower resistance allow more “current” (representing movement probability
+or gene flow) to pass through. This captures not just the single best
+path between sites, but all possible pathways simultaneously, making it
+especially useful for identifying corridors and pinch points. Omniscape
+extends this by applying Circuitscape in a moving window across the
+landscape, producing wall-to-wall connectivity maps without requiring
+predefined focal sites.
 
-circuitscaper provides a clean, R-native interface to both tools. Users
-work entirely in R with familiar
+**circuitscaper** is an independent R package (not affiliated with the
+Circuitscape development team) that provides a clean, R-native interface
+to both tools. Users work entirely in R with familiar
 [`terra::SpatRaster`](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 objects while Julia handles computation invisibly.
 
