@@ -124,22 +124,6 @@ result <- os_run(resistance, radius = 100,
                  parallelize = TRUE)
 ```
 
-## Comparing Scenarios
-
-Use
-[`os_compare()`](https://matthewkling.github.io/circuitscaper/reference/os_compare.md)
-to assess changes between two Omniscape runs (e.g., current vs. future
-climate).
-
-``` r
-baseline <- os_run(resistance_current, radius = 100, block_size = 5)
-future <- os_run(resistance_future, radius = 100, block_size = 5)
-
-comparison <- os_compare(baseline, future)
-plot(comparison[["difference"]])
-plot(comparison[["ratio"]])
-```
-
 ## Saving Outputs
 
 By default, intermediate files are written to a temporary directory and

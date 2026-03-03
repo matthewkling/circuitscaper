@@ -49,7 +49,6 @@ plot(result[["normalized_current"]])
 | [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)       | All-to-one connectivity analysis               |
 | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)           | Advanced mode with custom sources and grounds  |
 | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)                     | Omniscape moving-window connectivity           |
-| [`os_compare()`](https://matthewkling.github.io/circuitscaper/reference/os_compare.md)             | Compare two Omniscape runs                     |
 | [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)                 | Initialize Julia (called automatically)        |
 | [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md) | Install Julia and required packages            |
 
@@ -76,8 +75,6 @@ plot(result[["normalized_current"]])
   : Pairwise Circuitscape Analysis
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   : Set Up Julia and Load Circuitscape/Omniscape
-- [`os_compare()`](https://matthewkling.github.io/circuitscaper/reference/os_compare.md)
-  : Compare Two Omniscape Runs
 - [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
   : Run Omniscape Moving-Window Connectivity Analysis
 

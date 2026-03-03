@@ -129,7 +129,6 @@ Omniscape documentation:
 
 ## See also
 
-[`os_compare()`](https://matthewkling.github.io/circuitscaper/reference/os_compare.md),
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md),
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
 
