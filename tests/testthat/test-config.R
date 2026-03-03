@@ -105,6 +105,60 @@ test_that("build_cs_config handles conductances option", {
   expect_true(any(grepl("habitat_map_is_resistances = false", content)))
 })
 
+test_that("build_cs_config handles short-circuit regions", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    short_circuit_file = "/path/to/polygons.asc"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("use_polygons = true", content)))
+  expect_true(any(grepl("polygon_file = /path/to/polygons.asc", content)))
+})
+
+test_that("build_cs_config handles included pairs", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    included_pairs_file = "/path/to/pairs.txt"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("use_included_pairs = true", content)))
+  expect_true(any(grepl("included_pairs_file = /path/to/pairs.txt", content)))
+})
+
+test_that("build_cs_config handles source/ground conflict", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "advanced",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    source_file = "/path/to/source.asc",
+    ground_file = "/path/to/ground.asc",
+    source_ground_conflict = "rmvsrc"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("remove_src_or_gnd = rmvsrc", content)))
+})
+
 test_that("build_os_config creates valid INI", {
   tmp_dir <- tempfile("os_test_")
   dir.create(tmp_dir)

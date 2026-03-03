@@ -19,7 +19,7 @@
 #' @return A [terra::SpatRaster] with the following layers:
 #' \describe{
 #'   \item{cumulative_current}{Current flow summed across all iterations.}
-#'   \item{curmap_\emph{N}}{Per-node current map for focal node \emph{N}, where
+#'   \item{current_\emph{N}}{Per-node current map for focal node \emph{N}, where
 #'     \emph{N} is the integer node ID from the `locations` raster. One layer
 #'     per focal node.}
 #' }
@@ -44,6 +44,8 @@ cs_all_to_one <- function(resistance,
                           locations,
                           resistance_is = "resistances",
                           four_neighbors = FALSE,
+                          short_circuit = NULL,
+                          included_pairs = NULL,
                           solver = "cg+amg",
                           output_dir = NULL,
                           verbose = FALSE) {
@@ -53,6 +55,8 @@ cs_all_to_one <- function(resistance,
               locations = locations,
               resistance_is = resistance_is,
               four_neighbors = four_neighbors,
+              short_circuit = short_circuit,
+              included_pairs = included_pairs,
               solver = solver,
               output_dir = output_dir,
               verbose = verbose)

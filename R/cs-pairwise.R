@@ -19,6 +19,13 @@
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
+#' @param short_circuit Optional [terra::SpatRaster] or file path. Raster
+#'   identifying short-circuit regions (aka polygons). Cells sharing the same
+#'   positive integer value are treated as short-circuit regions with zero
+#'   resistance between them. Default `NULL` (no short-circuit regions).
+#' @param included_pairs Optional character file path. A text file specifying
+#'   which pairs of focal nodes to include or exclude from analysis. See the
+#'   Circuitscape documentation for the file format. Default `NULL` (all pairs).
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory that is cleaned up
@@ -71,6 +78,8 @@ cs_pairwise <- function(resistance,
                         locations,
                         resistance_is = "resistances",
                         four_neighbors = FALSE,
+                        short_circuit = NULL,
+                        included_pairs = NULL,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -80,6 +89,8 @@ cs_pairwise <- function(resistance,
               locations = locations,
               resistance_is = resistance_is,
               four_neighbors = four_neighbors,
+              short_circuit = short_circuit,
+              included_pairs = included_pairs,
               solver = solver,
               output_dir = output_dir,
               verbose = verbose)
@@ -91,7 +102,7 @@ cs_pairwise <- function(resistance,
 #' Internal workhorse for pairwise, one-to-all, and all-to-one modes.
 #'
 #' @param mode Character. The Circuitscape scenario.
-#' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose
+#' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose,short_circuit,included_pairs
 #'   See [cs_pairwise()] for details.
 #' @return For pairwise mode, a named list with `$current_map` and
 #'   `$resistance_matrix`. For one-to-all and all-to-one, just the SpatRaster.
@@ -101,6 +112,8 @@ run_cs_mode <- function(mode,
                         locations,
                         resistance_is = "resistances",
                         four_neighbors = FALSE,
+                        short_circuit = NULL,
+                        included_pairs = NULL,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -135,6 +148,16 @@ run_cs_mode <- function(mode,
   res_path <- ensure_asc(resistance, work_dir, "resistance")
   loc_path <- ensure_asc(locations, work_dir, "locations")
 
+  sc_path <- NULL
+  if (!is.null(short_circuit)) {
+    if (inherits(resistance, "SpatRaster") &&
+        inherits(short_circuit, "SpatRaster")) {
+      validate_raster_match(resistance, short_circuit,
+                            "resistance", "short_circuit")
+    }
+    sc_path <- ensure_asc(short_circuit, work_dir, "short_circuit")
+  }
+
   # Build INI configuration
   prefix <- "cs_output"
   ini_path <- build_cs_config(
@@ -145,6 +168,8 @@ run_cs_mode <- function(mode,
     locations_file = loc_path,
     resistance_is = resistance_is,
     four_neighbors = four_neighbors,
+    short_circuit_file = sc_path,
+    included_pairs_file = included_pairs,
     solver = solver
   )
 

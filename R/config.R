@@ -14,6 +14,9 @@
 #' @param ground_is Character. "resistances" or "conductances" (advanced mode).
 #' @param use_unit_currents Logical. Set all sources to 1 amp (advanced mode).
 #' @param use_direct_grounds Logical. Tie grounds directly to ground (advanced mode).
+#' @param short_circuit_file Character or NULL. Path to short-circuit region raster.
+#' @param included_pairs_file Character or NULL. Path to included pairs file.
+#' @param source_ground_conflict Character. How to handle source/ground overlap (advanced mode).
 #' @param four_neighbors Logical. Use 4-neighbor connectivity.
 #' @param solver Character. Solver type.
 #' @param write_voltage Logical. Write voltage maps (advanced mode).
@@ -31,6 +34,9 @@ build_cs_config <- function(mode,
                             ground_is = "resistances",
                             use_unit_currents = FALSE,
                             use_direct_grounds = FALSE,
+                            short_circuit_file = NULL,
+                            included_pairs_file = NULL,
+                            source_ground_conflict = "keepall",
                             four_neighbors = FALSE,
                             solver = "cg+amg",
                             write_voltage = FALSE) {
@@ -62,10 +68,17 @@ build_cs_config <- function(mode,
     connect_using_avg_resistances = "false"
   )
 
-  # Short-circuit regions (default off)
-  config[["Short circuit regions (aka polygons)"]] <- list(
-    use_polygons = "false"
-  )
+  # Short-circuit regions
+  if (!is.null(short_circuit_file)) {
+    config[["Short circuit regions (aka polygons)"]] <- list(
+      use_polygons = "true",
+      polygon_file = short_circuit_file
+    )
+  } else {
+    config[["Short circuit regions (aka polygons)"]] <- list(
+      use_polygons = "false"
+    )
+  }
 
   # Options
   config[["Options for advanced mode"]] <- list(
@@ -73,17 +86,22 @@ build_cs_config <- function(mode,
     source_file = if (!is.null(source_file)) source_file else "",
     ground_file = if (!is.null(ground_file)) ground_file else "",
     use_unit_currents = if (use_unit_currents) "true" else "false",
-    use_direct_grounds = if (use_direct_grounds) "true" else "false"
+    use_direct_grounds = if (use_direct_grounds) "true" else "false",
+    remove_src_or_gnd = source_ground_conflict
   )
 
   config[["Calculation options"]] <- list(
     solver = solver
   )
 
-  config[["Options for pairwise and one-to-all and all-to-one modes"]] <- list(
+  pairs_opts <- list(
     point_file = if (!is.null(locations_file)) locations_file else "",
-    use_included_pairs = "false"
+    use_included_pairs = if (!is.null(included_pairs_file)) "true" else "false"
   )
+  if (!is.null(included_pairs_file)) {
+    pairs_opts$included_pairs_file <- included_pairs_file
+  }
+  config[["Options for pairwise and one-to-all and all-to-one modes"]] <- pairs_opts
 
   # Output options
   config[["Output options"]] <- list(

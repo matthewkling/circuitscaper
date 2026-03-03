@@ -12,6 +12,8 @@ cs_advanced(
   ground_is = "resistances",
   use_unit_currents = FALSE,
   use_direct_grounds = FALSE,
+  short_circuit = NULL,
+  source_ground_conflict = "keepall",
   four_neighbors = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
@@ -42,6 +44,16 @@ or conductances to ground. Cells with value 0 or NA are not grounds.}
 \item{use_direct_grounds}{Logical. If \code{TRUE}, all ground nodes are tied
 directly to ground (zero resistance), regardless of the values in the
 ground raster. Default \code{FALSE}.}
+
+\item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
+identifying short-circuit regions (aka polygons). Cells sharing the same
+positive integer value are treated as short-circuit regions with zero
+resistance between them. Default \code{NULL} (no short-circuit regions).}
+
+\item{source_ground_conflict}{Character. How to resolve cells that appear in
+both the source and ground rasters: \code{"keepall"} (default, keep both),
+\code{"rmvsrc"} (remove source), \code{"rmvgnd"} (remove ground), or \code{"rmvall"}
+(remove both).}
 
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}

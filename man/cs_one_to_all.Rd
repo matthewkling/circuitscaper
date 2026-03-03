@@ -9,6 +9,8 @@ cs_one_to_all(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  short_circuit = NULL,
+  included_pairs = NULL,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -37,6 +39,15 @@ are snapped to the nearest cell of the \code{resistance} raster. See
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}
 
+\item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
+identifying short-circuit regions (aka polygons). Cells sharing the same
+positive integer value are treated as short-circuit regions with zero
+resistance between them. Default \code{NULL} (no short-circuit regions).}
+
+\item{included_pairs}{Optional character file path. A text file specifying
+which pairs of focal nodes to include or exclude from analysis. See the
+Circuitscape documentation for the file format. Default \code{NULL} (all pairs).}
+
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 
 \item{output_dir}{Optional character path. If provided, output files persist
@@ -49,7 +60,7 @@ automatically.}
 A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
 \describe{
 \item{cumulative_current}{Current flow summed across all iterations.}
-\item{curmap_\emph{N}}{Per-node current map for focal node \emph{N}, where
+\item{current_\emph{N}}{Per-node current map for focal node \emph{N}, where
 \emph{N} is the integer node ID from the \code{locations} raster. One layer
 per focal node.}
 }

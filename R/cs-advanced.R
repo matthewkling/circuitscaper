@@ -19,6 +19,14 @@
 #' @param use_direct_grounds Logical. If `TRUE`, all ground nodes are tied
 #'   directly to ground (zero resistance), regardless of the values in the
 #'   ground raster. Default `FALSE`.
+#' @param short_circuit Optional [terra::SpatRaster] or file path. Raster
+#'   identifying short-circuit regions (aka polygons). Cells sharing the same
+#'   positive integer value are treated as short-circuit regions with zero
+#'   resistance between them. Default `NULL` (no short-circuit regions).
+#' @param source_ground_conflict Character. How to resolve cells that appear in
+#'   both the source and ground rasters: `"keepall"` (default, keep both),
+#'   `"rmvsrc"` (remove source), `"rmvgnd"` (remove ground), or `"rmvall"`
+#'   (remove both).
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
@@ -68,6 +76,8 @@ cs_advanced <- function(resistance,
                         ground_is = "resistances",
                         use_unit_currents = FALSE,
                         use_direct_grounds = FALSE,
+                        short_circuit = NULL,
+                        source_ground_conflict = "keepall",
                         four_neighbors = FALSE,
                         solver = "cg+amg",
                         output_dir = NULL,
@@ -78,6 +88,8 @@ cs_advanced <- function(resistance,
   # Validate arguments
   match.arg(resistance_is, c("resistances", "conductances"))
   match.arg(ground_is, c("resistances", "conductances"))
+  match.arg(source_ground_conflict,
+            c("keepall", "rmvsrc", "rmvgnd", "rmvall"))
   match.arg(solver, c("cg+amg", "cholmod"))
   validate_resistance_values(resistance, resistance_is)
 
@@ -103,6 +115,16 @@ cs_advanced <- function(resistance,
   src_path <- ensure_asc(source, work_dir, "source")
   gnd_path <- ensure_asc(ground, work_dir, "ground")
 
+  sc_path <- NULL
+  if (!is.null(short_circuit)) {
+    if (inherits(resistance, "SpatRaster") &&
+        inherits(short_circuit, "SpatRaster")) {
+      validate_raster_match(resistance, short_circuit,
+                            "resistance", "short_circuit")
+    }
+    sc_path <- ensure_asc(short_circuit, work_dir, "short_circuit")
+  }
+
   # Build INI configuration
   prefix <- "cs_output"
   ini_path <- build_cs_config(
@@ -116,6 +138,8 @@ cs_advanced <- function(resistance,
     ground_is = ground_is,
     use_unit_currents = use_unit_currents,
     use_direct_grounds = use_direct_grounds,
+    short_circuit_file = sc_path,
+    source_ground_conflict = source_ground_conflict,
     four_neighbors = four_neighbors,
     solver = solver,
     write_voltage = TRUE
