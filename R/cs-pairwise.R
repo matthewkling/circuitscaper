@@ -69,7 +69,8 @@ cs_pairwise <- function(resistance,
 #' @param mode Character. The Circuitscape scenario.
 #' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose
 #'   See [cs_pairwise()] for details.
-#' @return Named list with `$current_map` and `$resistance_matrix`.
+#' @return For pairwise mode, a named list with `$current_map` and
+#'   `$resistance_matrix`. For one-to-all and all-to-one, just the SpatRaster.
 #' @noRd
 run_cs_mode <- function(mode,
                         resistance,
@@ -130,10 +131,14 @@ run_cs_mode <- function(mode,
 
   # Parse outputs
   current_map <- parse_cs_output(work_dir, prefix, input_crs)
-  resistance_matrix <- read_resistance_matrix(work_dir, prefix)
 
-  list(
-    current_map = current_map,
-    resistance_matrix = resistance_matrix
-  )
+  if (mode == "pairwise") {
+    resistance_matrix <- read_resistance_matrix(work_dir, prefix)
+    list(
+      current_map = current_map,
+      resistance_matrix = resistance_matrix
+    )
+  } else {
+    current_map
+  }
 }

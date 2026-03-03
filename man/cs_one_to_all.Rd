@@ -36,12 +36,8 @@ automatically.}
 \item{verbose}{Logical. Print Circuitscape solver output. Default \code{FALSE}.}
 }
 \value{
-A named list with:
-\describe{
-\item{current_map}{A \link[terra:SpatRaster-class]{terra::SpatRaster} with named layers for each output
-map.}
-\item{resistance_matrix}{A numeric matrix of effective resistances.}
-}
+A \link[terra:SpatRaster-class]{terra::SpatRaster} with named layers for each output map,
+including per-node current maps and a cumulative current map.
 }
 \description{
 For each focal node, that node is the source and all others are grounds
@@ -54,7 +50,7 @@ res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
 locs <- rast(nrows = 10, ncols = 10, vals = 0)
 locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
 result <- cs_one_to_all(res, locs)
-plot(result$current_map)
+plot(result)
 }
 
 }

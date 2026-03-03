@@ -29,8 +29,8 @@ test_that("cs_one_to_all runs end-to-end", {
 
   result <- cs_one_to_all(res, locs, verbose = FALSE)
 
-  expect_type(result, "list")
-  expect_s4_class(result$current_map, "SpatRaster")
+  expect_s4_class(result, "SpatRaster")
+  expect_true(terra::nlyr(result) >= 2)
 })
 
 test_that("cs_all_to_one runs end-to-end", {
@@ -44,8 +44,8 @@ test_that("cs_all_to_one runs end-to-end", {
 
   result <- cs_all_to_one(res, locs, verbose = FALSE)
 
-  expect_type(result, "list")
-  expect_s4_class(result$current_map, "SpatRaster")
+  expect_s4_class(result, "SpatRaster")
+  expect_true(terra::nlyr(result) >= 2)
 })
 
 test_that("cs_advanced runs end-to-end", {

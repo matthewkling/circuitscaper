@@ -5,12 +5,8 @@
 #'
 #' @inheritParams cs_pairwise
 #'
-#' @return A named list with:
-#' \describe{
-#'   \item{current_map}{A [terra::SpatRaster] with named layers for each output
-#'     map.}
-#'   \item{resistance_matrix}{A numeric matrix of effective resistances.}
-#' }
+#' @return A [terra::SpatRaster] with named layers for each output map,
+#'   including per-node current maps and a cumulative current map.
 #'
 #' @references
 #' Circuitscape user guide:
@@ -25,7 +21,7 @@
 #' locs <- rast(nrows = 10, ncols = 10, vals = 0)
 #' locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
 #' result <- cs_all_to_one(res, locs)
-#' plot(result$current_map)
+#' plot(result)
 #' }
 #'
 #' @export
