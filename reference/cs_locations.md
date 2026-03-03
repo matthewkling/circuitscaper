@@ -27,8 +27,8 @@ cs_locations(coords, resistance)
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  used as a template for extent, resolution, and CRS. The output raster
-  will match this exactly.
+  or file path to a raster, used as a template for extent, resolution,
+  and CRS. The output raster will match this exactly.
 
 ## Value
 

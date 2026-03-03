@@ -41,7 +41,7 @@ cs_pairwise(
   - A two-column matrix or data.frame of x/y coordinates. Each row
     becomes a focal node, auto-assigned IDs 1, 2, 3, ... in row order.
     Coordinates are snapped to the nearest cell of the `resistance`
-    raster (which must be a SpatRaster in this case). See
+    raster. See
     [`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md).
 
 - resistance_is:
@@ -120,9 +120,8 @@ Circuitscape user guide:
 if (FALSE) { # \dontrun{
 library(terra)
 res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-locs <- rast(nrows = 10, ncols = 10, vals = 0)
-locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
-result <- cs_pairwise(res, locs)
+coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+result <- cs_pairwise(res, coords)
 plot(result$current_map)
 result$resistance_matrix
 } # }
