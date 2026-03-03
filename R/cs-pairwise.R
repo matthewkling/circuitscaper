@@ -13,8 +13,8 @@
 #'   * A file path to a raster file (e.g., `.tif`, `.asc`).
 #'   * A two-column matrix or data.frame of x/y coordinates. Each row becomes
 #'     a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
-#'     are snapped to the nearest cell of the `resistance` raster (which must
-#'     be a SpatRaster in this case). See [cs_locations()].
+#'     are snapped to the nearest cell of the `resistance` raster. See
+#'     [cs_locations()].
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
@@ -60,9 +60,8 @@
 #' \dontrun{
 #' library(terra)
 #' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-#' locs <- rast(nrows = 10, ncols = 10, vals = 0)
-#' locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
-#' result <- cs_pairwise(res, locs)
+#' coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+#' result <- cs_pairwise(res, coords)
 #' plot(result$current_map)
 #' result$resistance_matrix
 #' }
@@ -123,10 +122,6 @@ run_cs_mode <- function(mode,
 
   # Convert coordinate input to raster
   if (is.matrix(locations) || is.data.frame(locations)) {
-    if (!inherits(resistance, "SpatRaster")) {
-      stop("`resistance` must be a SpatRaster when `locations` is coordinates.",
-           call. = FALSE)
-    }
     locations <- cs_locations(locations, resistance)
   }
 

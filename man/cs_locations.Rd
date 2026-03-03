@@ -11,8 +11,9 @@ cs_locations(coords, resistance)
 Each row represents one focal node. IDs are assigned sequentially
 (1, 2, 3, ...) based on row order.}
 
-\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} used as a template for extent,
-resolution, and CRS. The output raster will match this exactly.}
+\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path to a raster, used as a
+template for extent, resolution, and CRS. The output raster will match
+this exactly.}
 }
 \value{
 A \link[terra:SpatRaster-class]{terra::SpatRaster} with 0 background and positive integer IDs at

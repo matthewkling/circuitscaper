@@ -8,8 +8,9 @@
 #' @param coords A two-column matrix or data.frame of x and y coordinates.
 #'   Each row represents one focal node. IDs are assigned sequentially
 #'   (1, 2, 3, ...) based on row order.
-#' @param resistance A [terra::SpatRaster] used as a template for extent,
-#'   resolution, and CRS. The output raster will match this exactly.
+#' @param resistance A [terra::SpatRaster] or file path to a raster, used as a
+#'   template for extent, resolution, and CRS. The output raster will match
+#'   this exactly.
 #'
 #' @return A [terra::SpatRaster] with 0 background and positive integer IDs at
 #'   the cells nearest each coordinate. This can be passed directly to the
@@ -44,8 +45,17 @@
 #'
 #' @export
 cs_locations <- function(coords, resistance) {
+  # Load from file if needed
+  if (is.character(resistance)) {
+    if (!file.exists(resistance)) {
+      stop("File not found: ", resistance, call. = FALSE)
+    }
+    resistance <- terra::rast(resistance)
+  }
+
   if (!inherits(resistance, "SpatRaster")) {
-    stop("`resistance` must be a SpatRaster.", call. = FALSE)
+    stop("`resistance` must be a SpatRaster or file path to a raster.",
+         call. = FALSE)
   }
 
   # Coerce to matrix

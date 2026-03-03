@@ -34,9 +34,8 @@
 #' \dontrun{
 #' library(terra)
 #' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-#' locs <- rast(nrows = 10, ncols = 10, vals = 0)
-#' locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
-#' result <- cs_one_to_all(res, locs)
+#' coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+#' result <- cs_one_to_all(res, coords)
 #' plot(result)
 #' }
 #'

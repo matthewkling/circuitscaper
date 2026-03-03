@@ -27,8 +27,8 @@ Cells with value 0 or \code{NA} are not treated as focal nodes.
 \item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
 \item A two-column matrix or data.frame of x/y coordinates. Each row becomes
 a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
-are snapped to the nearest cell of the \code{resistance} raster (which must
-be a SpatRaster in this case). See \code{\link[=cs_locations]{cs_locations()}}.
+are snapped to the nearest cell of the \code{resistance} raster. See
+\code{\link[=cs_locations]{cs_locations()}}.
 }}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
@@ -73,9 +73,8 @@ important for connectivity across the full set of nodes.
 \dontrun{
 library(terra)
 res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-locs <- rast(nrows = 10, ncols = 10, vals = 0)
-locs[1, 1] <- 1; locs[1, 10] <- 2; locs[10, 5] <- 3
-result <- cs_one_to_all(res, locs)
+coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+result <- cs_one_to_all(res, coords)
 plot(result)
 }
 
