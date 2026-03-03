@@ -1,5 +1,9 @@
 # circuitscaper
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
 R interface to [Circuitscape.jl](https://github.com/Circuitscape/Circuitscape.jl) and [Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl) via JuliaCall.
 
 ## Overview
