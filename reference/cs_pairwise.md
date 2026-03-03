@@ -15,6 +15,7 @@ cs_pairwise(
   included_pairs = NULL,
   write_voltage = FALSE,
   cumulative_only = TRUE,
+  source_strengths = NULL,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -85,6 +86,19 @@ cs_pairwise(
   returned. If `FALSE`, per-iteration current layers (named `current_1`,
   `current_2`, ...) are also included. Use with caution for large
   numbers of focal nodes, as this can produce many layers.
+
+- source_strengths:
+
+  Optional. Variable current injection strengths for each focal node.
+  Can be:
+
+  - A numeric vector with one value per focal node (in the same order as
+    the locations input). Node IDs are assigned 1, 2, 3, ... matching
+    the order.
+
+  - A character file path to a tab-delimited text file with two columns:
+    node ID and strength in amps. Nodes not listed default to 1 amp.
+    Default `NULL` (all nodes inject 1 amp).
 
 - solver:
 

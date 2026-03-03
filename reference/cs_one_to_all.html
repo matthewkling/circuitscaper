@@ -53,6 +53,7 @@ other focal nodes simultaneously.</p>
 <span>  included_pairs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  write_voltage <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cumulative_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  source_strengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  solver <span class="op">=</span> <span class="st">"cg+amg"</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -115,6 +116,16 @@ are included in the output raster.</p></dd>
 current map is returned. If <code>FALSE</code>, per-iteration current layers (named
 <code>current_1</code>, <code>current_2</code>, ...) are also included. Use with caution for
 large numbers of focal nodes, as this can produce many layers.</p></dd>
+
+
+<dt id="arg-source-strengths">source_strengths<a class="anchor" aria-label="anchor" href="#arg-source-strengths"></a></dt>
+<dd><p>Optional. Variable current injection strengths for
+each focal node. Can be:</p><ul><li><p>A numeric vector with one value per focal node (in the same order as the
+locations input). Node IDs are assigned 1, 2, 3, ... matching the order.</p></li>
+<li><p>A character file path to a tab-delimited text file with two columns:
+node ID and strength in amps. Nodes not listed default to 1 amp.
+Default <code>NULL</code> (all nodes inject 1 amp).</p></li>
+</ul></dd>
 
 
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>
