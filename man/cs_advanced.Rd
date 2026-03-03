@@ -17,7 +17,8 @@ cs_advanced(
 }
 \arguments{
 \item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
-conductance) surface.}
+conductance) surface. Higher values represent greater resistance to
+movement.}
 
 \item{source}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Source current strengths
 (amps per cell). Cells with value 0 or NA are not sources.}

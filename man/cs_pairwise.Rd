@@ -16,10 +16,13 @@ cs_pairwise(
 }
 \arguments{
 \item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
-conductance) surface.}
+conductance) surface. Higher values represent greater resistance to
+movement. Use the \code{resistance_is} argument if your surface represents
+conductances instead.}
 
-\item{locations}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Focal nodes/regions
-raster with integer IDs.}
+\item{locations}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Focal nodes raster
+with positive integer IDs identifying each node. Cells with value 0 or
+\code{NA} are not treated as focal nodes.}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
 \code{"resistances"} (default) or \code{"conductances"}.}

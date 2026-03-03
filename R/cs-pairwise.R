@@ -4,9 +4,12 @@
 #' all pairs of focal nodes.
 #'
 #' @param resistance A [terra::SpatRaster] or file path. The resistance (or
-#'   conductance) surface.
-#' @param locations A [terra::SpatRaster] or file path. Focal nodes/regions
-#'   raster with integer IDs.
+#'   conductance) surface. Higher values represent greater resistance to
+#'   movement. Use the `resistance_is` argument if your surface represents
+#'   conductances instead.
+#' @param locations A [terra::SpatRaster] or file path. Focal nodes raster
+#'   with positive integer IDs identifying each node. Cells with value 0 or
+#'   `NA` are not treated as focal nodes.
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of

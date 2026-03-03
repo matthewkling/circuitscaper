@@ -128,6 +128,7 @@ build_os_config <- function(resistance_file,
                             source_file = NULL,
                             block_size = 1L,
                             source_threshold = 0,
+                            r_cutoff = Inf,
                             resistance_is = "resistances",
                             calc_normalized_current = TRUE,
                             calc_flow_potential = TRUE,
@@ -167,6 +168,9 @@ build_os_config <- function(resistance_file,
     config[["General options"]]$source_from_resistance <- "false"
   } else {
     config[["General options"]]$source_from_resistance <- "true"
+    if (is.finite(r_cutoff)) {
+      config[["General options"]]$r_cutoff <- r_cutoff
+    }
   }
 
   # Conditional connectivity

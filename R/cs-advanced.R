@@ -3,7 +3,8 @@
 #' Solve a single circuit with user-specified source and ground layers.
 #'
 #' @param resistance A [terra::SpatRaster] or file path. The resistance (or
-#'   conductance) surface.
+#'   conductance) surface. Higher values represent greater resistance to
+#'   movement.
 #' @param source A [terra::SpatRaster] or file path. Source current strengths
 #'   (amps per cell). Cells with value 0 or NA are not sources.
 #' @param ground A [terra::SpatRaster] or file path. Ground conductances

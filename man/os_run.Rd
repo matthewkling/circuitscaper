@@ -10,6 +10,7 @@ os_run(
   source_strength = NULL,
   block_size = 1L,
   source_threshold = 0,
+  r_cutoff = Inf,
   resistance_is = "resistances",
   calc_normalized_current = TRUE,
   calc_flow_potential = TRUE,
@@ -24,19 +25,32 @@ os_run(
 }
 \arguments{
 \item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
-conductance) surface.}
+conductance) surface. Higher values represent greater resistance to
+movement.}
 
-\item{radius}{Numeric. Moving window radius in pixels.}
+\item{radius}{Numeric. Moving window radius in pixels. This determines the
+maximum distance over which connectivity is evaluated from each source
+pixel.}
 
 \item{source_strength}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Source
-strength weights. If \code{NULL} (default), all non-nodata pixels are treated as
-sources with equal weight.}
+strength weights, often derived from habitat quality or suitability, where
+higher values indicate stronger sources of movement. If \code{NULL} (default),
+source strength is set to the inverse of resistance (i.e., all non-nodata
+pixels become sources, weighted by conductance). Use \code{r_cutoff} to exclude
+high-resistance cells from acting as sources in that case.}
 
 \item{block_size}{Integer. Aggregation block size for source points. Default
-\code{1} (no aggregation). Increasing this significantly speeds computation.}
+\code{1} (no aggregation). A \code{block_size} of e.g. 3 coarsens the source grid
+into 3x3 blocks, reducing the number of solves (and thus computation time)
+substantially with typically negligible effects on results.}
 
 \item{source_threshold}{Numeric. Minimum source strength to include a pixel.
 Default \code{0}.}
+
+\item{r_cutoff}{Numeric. Maximum resistance value for a cell to be included
+as a source when \code{source_strength = NULL}. Cells with resistance above
+this value are excluded as sources. Default \code{Inf} (no cutoff). Only
+relevant when \code{source_strength} is not provided.}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
 \code{"resistances"} (default) or \code{"conductances"}.}
