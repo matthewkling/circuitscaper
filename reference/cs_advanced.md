@@ -12,7 +12,6 @@ cs_advanced(
   resistance_is = "resistances",
   four_neighbors = FALSE,
   solver = "cg+amg",
-  write_voltage = FALSE,
   output_dir = NULL,
   verbose = FALSE
 )
@@ -54,10 +53,6 @@ cs_advanced(
 
   Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 
-- write_voltage:
-
-  Logical. Also compute voltage maps. Default `FALSE`.
-
 - output_dir:
 
   Optional character path. If provided, output files persist there.
@@ -79,9 +74,8 @@ with the following layers:
 
 - voltage:
 
-  Voltage at each cell (only if `write_voltage = TRUE`). Voltage is
-  analogous to movement probability and decreases with distance from
-  sources.
+  Voltage at each cell. Voltage is analogous to movement probability and
+  decreases with distance from sources.
 
 ## Details
 
@@ -116,9 +110,6 @@ gnd <- rast(nrows = 10, ncols = 10, vals = 0)
 gnd[10, 10] <- 1
 result <- cs_advanced(res, src, gnd)
 plot(result)
-
-# With voltage maps
-result_v <- cs_advanced(res, src, gnd, write_voltage = TRUE)
-plot(result_v[["voltage"]])
+plot(result[["voltage"]])
 } # }
 ```
