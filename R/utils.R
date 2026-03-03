@@ -93,6 +93,48 @@ validate_resistance_values <- function(resistance, resistance_is = "resistances"
 }
 
 
+#' Count Focal Nodes in a Locations Input
+#'
+#' Determines the number of unique focal nodes from a SpatRaster or its
+#' written ASC file.
+#'
+#' @param locations A SpatRaster or file path.
+#' @param loc_path Character. Path to the ASC file (used if locations is a
+#'   file path string).
+#' @return Integer. Number of unique positive-valued focal nodes.
+#' @noRd
+count_focal_nodes <- function(locations, loc_path) {
+  if (inherits(locations, "SpatRaster")) {
+    vals <- terra::values(locations)
+    vals <- vals[!is.na(vals) & vals > 0]
+    return(length(unique(vals)))
+  }
+  # Read the written ASC to count nodes
+  r <- terra::rast(loc_path)
+  vals <- terra::values(r)
+  vals <- vals[!is.na(vals) & vals > 0]
+  length(unique(vals))
+}
+
+
+#' Write Variable Source Strengths File
+#'
+#' Writes a tab-delimited text file mapping node IDs to source strengths,
+#' in the format expected by Circuitscape.
+#'
+#' @param strengths Numeric vector. One strength value per focal node,
+#'   ordered by node ID (1, 2, 3, ...).
+#' @param path Character. File path to write.
+#' @return The file path (invisibly).
+#' @noRd
+write_source_strengths <- function(strengths, path) {
+  ids <- seq_along(strengths)
+  lines <- paste(ids, strengths, sep = "\t")
+  writeLines(lines, path)
+  invisible(path)
+}
+
+
 #' Read Resistance Matrix from Circuitscape Output
 #'
 #' Parses the `*_resistances.out` or `*_resistances_3columns.out` file.

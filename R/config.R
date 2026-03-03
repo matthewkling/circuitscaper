@@ -20,6 +20,8 @@
 #' @param four_neighbors Logical. Use 4-neighbor connectivity.
 #' @param solver Character. Solver type.
 #' @param write_voltage Logical. Write voltage maps (advanced mode).
+#' @param variable_source_file Character or NULL. Path to variable source
+#'   strengths file (tab-delimited, node ID and strength columns).
 #'
 #' @return Path to the written INI file.
 #' @noRd
@@ -40,7 +42,8 @@ build_cs_config <- function(mode,
                             four_neighbors = FALSE,
                             solver = "cg+amg",
                             write_voltage = FALSE,
-                            cumulative_only = TRUE) {
+                            cumulative_only = TRUE,
+                            variable_source_file = NULL) {
 
   # Map R mode names to Circuitscape scenario names
   scenario_map <- c(
@@ -97,10 +100,14 @@ build_cs_config <- function(mode,
 
   pairs_opts <- list(
     point_file = if (!is.null(locations_file)) locations_file else "",
-    use_included_pairs = if (!is.null(included_pairs_file)) "true" else "false"
+    use_included_pairs = if (!is.null(included_pairs_file)) "true" else "false",
+    use_variable_source_strengths = if (!is.null(variable_source_file)) "true" else "false"
   )
   if (!is.null(included_pairs_file)) {
     pairs_opts$included_pairs_file <- included_pairs_file
+  }
+  if (!is.null(variable_source_file)) {
+    pairs_opts$variable_source_file <- variable_source_file
   }
   config[["Options for pairwise and one-to-all and all-to-one modes"]] <- pairs_opts
 

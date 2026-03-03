@@ -110,3 +110,39 @@ test_that("validate_resistance_values no zero warning for conductances", {
   # Zeros in conductance surfaces are fine (they mean no connectivity)
   expect_silent(validate_resistance_values(r, "conductances"))
 })
+
+
+test_that("write_source_strengths creates correct tab-delimited file", {
+  tmp <- tempfile(fileext = ".txt")
+  on.exit(unlink(tmp))
+
+  write_source_strengths(c(2.5, 1.0, 0.5), tmp)
+
+  lines <- readLines(tmp)
+  expect_equal(length(lines), 3)
+  expect_equal(lines[1], "1\t2.5")
+  expect_equal(lines[2], "2\t1")
+  expect_equal(lines[3], "3\t0.5")
+})
+
+test_that("count_focal_nodes counts unique positive values from SpatRaster", {
+  skip_if_not_installed("terra")
+
+  r <- terra::rast(nrows = 5, ncols = 5, vals = 0)
+  r[1] <- 1
+  r[5] <- 2
+  r[10] <- 3
+
+  expect_equal(count_focal_nodes(r, "unused"), 3)
+})
+
+test_that("count_focal_nodes ignores NA and zero", {
+  skip_if_not_installed("terra")
+
+  r <- terra::rast(nrows = 5, ncols = 5, vals = 0)
+  r[1] <- 1
+  r[5] <- 2
+  r[10] <- NA
+
+  expect_equal(count_focal_nodes(r, "unused"), 2)
+})

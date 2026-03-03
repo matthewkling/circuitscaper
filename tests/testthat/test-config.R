@@ -221,6 +221,41 @@ test_that("build_os_config handles source file", {
   expect_true(any(grepl("source_from_resistance = false", content)))
 })
 
+test_that("build_cs_config handles variable source strengths", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "one-to-all",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    variable_source_file = "/path/to/strengths.txt"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("use_variable_source_strengths = true", content)))
+  expect_true(any(grepl("variable_source_file = /path/to/strengths.txt", content)))
+})
+
+test_that("build_cs_config omits variable source strengths when NULL", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("use_variable_source_strengths = false", content)))
+  expect_false(any(grepl("variable_source_file", content)))
+})
+
 test_that("build_os_config handles conditional connectivity", {
   tmp_dir <- tempfile("os_test_")
   dir.create(tmp_dir)

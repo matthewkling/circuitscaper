@@ -33,6 +33,13 @@
 #'   current map is returned. If `FALSE`, per-iteration current layers (named
 #'   `current_1`, `current_2`, ...) are also included. Use with caution for
 #'   large numbers of focal nodes, as this can produce many layers.
+#' @param source_strengths Optional. Variable current injection strengths for
+#'   each focal node. Can be:
+#'   * A numeric vector with one value per focal node (in the same order as the
+#'     locations input). Node IDs are assigned 1, 2, 3, ... matching the order.
+#'   * A character file path to a tab-delimited text file with two columns:
+#'     node ID and strength in amps. Nodes not listed default to 1 amp.
+#'   Default `NULL` (all nodes inject 1 amp).
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory that is cleaned up
@@ -89,6 +96,7 @@ cs_pairwise <- function(resistance,
                         included_pairs = NULL,
                         write_voltage = FALSE,
                         cumulative_only = TRUE,
+                        source_strengths = NULL,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -102,6 +110,7 @@ cs_pairwise <- function(resistance,
               included_pairs = included_pairs,
               write_voltage = write_voltage,
               cumulative_only = cumulative_only,
+              source_strengths = source_strengths,
               solver = solver,
               output_dir = output_dir,
               verbose = verbose)
@@ -113,7 +122,7 @@ cs_pairwise <- function(resistance,
 #' Internal workhorse for pairwise, one-to-all, and all-to-one modes.
 #'
 #' @param mode Character. The Circuitscape scenario.
-#' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose,short_circuit,included_pairs
+#' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose,short_circuit,included_pairs,source_strengths
 #'   See [cs_pairwise()] for details.
 #' @return For pairwise mode, a named list with `$current_map` and
 #'   `$resistance_matrix`. For one-to-all and all-to-one, just the SpatRaster.
@@ -127,6 +136,7 @@ run_cs_mode <- function(mode,
                         included_pairs = NULL,
                         write_voltage = FALSE,
                         cumulative_only = TRUE,
+                        source_strengths = NULL,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -171,6 +181,35 @@ run_cs_mode <- function(mode,
     sc_path <- ensure_asc(short_circuit, work_dir, "short_circuit")
   }
 
+  # Handle variable source strengths
+  vs_path <- NULL
+  if (!is.null(source_strengths)) {
+    if (is.character(source_strengths)) {
+      # File path passthrough
+      if (!file.exists(source_strengths)) {
+        stop("source_strengths file not found: ", source_strengths,
+             call. = FALSE)
+      }
+      vs_path <- normalizePath(source_strengths, mustWork = TRUE)
+    } else if (is.numeric(source_strengths)) {
+      # Numeric vector — determine node count and validate
+      n_nodes <- count_focal_nodes(locations, loc_path)
+      if (length(source_strengths) != n_nodes) {
+        stop("source_strengths has length ", length(source_strengths),
+             " but there are ", n_nodes, " focal nodes.", call. = FALSE)
+      }
+      if (any(is.na(source_strengths))) {
+        stop("source_strengths must not contain NA values.", call. = FALSE)
+      }
+      # Write tab-delimited strengths file
+      vs_path <- file.path(work_dir, "source_strengths.txt")
+      write_source_strengths(source_strengths, vs_path)
+    } else {
+      stop("source_strengths must be a numeric vector or a file path.",
+           call. = FALSE)
+    }
+  }
+
   # Build INI configuration
   prefix <- "cs_output"
   ini_path <- build_cs_config(
@@ -185,7 +224,8 @@ run_cs_mode <- function(mode,
     included_pairs_file = included_pairs,
     solver = solver,
     write_voltage = write_voltage,
-    cumulative_only = cumulative_only
+    cumulative_only = cumulative_only,
+    variable_source_file = vs_path
   )
 
   # Run Circuitscape
