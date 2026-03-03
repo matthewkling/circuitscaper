@@ -12,7 +12,7 @@ Description: Provides an R-native interface to the Circuitscape.jl and
     Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one,
     advanced) and Omniscape moving-window analysis.
 License: MIT + file LICENSE
-URL: https://github.com/matthewkling/circuitscaper
+URL: https://github.com/matthewkling/circuitscaper, https://matthewkling.github.io/circuitscaper/
 BugReports: https://github.com/matthewkling/circuitscaper/issues
 Depends:
     R (>= 4.0)

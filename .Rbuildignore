@@ -5,3 +5,6 @@
 ^\.github$
 ^\.claude$
 ^\.gitignore$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
