@@ -20,9 +20,16 @@ conductance) surface. Higher values represent greater resistance to
 movement. Use the \code{resistance_is} argument if your surface represents
 conductances instead.}
 
-\item{locations}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Focal nodes raster
-with positive integer IDs identifying each node. Cells with value 0 or
-\code{NA} are not treated as focal nodes.}
+\item{locations}{Focal node locations, provided as any of:
+\itemize{
+\item A \link[terra:SpatRaster-class]{terra::SpatRaster} with positive integer IDs identifying each node.
+Cells with value 0 or \code{NA} are not treated as focal nodes.
+\item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
+\item A two-column matrix or data.frame of x/y coordinates. Each row becomes
+a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
+are snapped to the nearest cell of the \code{resistance} raster (which must
+be a SpatRaster in this case). See \code{\link[=cs_locations]{cs_locations()}}.
+}}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
 \code{"resistances"} (default) or \code{"conductances"}.}

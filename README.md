@@ -39,12 +39,16 @@ cs_install_julia()
 library(circuitscaper)
 library(terra)
 
-# Load resistance and focal node rasters
+# Load resistance surface
 resistance <- rast("path/to/resistance.tif")
-locations <- rast("path/to/focal_nodes.tif")
+
+# Focal nodes as coordinates (x, y)
+coords <- matrix(c(-120.5, 37.2,
+                    -119.8, 36.9,
+                    -121.1, 37.8), ncol = 2, byrow = TRUE)
 
 # Pairwise Circuitscape
-result <- cs_pairwise(resistance, locations)
+result <- cs_pairwise(resistance, coords)
 plot(result$current_map)
 result$resistance_matrix
 
@@ -62,6 +66,7 @@ plot(result[["normalized_current"]])
 | `cs_all_to_one()` | All-to-one connectivity analysis |
 | `cs_advanced()` | Advanced mode with custom sources and grounds |
 | `os_run()` | Omniscape moving-window connectivity |
+| `cs_locations()` | Create focal node raster from coordinates |
 | `cs_setup()` | Initialize Julia (called automatically) |
 | `cs_install_julia()` | Install Julia and required packages |
 

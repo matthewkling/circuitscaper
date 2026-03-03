@@ -7,9 +7,14 @@
 #'   conductance) surface. Higher values represent greater resistance to
 #'   movement. Use the `resistance_is` argument if your surface represents
 #'   conductances instead.
-#' @param locations A [terra::SpatRaster] or file path. Focal nodes raster
-#'   with positive integer IDs identifying each node. Cells with value 0 or
-#'   `NA` are not treated as focal nodes.
+#' @param locations Focal node locations, provided as any of:
+#'   * A [terra::SpatRaster] with positive integer IDs identifying each node.
+#'     Cells with value 0 or `NA` are not treated as focal nodes.
+#'   * A file path to a raster file (e.g., `.tif`, `.asc`).
+#'   * A two-column matrix or data.frame of x/y coordinates. Each row becomes
+#'     a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
+#'     are snapped to the nearest cell of the `resistance` raster (which must
+#'     be a SpatRaster in this case). See [cs_locations()].
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
@@ -115,6 +120,15 @@ run_cs_mode <- function(mode,
 
   # Capture CRS before writing to ASC
   input_crs <- get_input_crs(resistance)
+
+  # Convert coordinate input to raster
+  if (is.matrix(locations) || is.data.frame(locations)) {
+    if (!inherits(resistance, "SpatRaster")) {
+      stop("`resistance` must be a SpatRaster when `locations` is coordinates.",
+           call. = FALSE)
+    }
+    locations <- cs_locations(locations, resistance)
+  }
 
   # Validate matching extents if both are SpatRasters
   if (inherits(resistance, "SpatRaster") && inherits(locations, "SpatRaster")) {

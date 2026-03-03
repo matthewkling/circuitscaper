@@ -18,6 +18,26 @@ test_that("cs_pairwise runs end-to-end", {
   expect_true(is.matrix(result$resistance_matrix))
 })
 
+test_that("cs_pairwise accepts coordinate matrix", {
+  skip_if_no_julia()
+  skip_if_not_installed("terra")
+
+  res <- terra::rast(system.file("testdata/resistance.asc",
+                                 package = "circuitscaper"))
+
+  # 3 focal nodes as coordinates (matching test data locations)
+  coords <- matrix(c(1.5, 8.5,
+                      8.5, 8.5,
+                      4.5, 1.5), ncol = 2, byrow = TRUE)
+
+  result <- cs_pairwise(res, coords, verbose = FALSE)
+
+  expect_type(result, "list")
+  expect_s4_class(result$current_map, "SpatRaster")
+  expect_true(is.matrix(result$resistance_matrix))
+  expect_equal(nrow(result$resistance_matrix), 3)
+})
+
 test_that("cs_one_to_all runs end-to-end", {
   skip_if_no_julia()
   skip_if_not_installed("terra")
