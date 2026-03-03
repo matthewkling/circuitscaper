@@ -42,7 +42,6 @@ plot(result[["normalized_current"]])
 | `cs_all_to_one()` | All-to-one connectivity analysis |
 | `cs_advanced()` | Advanced mode with custom sources and grounds |
 | `os_run()` | Omniscape moving-window connectivity |
-| `os_compare()` | Compare two Omniscape runs |
 | `cs_setup()` | Initialize Julia (called automatically) |
 | `cs_install_julia()` | Install Julia and required packages |
 

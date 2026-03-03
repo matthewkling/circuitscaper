@@ -96,5 +96,5 @@ Omniscape documentation:
 \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 }
 \seealso{
-\code{\link[=os_compare]{os_compare()}}, \code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=cs_setup]{cs_setup()}}
+\code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=cs_setup]{cs_setup()}}
 }

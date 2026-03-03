@@ -47,7 +47,7 @@
 #' Omniscape documentation:
 #' \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 #'
-#' @seealso [os_compare()], [cs_pairwise()], [cs_setup()]
+#' @seealso [cs_pairwise()], [cs_setup()]
 #'
 #' @examples
 #' \dontrun{

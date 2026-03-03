@@ -12,6 +12,7 @@ Provides an R-native interface to the Circuitscape.jl and Omniscape.jl Julia pac
 Useful links:
 \itemize{
   \item \url{https://github.com/matthewkling/circuitscaper}
+  \item \url{https://matthewkling.github.io/circuitscaper/}
   \item Report bugs at \url{https://github.com/matthewkling/circuitscaper/issues}
 }
 
