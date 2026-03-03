@@ -123,6 +123,25 @@ test_that("build_cs_config handles short-circuit regions", {
   expect_true(any(grepl("polygon_file = /path/to/polygons.asc", content)))
 })
 
+test_that("build_cs_config handles write_voltage and cumulative_only", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    write_voltage = TRUE,
+    cumulative_only = FALSE
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("write_volt_maps = true", content)))
+  expect_true(any(grepl("write_cum_cur_map_only = false", content)))
+})
+
 test_that("build_cs_config handles included pairs", {
   tmp_dir <- tempfile("cs_test_")
   dir.create(tmp_dir)

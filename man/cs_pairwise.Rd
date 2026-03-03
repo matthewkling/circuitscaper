@@ -11,6 +11,8 @@ cs_pairwise(
   four_neighbors = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
+  write_voltage = FALSE,
+  cumulative_only = TRUE,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -47,6 +49,15 @@ resistance between them. Default \code{NULL} (no short-circuit regions).}
 \item{included_pairs}{Optional character file path. A text file specifying
 which pairs of focal nodes to include or exclude from analysis. See the
 Circuitscape documentation for the file format. Default \code{NULL} (all pairs).}
+
+\item{write_voltage}{Logical. Write voltage maps. Default \code{FALSE}. When
+\code{TRUE}, per-iteration voltage layers (named \code{voltage_1}, \code{voltage_2}, ...)
+are included in the output raster.}
+
+\item{cumulative_only}{Logical. If \code{TRUE} (default), only the cumulative
+current map is returned. If \code{FALSE}, per-iteration current layers (named
+\code{current_1}, \code{current_2}, ...) are also included. Use with caution for
+large numbers of focal nodes, as this can produce many layers.}
 
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 

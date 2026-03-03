@@ -39,7 +39,8 @@ build_cs_config <- function(mode,
                             source_ground_conflict = "keepall",
                             four_neighbors = FALSE,
                             solver = "cg+amg",
-                            write_voltage = FALSE) {
+                            write_voltage = FALSE,
+                            cumulative_only = TRUE) {
 
   # Map R mode names to Circuitscape scenario names
   scenario_map <- c(
@@ -108,7 +109,7 @@ build_cs_config <- function(mode,
     write_cur_maps = "true",
     write_volt_maps = if (write_voltage) "true" else "false",
     output_file = file.path(output_dir, output_prefix),
-    write_cum_cur_map_only = "true",
+    write_cum_cur_map_only = if (cumulative_only) "true" else "false",
     log_transform_maps = "false",
     write_max_cur_maps = "false"
   )

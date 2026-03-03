@@ -26,6 +26,13 @@
 #' @param included_pairs Optional character file path. A text file specifying
 #'   which pairs of focal nodes to include or exclude from analysis. See the
 #'   Circuitscape documentation for the file format. Default `NULL` (all pairs).
+#' @param write_voltage Logical. Write voltage maps. Default `FALSE`. When
+#'   `TRUE`, per-iteration voltage layers (named `voltage_1`, `voltage_2`, ...)
+#'   are included in the output raster.
+#' @param cumulative_only Logical. If `TRUE` (default), only the cumulative
+#'   current map is returned. If `FALSE`, per-iteration current layers (named
+#'   `current_1`, `current_2`, ...) are also included. Use with caution for
+#'   large numbers of focal nodes, as this can produce many layers.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory that is cleaned up
@@ -80,6 +87,8 @@ cs_pairwise <- function(resistance,
                         four_neighbors = FALSE,
                         short_circuit = NULL,
                         included_pairs = NULL,
+                        write_voltage = FALSE,
+                        cumulative_only = TRUE,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -91,6 +100,8 @@ cs_pairwise <- function(resistance,
               four_neighbors = four_neighbors,
               short_circuit = short_circuit,
               included_pairs = included_pairs,
+              write_voltage = write_voltage,
+              cumulative_only = cumulative_only,
               solver = solver,
               output_dir = output_dir,
               verbose = verbose)
@@ -114,6 +125,8 @@ run_cs_mode <- function(mode,
                         four_neighbors = FALSE,
                         short_circuit = NULL,
                         included_pairs = NULL,
+                        write_voltage = FALSE,
+                        cumulative_only = TRUE,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -170,7 +183,9 @@ run_cs_mode <- function(mode,
     four_neighbors = four_neighbors,
     short_circuit_file = sc_path,
     included_pairs_file = included_pairs,
-    solver = solver
+    solver = solver,
+    write_voltage = write_voltage,
+    cumulative_only = cumulative_only
   )
 
   # Run Circuitscape
