@@ -53,11 +53,12 @@ for targeted connectivity analysis.}
 Only relevant if \code{condition} is provided. See the Omniscape documentation
 for options.}
 
-\item{parallelize}{Logical. Use Julia multithreading. Default \code{FALSE}. Note
-that the number of threads must be set before Julia starts; if Julia was
-already initialized without threading, a warning is issued.}
+\item{parallelize}{Logical. Use Julia multithreading. Default \code{FALSE}.
+Julia's thread count is fixed at startup. If Julia was already initialized
+without enough threads, a warning is issued. To avoid this, call
+\code{\link[=cs_setup]{cs_setup()}} with the \code{threads} argument at the start of your session.}
 
-\item{julia_threads}{Integer. Number of Julia threads if \code{parallelize = TRUE}. Default \code{2}.}
+\item{julia_threads}{Integer. Number of Julia threads if \code{parallelize = TRUE}. Default \code{2}. Ignored if Julia is already running with fewer threads.}
 
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 

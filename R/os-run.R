@@ -23,11 +23,12 @@
 #' @param condition_type Character. Determines how the condition layer is used.
 #'   Only relevant if `condition` is provided. See the Omniscape documentation
 #'   for options.
-#' @param parallelize Logical. Use Julia multithreading. Default `FALSE`. Note
-#'   that the number of threads must be set before Julia starts; if Julia was
-#'   already initialized without threading, a warning is issued.
+#' @param parallelize Logical. Use Julia multithreading. Default `FALSE`.
+#'   Julia's thread count is fixed at startup. If Julia was already initialized
+#'   without enough threads, a warning is issued. To avoid this, call
+#'   [cs_setup()] with the `threads` argument at the start of your session.
 #' @param julia_threads Integer. Number of Julia threads if `parallelize =
-#'   TRUE`. Default `2`.
+#'   TRUE`. Default `2`. Ignored if Julia is already running with fewer threads.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory.
@@ -82,9 +83,9 @@ os_run <- function(resistance,
              .cs_env$julia_threads < julia_threads) {
     warning(
       "Julia is already running with ", .cs_env$julia_threads, " thread(s). ",
-      "Cannot increase to ", julia_threads, " threads mid-session. ",
-      "Restart R and call os_run() with parallelize = TRUE before any other ",
-      "circuitscaper functions to use multithreading.",
+      "Cannot change to ", julia_threads, " threads mid-session. ",
+      "To use multithreading, restart R and call cs_setup(threads = ",
+      julia_threads, ") before any other circuitscaper functions.",
       call. = FALSE
     )
   }

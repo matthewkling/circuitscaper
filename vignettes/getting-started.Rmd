@@ -123,14 +123,17 @@ plot(result[["normalized_current"]])
 
 ### Parallel Processing
 
-For large landscapes, enable Julia multithreading:
+For large landscapes, enable Julia multithreading. Julia's thread count is
+fixed at startup, so set it via `cs_setup()` before any other circuitscaper
+calls:
 
 ```{r omniscape-parallel}
-# Must be called before any other circuitscaper functions in the session
+# Set thread count at the start of your session
+cs_setup(threads = 4)
+
 result <- os_run(resistance, radius = 100,
                  block_size = 5,
-                 parallelize = TRUE,
-                 julia_threads = 4)
+                 parallelize = TRUE)
 ```
 
 ## Comparing Scenarios

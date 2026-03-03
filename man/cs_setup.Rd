@@ -4,11 +4,16 @@
 \alias{cs_setup}
 \title{Set Up Julia and Load Circuitscape/Omniscape}
 \usage{
-cs_setup(julia_home = NULL, quiet = TRUE, ...)
+cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE, ...)
 }
 \arguments{
 \item{julia_home}{Character. Path to the Julia installation directory. If
 \code{NULL} (default), JuliaCall searches standard locations.}
+
+\item{threads}{Integer. Number of Julia threads to start. Default \code{1L}.
+Must be set before Julia initializes — once Julia is running, the thread
+count cannot be changed without restarting R. Set this to a value greater
+than 1 if you plan to use \code{\link[=os_run]{os_run()}} with \code{parallelize = TRUE}.}
 
 \item{quiet}{Logical. Suppress Julia startup messages. Default \code{TRUE}.}
 
@@ -20,7 +25,8 @@ Invisibly returns \code{TRUE} on success.
 \description{
 Initialize the Julia session and load the Circuitscape and Omniscape Julia
 packages. This is called automatically on first use of any \verb{cs_*} or \verb{os_*}
-function. Call explicitly to control the Julia path or pre-warm the session.
+function. Call explicitly to control the Julia path, number of threads, or
+pre-warm the session.
 }
 \details{
 Following the pattern established by diffeqr, \code{cs_setup()} will:
@@ -33,10 +39,21 @@ Following the pattern established by diffeqr, \code{cs_setup()} will:
 
 Once Julia is initialized, it stays warm for the R session. Subsequent calls
 to \code{cs_setup()} return immediately.
+\subsection{Threading}{
+
+Julia's thread count is fixed at startup and cannot be changed mid-session.
+If you need parallelization for Omniscape, set \code{threads} here before calling
+any other circuitscaper function:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{cs_setup(threads = 4)
+os_run(resistance, radius = 50, parallelize = TRUE)
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 \dontrun{
 cs_setup()
+cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
 }
 
