@@ -1,4 +1,4 @@
-# circuitscaper
+# circuitscaper <a href="https://matthewkling.github.io/circuitscaper/"><img src="man/figures/logo.png" align="right" height="139" alt="circuitscaper website" /></a>
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml)

@@ -1,19 +1,20 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>/404.html</loc></url>
-<url><loc>/LICENSE-text.html</loc></url>
-<url><loc>/articles/getting-started.html</loc></url>
-<url><loc>/articles/index.html</loc></url>
-<url><loc>/authors.html</loc></url>
-<url><loc>/index.html</loc></url>
-<url><loc>/reference/circuitscaper-package.html</loc></url>
-<url><loc>/reference/cs_advanced.html</loc></url>
-<url><loc>/reference/cs_all_to_one.html</loc></url>
-<url><loc>/reference/cs_install_julia.html</loc></url>
-<url><loc>/reference/cs_one_to_all.html</loc></url>
-<url><loc>/reference/cs_pairwise.html</loc></url>
-<url><loc>/reference/cs_setup.html</loc></url>
-<url><loc>/reference/index.html</loc></url>
-<url><loc>/reference/os_compare.html</loc></url>
-<url><loc>/reference/os_run.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/404.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/LICENSE-text.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/articles/getting-started.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/articles/index.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/authors.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/index.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/circuitscaper-package.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_advanced.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_locations.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_setup.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/index.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/os_compare.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/os_run.html</loc></url>
 </urlset>
 
