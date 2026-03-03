@@ -56,7 +56,7 @@ there. Default \code{NULL} uses a temporary directory.}
 \value{
 A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
 \describe{
-\item{cumulative_current}{Current density at each cell.}
+\item{current}{Current density at each cell.}
 \item{voltage}{Voltage at each cell. Voltage is analogous to movement
 probability and decreases with distance from sources.}
 }

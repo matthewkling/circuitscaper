@@ -84,7 +84,7 @@ test_that("cs_advanced runs end-to-end", {
   result <- cs_advanced(res, src, gnd, verbose = FALSE)
 
   expect_s4_class(result, "SpatRaster")
-  expect_true("cumulative_current" %in% names(result))
+  expect_true("current" %in% names(result))
   expect_true("voltage" %in% names(result))
 })
 

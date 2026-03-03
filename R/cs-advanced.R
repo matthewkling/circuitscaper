@@ -36,7 +36,7 @@
 #'
 #' @return A [terra::SpatRaster] with the following layers:
 #' \describe{
-#'   \item{cumulative_current}{Current density at each cell.}
+#'   \item{current}{Current density at each cell.}
 #'   \item{voltage}{Voltage at each cell. Voltage is analogous to movement
 #'     probability and decreases with distance from sources.}
 #' }

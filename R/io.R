@@ -87,10 +87,10 @@ parse_cs_output <- function(dir, prefix, input_crs = "") {
   layer_names <- gsub(paste0("^", prefix, "_?"), "", basename(raster_files))
   layer_names <- gsub("\\.(asc|tif)$", "", layer_names)
   layer_names <- gsub("^_", "", layer_names)
-  # Clean up common suffixes
-  layer_names[layer_names == "cum_curmap"] <- "cumulative_current"
-  layer_names[layer_names == "curmap"] <- "cumulative_current"
-  layer_names[layer_names == "voltmap"] <- "voltage"
+  # Clean up Circuitscape file suffixes into readable layer names
+  layer_names <- gsub("cum_curmap", "cumulative_current", layer_names)
+  layer_names <- gsub("curmap", "current", layer_names)
+  layer_names <- gsub("voltmap", "voltage", layer_names)
   layer_names[layer_names == ""] <- "cumulative_current"
 
   names(result) <- layer_names
