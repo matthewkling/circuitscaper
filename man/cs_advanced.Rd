@@ -11,7 +11,6 @@ cs_advanced(
   resistance_is = "resistances",
   four_neighbors = FALSE,
   solver = "cg+amg",
-  write_voltage = FALSE,
   output_dir = NULL,
   verbose = FALSE
 )
@@ -34,8 +33,6 @@ conductance) surface.}
 
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 
-\item{write_voltage}{Logical. Also compute voltage maps. Default \code{FALSE}.}
-
 \item{output_dir}{Optional character path. If provided, output files persist
 there. Default \code{NULL} uses a temporary directory.}
 
@@ -45,9 +42,8 @@ there. Default \code{NULL} uses a temporary directory.}
 A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
 \describe{
 \item{cumulative_current}{Current density at each cell.}
-\item{voltage}{Voltage at each cell (only if \code{write_voltage = TRUE}).
-Voltage is analogous to movement probability and decreases with
-distance from sources.}
+\item{voltage}{Voltage at each cell. Voltage is analogous to movement
+probability and decreases with distance from sources.}
 }
 }
 \description{
@@ -71,10 +67,7 @@ gnd <- rast(nrows = 10, ncols = 10, vals = 0)
 gnd[10, 10] <- 1
 result <- cs_advanced(res, src, gnd)
 plot(result)
-
-# With voltage maps
-result_v <- cs_advanced(res, src, gnd, write_voltage = TRUE)
-plot(result_v[["voltage"]])
+plot(result[["voltage"]])
 }
 
 }

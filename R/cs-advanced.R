@@ -13,7 +13,6 @@
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
-#' @param write_voltage Logical. Also compute voltage maps. Default `FALSE`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory.
 #' @param verbose Logical. Print Circuitscape solver output. Default `FALSE`.
@@ -29,9 +28,8 @@
 #' @return A [terra::SpatRaster] with the following layers:
 #' \describe{
 #'   \item{cumulative_current}{Current density at each cell.}
-#'   \item{voltage}{Voltage at each cell (only if `write_voltage = TRUE`).
-#'     Voltage is analogous to movement probability and decreases with
-#'     distance from sources.}
+#'   \item{voltage}{Voltage at each cell. Voltage is analogous to movement
+#'     probability and decreases with distance from sources.}
 #' }
 #'
 #' @references
@@ -50,10 +48,7 @@
 #' gnd[10, 10] <- 1
 #' result <- cs_advanced(res, src, gnd)
 #' plot(result)
-#'
-#' # With voltage maps
-#' result_v <- cs_advanced(res, src, gnd, write_voltage = TRUE)
-#' plot(result_v[["voltage"]])
+#' plot(result[["voltage"]])
 #' }
 #'
 #' @export
@@ -63,7 +58,6 @@ cs_advanced <- function(resistance,
                         resistance_is = "resistances",
                         four_neighbors = FALSE,
                         solver = "cg+amg",
-                        write_voltage = FALSE,
                         output_dir = NULL,
                         verbose = FALSE) {
 
@@ -107,7 +101,7 @@ cs_advanced <- function(resistance,
     resistance_is = resistance_is,
     four_neighbors = four_neighbors,
     solver = solver,
-    write_voltage = write_voltage
+    write_voltage = TRUE
   )
 
   # Run Circuitscape

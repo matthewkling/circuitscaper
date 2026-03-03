@@ -65,23 +65,6 @@ test_that("cs_advanced runs end-to-end", {
 
   expect_s4_class(result, "SpatRaster")
   expect_true("cumulative_current" %in% names(result))
-})
-
-test_that("cs_advanced with voltage runs end-to-end", {
-  skip_if_no_julia()
-  skip_if_not_installed("terra")
-
-  res <- terra::rast(system.file("testdata/resistance.asc",
-                                 package = "circuitscaper"))
-
-  src <- res * 0
-  src[1, 1] <- 1
-  gnd <- res * 0
-  gnd[10, 10] <- 10
-
-  result <- cs_advanced(res, src, gnd, write_voltage = TRUE, verbose = FALSE)
-
-  expect_s4_class(result, "SpatRaster")
   expect_true("voltage" %in% names(result))
 })
 
