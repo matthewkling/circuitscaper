@@ -144,16 +144,24 @@ there. Default <code>NULL</code> uses a temporary directory.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with named layers. Possible layers depending on
-options:</p><dl><dt>cumulative_current</dt>
-<dd><p>Cumulative current flow.</p></dd>
+    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with the following layers (depending on
+options):</p><dl><dt>cumulative_current</dt>
+<dd><p>Raw cumulative current flow. Always present.
+Higher values indicate cells that carry more current across all
+moving-window iterations.</p></dd>
 
 <dt>flow_potential</dt>
-<dd><p>Flow potential (if <code>calc_flow_potential = TRUE</code>).</p></dd>
+<dd><p>Expected current under homogeneous resistance
+(if <code>calc_flow_potential = TRUE</code>). Reflects the spatial configuration
+of sources independently of landscape resistance.</p></dd>
 
 <dt>normalized_current</dt>
-<dd><p>Normalized current flow (if
-<code>calc_normalized_current = TRUE</code>).</p></dd>
+<dd><p>Cumulative current divided by flow potential
+(if <code>calc_normalized_current = TRUE</code>). Values greater than 1 indicate
+cells where connectivity is higher than expected given the source
+geometry; values less than 1 indicate relative barriers. This is
+typically the most informative layer for identifying corridors and
+pinch points.</p></dd>
 
 
 </dl></div>

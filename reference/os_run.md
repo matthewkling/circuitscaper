@@ -108,19 +108,27 @@ os_run(
 
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-with named layers. Possible layers depending on options:
+with the following layers (depending on options):
 
 - cumulative_current:
 
-  Cumulative current flow.
+  Raw cumulative current flow. Always present. Higher values indicate
+  cells that carry more current across all moving-window iterations.
 
 - flow_potential:
 
-  Flow potential (if `calc_flow_potential = TRUE`).
+  Expected current under homogeneous resistance (if
+  `calc_flow_potential = TRUE`). Reflects the spatial configuration of
+  sources independently of landscape resistance.
 
 - normalized_current:
 
-  Normalized current flow (if `calc_normalized_current = TRUE`).
+  Cumulative current divided by flow potential (if
+  `calc_normalized_current = TRUE`). Values greater than 1 indicate
+  cells where connectivity is higher than expected given the source
+  geometry; values less than 1 indicate relative barriers. This is
+  typically the most informative layer for identifying corridors and
+  pinch points.
 
 ## References
 

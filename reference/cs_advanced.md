@@ -1,8 +1,6 @@
 # Advanced Circuitscape Analysis
 
-Advanced mode with user-specified source and ground layers. Unlike the
-other modes, there is no focal node concept — the user provides explicit
-source current strengths and ground conductances.
+Solve a single circuit with user-specified source and ground layers.
 
 ## Usage
 
@@ -32,13 +30,15 @@ cs_advanced(
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Source current strengths.
+  or file path. Source current strengths (amps per cell). Cells with
+  value 0 or NA are not sources.
 
 - ground:
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Ground conductances.
+  or file path. Ground conductances (siemens per cell). Cells with value
+  0 or NA are not grounds.
 
 - resistance_is:
 
@@ -71,8 +71,26 @@ cs_advanced(
 
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-with named layers. Always includes `"cumulative_current"`. If
-`write_voltage = TRUE`, also includes `"voltage"`.
+with the following layers:
+
+- cumulative_current:
+
+  Current density at each cell.
+
+- voltage:
+
+  Voltage at each cell (only if `write_voltage = TRUE`). Voltage is
+  analogous to movement probability and decreases with distance from
+  sources.
+
+## Details
+
+Unlike the other Circuitscape modes, advanced mode does not iterate over
+focal nodes. Instead, the user provides explicit source current and
+ground conductance rasters, and a single circuit is solved. This gives
+full control over the current injection pattern and is useful for
+modeling specific scenarios such as directional movement between a
+defined source area and destination.
 
 ## References
 
