@@ -11,6 +11,7 @@ cs_pairwise(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
   write_voltage = FALSE,
@@ -58,6 +59,13 @@ cs_pairwise(
 
   Logical. Use 4-neighbor (rook) connectivity instead of 8-neighbor
   (queen). Default `FALSE`.
+
+- avg_resistances:
+
+  Logical. When using 8-neighbor connectivity, compute the resistance of
+  diagonal connections as the average of the two cells rather than their
+  sum. Default `FALSE` (Circuitscape default). Ignored when
+  `four_neighbors = TRUE`.
 
 - short_circuit:
 
@@ -121,13 +129,12 @@ A named list with:
 - current_map:
 
   A
-  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  with a single layer:
-
-  cumulative_current
-
-  :   Current flow summed across all pairs, indicating the relative
-      importance of each cell as a movement corridor.
+  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html).
+  By default contains a single `cumulative_current` layer (current flow
+  summed across all pairs). When `cumulative_only = FALSE`, additional
+  per-pair layers are included (e.g., `current_1_2`, `current_1_3`).
+  When `write_voltage = TRUE`, per-pair voltage layers are included
+  (e.g., `voltage_1_2`, `voltage_1_3`).
 
 - resistance_matrix:
 

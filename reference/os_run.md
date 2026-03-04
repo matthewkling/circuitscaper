@@ -91,9 +91,13 @@ os_run(
 - condition_type:
 
   Character. How the condition layer filters connectivity: `"within"`
-  (connectivity only between cells sharing the same condition value) or
-  `"equal"` (connectivity only between cells with equal condition
-  values, evaluated pairwise). Only relevant if `condition` is provided.
+  (connectivity only between source and target cells whose condition
+  values fall within a specified range) or `"equal"` (connectivity only
+  between cells with equal condition values, evaluated pairwise). Only
+  relevant if `condition` is provided. Note: `"within"` currently uses
+  Omniscape's default unbounded range (`-Inf` to `Inf`), which
+  effectively includes all cells. Finer control over range bounds is
+  planned for a future version.
 
 - parallelize:
 

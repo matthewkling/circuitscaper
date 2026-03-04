@@ -16,6 +16,7 @@ cs_advanced(
   short_circuit = NULL,
   source_ground_conflict = "keepall",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -86,6 +87,13 @@ cs_advanced(
 
   Logical. Use 4-neighbor (rook) connectivity instead of 8-neighbor
   (queen). Default `FALSE`.
+
+- avg_resistances:
+
+  Logical. When using 8-neighbor connectivity, compute the resistance of
+  diagonal connections as the average of the two cells rather than their
+  sum. Default `FALSE` (Circuitscape default). Ignored when
+  `four_neighbors = TRUE`.
 
 - solver:
 

@@ -52,6 +52,7 @@
 <span>  short_circuit <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  source_ground_conflict <span class="op">=</span> <span class="st">"keepall"</span>,</span>
 <span>  four_neighbors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  avg_resistances <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  solver <span class="op">=</span> <span class="st">"cg+amg"</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -117,6 +118,13 @@ both the source and ground rasters: <code>"keepall"</code> (default, keep both),
 <dt id="arg-four-neighbors">four_neighbors<a class="anchor" aria-label="anchor" href="#arg-four-neighbors"></a></dt>
 <dd><p>Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-avg-resistances">avg_resistances<a class="anchor" aria-label="anchor" href="#arg-avg-resistances"></a></dt>
+<dd><p>Logical. When using 8-neighbor connectivity, compute
+the resistance of diagonal connections as the average of the two cells
+rather than their sum. Default <code>FALSE</code> (Circuitscape default). Ignored when
+<code>four_neighbors = TRUE</code>.</p></dd>
 
 
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>

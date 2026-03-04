@@ -11,6 +11,7 @@ cs_all_to_one(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
   write_voltage = FALSE,
@@ -58,6 +59,13 @@ cs_all_to_one(
 
   Logical. Use 4-neighbor (rook) connectivity instead of 8-neighbor
   (queen). Default `FALSE`.
+
+- avg_resistances:
+
+  Logical. When using 8-neighbor connectivity, compute the resistance of
+  diagonal connections as the average of the two cells rather than their
+  sum. Default `FALSE` (Circuitscape default). Ignored when
+  `four_neighbors = TRUE`.
 
 - short_circuit:
 

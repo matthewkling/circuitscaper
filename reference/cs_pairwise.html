@@ -49,6 +49,7 @@ all pairs of focal nodes.</p>
 <span>  <span class="va">locations</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
 <span>  four_neighbors <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  avg_resistances <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  short_circuit <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  included_pairs <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  write_voltage <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -90,6 +91,13 @@ are snapped to the nearest cell of the <code>resistance</code> raster. See
 <dt id="arg-four-neighbors">four_neighbors<a class="anchor" aria-label="anchor" href="#arg-four-neighbors"></a></dt>
 <dd><p>Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-avg-resistances">avg_resistances<a class="anchor" aria-label="anchor" href="#arg-avg-resistances"></a></dt>
+<dd><p>Logical. When using 8-neighbor connectivity, compute
+the resistance of diagonal connections as the average of the two cells
+rather than their sum. Default <code>FALSE</code> (Circuitscape default). Ignored when
+<code>four_neighbors = TRUE</code>.</p></dd>
 
 
 <dt id="arg-short-circuit">short_circuit<a class="anchor" aria-label="anchor" href="#arg-short-circuit"></a></dt>
@@ -145,13 +153,12 @@ automatically.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A named list with:</p><dl><dt>current_map</dt>
-<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with a single layer:</p><dl><dt>cumulative_current</dt>
-<dd><p>Current flow summed across all pairs,
-indicating the relative importance of each cell as a movement
-corridor.</p></dd>
-
-
-</dl></dd>
+<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a>. By default contains a single
+<code>cumulative_current</code> layer (current flow summed across all pairs). When
+<code>cumulative_only = FALSE</code>, additional per-pair layers are included
+(e.g., <code>current_1_2</code>, <code>current_1_3</code>). When <code>write_voltage = TRUE</code>,
+per-pair voltage layers are included (e.g., <code>voltage_1_2</code>,
+<code>voltage_1_3</code>).</p></dd>
 
 <dt>resistance_matrix</dt>
 <dd><p>A symmetric numeric matrix of pairwise effective
