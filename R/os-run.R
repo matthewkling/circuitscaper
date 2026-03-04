@@ -103,7 +103,7 @@ os_run <- function(resistance,
 
   # Handle threading before Julia init
   if (parallelize && !.cs_env$julia_ready) {
-    Sys.setenv(JULIA_NUM_THREADS = as.character(julia_threads))
+    Sys.setenv(JULIA_NUM_THREADS = paste0(julia_threads, ",0"))
     .cs_env$julia_threads <- as.integer(julia_threads)
   } else if (parallelize && .cs_env$julia_ready &&
              .cs_env$julia_threads < julia_threads) {
@@ -177,24 +177,10 @@ os_run <- function(resistance,
   )
 
   # Run Omniscape
-  tryCatch({
-    if (verbose) {
-      JuliaCall::julia_call("Omniscape.run_omniscape", ini_path)
-    } else {
-      JuliaCall::julia_eval(
-        paste0('redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
-               'Omniscape.run_omniscape("', gsub("\\\\", "/", ini_path), '"); ',
-               'end; end')
-      )
-    }
-  }, error = function(e) {
-    msg <- conditionMessage(e)
-    julia_msg <- sub(".*Julia exception: ", "", msg)
-    julia_msg <- sub("\n.*", "", julia_msg)
-    stop("Omniscape computation failed: ", julia_msg, "\n",
-         "Check that resistance has no zero values and that the radius ",
-         "is appropriate for the raster dimensions.", call. = FALSE)
-  })
+  julia_expr <- paste0(
+    'Omniscape.run_omniscape("', gsub("\\\\", "/", ini_path), '")'
+  )
+  run_julia(julia_expr, verbose = verbose)
 
   # Parse and return output rasters from the Omniscape output subdirectory
   os_output_dir <- file.path(work_dir, "omniscape_output")

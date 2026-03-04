@@ -135,6 +135,101 @@ write_source_strengths <- function(strengths, path) {
 }
 
 
+#' Run a Julia Expression with Error Capture
+#'
+#' Runs a Julia function call, optionally suppressing output. On error, the
+#' Julia exception is captured via `sprint(showerror, e)` so that the actual
+#' error type and message are available in R rather than the generic
+#' "Error happens in Julia" from JuliaCall.
+#'
+#' The key design choice is to **not rethrow** from Julia. Instead, the error
+#' is stored in a global variable and `nothing` is returned. This keeps
+#' JuliaCall in a clean state so we can read the error details afterward.
+#' If `rethrow()` were used, JuliaCall would intercept it and produce the
+#' generic "Error happens in Julia" message, and subsequent `julia_eval()`
+#' calls to read the error variable would fail.
+#'
+#' @param julia_expr Character. The Julia function call to evaluate
+#'   (e.g., `'Circuitscape.compute("path")'`).
+#' @param verbose Logical. If TRUE, output is shown in real time. If FALSE,
+#'   stdout and stderr are suppressed.
+#' @return The return value of the Julia expression (invisibly).
+#' @noRd
+run_julia <- function(julia_expr, verbose = FALSE) {
+  # Clear any previous error state
+  JuliaCall::julia_eval("global _circuitscaper_last_err = nothing")
+
+  # Wrap in Julia try-catch that captures the error WITHOUT rethrowing.
+  # On error, sprint(showerror, e) converts the exception to a readable
+  # string. We also wrap sprint() itself in case it fails for exotic types.
+  catch_block <- paste0(
+    'catch e; ',
+    'global _circuitscaper_last_err = ',
+    'try; sprint(showerror, e); catch e2; string(typeof(e)); end; ',
+    'nothing; end'
+  )
+
+  wrapped <- if (verbose) {
+    paste0('try; ', julia_expr, '; ', catch_block)
+  } else {
+    paste0(
+      'try; redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
+      julia_expr,
+      '; end; end; ', catch_block
+    )
+  }
+
+  # Execute — should not throw since errors are caught in Julia.
+  # Safety-net tryCatch in case something truly unexpected happens.
+  tryCatch(
+    JuliaCall::julia_eval(wrapped),
+    error = function(e) {
+      # Unexpected JuliaCall-level failure. Try to read the error variable
+      # anyway; if the catch block ran, the detail will be there.
+    }
+  )
+
+  # Check whether the Julia expression errored
+  julia_err <- tryCatch(
+    JuliaCall::julia_eval("_circuitscaper_last_err"),
+    error = function(e2) NULL
+  )
+
+  if (!is.null(julia_err)) {
+    # Extract a concise summary from the full stack trace.
+    # Julia errors can be nested (e.g., TaskFailedException wrapping a
+    # BoundsError). We look for several patterns:
+    #   "caused by: <ErrorType>: <message>" — on the same line
+    #   "nested task error: <ErrorType>: <message>" — on the same line
+    # If neither is found, we use the first non-blank line.
+    lines <- strsplit(julia_err, "\n")[[1]]
+    lines <- trimws(lines)
+
+    # Look for the root cause in "caused by:" or "nested task error:" lines
+    root_cause <- NULL
+    for (pattern in c("^caused by: ", "^nested task error: ")) {
+      idx <- grep(pattern, lines)
+      if (length(idx) > 0) {
+        root_cause <- sub(pattern, "", lines[idx[length(idx)]])
+        break
+      }
+    }
+
+    if (!is.null(root_cause) && nchar(root_cause) > 0) {
+      err_msg <- root_cause
+    } else {
+      # Use first non-blank line
+      non_blank <- lines[nchar(lines) > 0]
+      err_msg <- if (length(non_blank) > 0) non_blank[1] else julia_err
+    }
+
+    stop(err_msg, call. = FALSE)
+  }
+
+  invisible(NULL)
+}
+
+
 #' Read Resistance Matrix from Circuitscape Output
 #'
 #' Parses the `*_resistances.out` or `*_resistances_3columns.out` file.

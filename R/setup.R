@@ -59,7 +59,11 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   # Set thread count before Julia initializes
   threads <- as.integer(threads)
   if (threads > 1L) {
-    Sys.setenv(JULIA_NUM_THREADS = as.character(threads))
+    # Use "N,0" format: N default threads, 0 interactive threads.
+    # Without this, JuliaCall runs on Julia's interactive thread whose ID
+    # exceeds nthreads(), causing BoundsError in packages (like Omniscape)
+    # that size thread-local arrays to nthreads().
+    Sys.setenv(JULIA_NUM_THREADS = paste0(threads, ",0"))
   }
   .cs_env$julia_threads <- threads
 
