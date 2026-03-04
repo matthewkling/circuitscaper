@@ -9,6 +9,7 @@ cs_pairwise(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
   write_voltage = FALSE,
@@ -41,6 +42,11 @@ are snapped to the nearest cell of the \code{resistance} raster. See
 
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}
+
+\item{avg_resistances}{Logical. When using 8-neighbor connectivity, compute
+the resistance of diagonal connections as the average of the two cells
+rather than their sum. Default \code{FALSE} (Circuitscape default). Ignored when
+\code{four_neighbors = TRUE}.}
 
 \item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
 identifying short-circuit regions (aka polygons). Cells sharing the same
@@ -81,13 +87,12 @@ automatically.}
 \value{
 A named list with:
 \describe{
-\item{current_map}{A \link[terra:SpatRaster-class]{terra::SpatRaster} with a single layer:
-\describe{
-\item{cumulative_current}{Current flow summed across all pairs,
-indicating the relative importance of each cell as a movement
-corridor.}
-}
-}
+\item{current_map}{A \link[terra:SpatRaster-class]{terra::SpatRaster}. By default contains a single
+\code{cumulative_current} layer (current flow summed across all pairs). When
+\code{cumulative_only = FALSE}, additional per-pair layers are included
+(e.g., \code{current_1_2}, \code{current_1_3}). When \code{write_voltage = TRUE},
+per-pair voltage layers are included (e.g., \code{voltage_1_2},
+\code{voltage_1_3}).}
 \item{resistance_matrix}{A symmetric numeric matrix of pairwise effective
 resistances between focal nodes, with node IDs as row and column names.}
 }

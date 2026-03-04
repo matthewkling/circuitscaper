@@ -29,6 +29,10 @@
 #'   (remove both).
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
+#' @param avg_resistances Logical. When using 8-neighbor connectivity, compute
+#'   the resistance of diagonal connections as the average of the two cells
+#'   rather than their sum. Default `FALSE` (Circuitscape default). Ignored when
+#'   `four_neighbors = TRUE`.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory.
@@ -79,6 +83,7 @@ cs_advanced <- function(resistance,
                         short_circuit = NULL,
                         source_ground_conflict = "keepall",
                         four_neighbors = FALSE,
+                        avg_resistances = FALSE,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
@@ -141,6 +146,7 @@ cs_advanced <- function(resistance,
     short_circuit_file = sc_path,
     source_ground_conflict = source_ground_conflict,
     four_neighbors = four_neighbors,
+    avg_resistances = avg_resistances,
     solver = solver,
     write_voltage = TRUE
   )

@@ -125,7 +125,7 @@ ground_layer <- rast("path/to/grounds.tif")
 result <- cs_advanced(resistance, source_layer, ground_layer)
 
 # Access individual layers
-plot(result[["cumulative_current"]])
+plot(result[["current"]])
 plot(result[["voltage"]])
 ```
 
@@ -166,6 +166,57 @@ cs_setup(threads = 4)
 result <- os_run(resistance, radius = 100,
                  block_size = 5,
                  parallelize = TRUE)
+```
+
+## Advanced Circuitscape Options
+
+The `cs_*` functions expose several additional Circuitscape features beyond
+the basics.
+
+### Per-Pair Current and Voltage Maps
+
+By default, pairwise, one-to-all, and all-to-one modes return only the
+cumulative current map. Set `cumulative_only = FALSE` to include per-pair
+(or per-node) current layers, and `write_voltage = TRUE` to include voltage
+layers:
+
+```{r per-pair}
+result <- cs_pairwise(resistance, locations,
+                      cumulative_only = FALSE,
+                      write_voltage = TRUE)
+names(result$current_map)  # e.g. cumulative_current, current_1_2, voltage_1_2, ...
+```
+
+### Variable Source Strengths
+
+By default, each focal node injects 1 amp of current. Use `source_strengths`
+to assign different injection strengths per node:
+
+```{r source-strengths}
+# Strengths in the same order as the locations
+strengths <- c(2.5, 1.0, 0.5)
+result <- cs_one_to_all(resistance, coords, source_strengths = strengths)
+```
+
+### Short-Circuit Regions
+
+Short-circuit regions represent areas of zero resistance (e.g., lakes,
+developed areas). Pass a raster where cells sharing the same positive integer
+value are short-circuited:
+
+```{r short-circuit}
+polygons <- rast("path/to/short_circuit_regions.tif")
+result <- cs_pairwise(resistance, locations, short_circuit = polygons)
+```
+
+### Include/Exclude Pairs
+
+For large numbers of focal nodes, you may want to restrict analysis to a
+subset of pairs:
+
+```{r included-pairs}
+result <- cs_pairwise(resistance, locations,
+                      included_pairs = "path/to/pairs.txt")
 ```
 
 ## Saving Outputs

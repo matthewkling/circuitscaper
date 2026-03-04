@@ -64,9 +64,13 @@ Default \code{TRUE}.}
 for targeted connectivity analysis.}
 
 \item{condition_type}{Character. How the condition layer filters connectivity:
-\code{"within"} (connectivity only between cells sharing the same condition
-value) or \code{"equal"} (connectivity only between cells with equal condition
-values, evaluated pairwise). Only relevant if \code{condition} is provided.}
+\code{"within"} (connectivity only between source and target cells whose
+condition values fall within a specified range) or \code{"equal"} (connectivity
+only between cells with equal condition values, evaluated pairwise). Only
+relevant if \code{condition} is provided. Note: \code{"within"} currently uses
+Omniscape's default unbounded range (\code{-Inf} to \code{Inf}), which effectively
+includes all cells. Finer control over range bounds is planned for a
+future version.}
 
 \item{parallelize}{Logical. Use Julia multithreading. Default \code{FALSE}.
 Julia's thread count is fixed at startup. If Julia was already initialized

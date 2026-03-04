@@ -19,6 +19,10 @@
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of
 #'   8-neighbor (queen). Default `FALSE`.
+#' @param avg_resistances Logical. When using 8-neighbor connectivity, compute
+#'   the resistance of diagonal connections as the average of the two cells
+#'   rather than their sum. Default `FALSE` (Circuitscape default). Ignored when
+#'   `four_neighbors = TRUE`.
 #' @param short_circuit Optional [terra::SpatRaster] or file path. Raster
 #'   identifying short-circuit regions (aka polygons). Cells sharing the same
 #'   positive integer value are treated as short-circuit regions with zero
@@ -60,13 +64,12 @@
 #'
 #' @return A named list with:
 #' \describe{
-#'   \item{current_map}{A [terra::SpatRaster] with a single layer:
-#'     \describe{
-#'       \item{cumulative_current}{Current flow summed across all pairs,
-#'         indicating the relative importance of each cell as a movement
-#'         corridor.}
-#'     }
-#'   }
+#'   \item{current_map}{A [terra::SpatRaster]. By default contains a single
+#'     `cumulative_current` layer (current flow summed across all pairs). When
+#'     `cumulative_only = FALSE`, additional per-pair layers are included
+#'     (e.g., `current_1_2`, `current_1_3`). When `write_voltage = TRUE`,
+#'     per-pair voltage layers are included (e.g., `voltage_1_2`,
+#'     `voltage_1_3`).}
 #'   \item{resistance_matrix}{A symmetric numeric matrix of pairwise effective
 #'     resistances between focal nodes, with node IDs as row and column names.}
 #' }
@@ -92,6 +95,7 @@ cs_pairwise <- function(resistance,
                         locations,
                         resistance_is = "resistances",
                         four_neighbors = FALSE,
+                        avg_resistances = FALSE,
                         short_circuit = NULL,
                         included_pairs = NULL,
                         write_voltage = FALSE,
@@ -106,6 +110,7 @@ cs_pairwise <- function(resistance,
               locations = locations,
               resistance_is = resistance_is,
               four_neighbors = four_neighbors,
+              avg_resistances = avg_resistances,
               short_circuit = short_circuit,
               included_pairs = included_pairs,
               write_voltage = write_voltage,
@@ -122,7 +127,7 @@ cs_pairwise <- function(resistance,
 #' Internal workhorse for pairwise, one-to-all, and all-to-one modes.
 #'
 #' @param mode Character. The Circuitscape scenario.
-#' @param resistance,locations,resistance_is,four_neighbors,solver,output_dir,verbose,short_circuit,included_pairs,source_strengths
+#' @param resistance,locations,resistance_is,four_neighbors,avg_resistances,solver,output_dir,verbose,short_circuit,included_pairs,source_strengths
 #'   See [cs_pairwise()] for details.
 #' @return For pairwise mode, a named list with `$current_map` and
 #'   `$resistance_matrix`. For one-to-all and all-to-one, just the SpatRaster.
@@ -132,6 +137,7 @@ run_cs_mode <- function(mode,
                         locations,
                         resistance_is = "resistances",
                         four_neighbors = FALSE,
+                        avg_resistances = FALSE,
                         short_circuit = NULL,
                         included_pairs = NULL,
                         write_voltage = FALSE,
@@ -220,6 +226,7 @@ run_cs_mode <- function(mode,
     locations_file = loc_path,
     resistance_is = resistance_is,
     four_neighbors = four_neighbors,
+    avg_resistances = avg_resistances,
     short_circuit_file = sc_path,
     included_pairs_file = included_pairs,
     solver = solver,

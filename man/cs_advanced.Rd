@@ -15,6 +15,7 @@ cs_advanced(
   short_circuit = NULL,
   source_ground_conflict = "keepall",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -57,6 +58,11 @@ both the source and ground rasters: \code{"keepall"} (default, keep both),
 
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}
+
+\item{avg_resistances}{Logical. When using 8-neighbor connectivity, compute
+the resistance of diagonal connections as the average of the two cells
+rather than their sum. Default \code{FALSE} (Circuitscape default). Ignored when
+\code{four_neighbors = TRUE}.}
 
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 

@@ -9,6 +9,7 @@ cs_one_to_all(
   locations,
   resistance_is = "resistances",
   four_neighbors = FALSE,
+  avg_resistances = FALSE,
   short_circuit = NULL,
   included_pairs = NULL,
   write_voltage = FALSE,
@@ -41,6 +42,11 @@ are snapped to the nearest cell of the \code{resistance} raster. See
 
 \item{four_neighbors}{Logical. Use 4-neighbor (rook) connectivity instead of
 8-neighbor (queen). Default \code{FALSE}.}
+
+\item{avg_resistances}{Logical. When using 8-neighbor connectivity, compute
+the resistance of diagonal connections as the average of the two cells
+rather than their sum. Default \code{FALSE} (Circuitscape default). Ignored when
+\code{four_neighbors = TRUE}.}
 
 \item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
 identifying short-circuit regions (aka polygons). Cells sharing the same

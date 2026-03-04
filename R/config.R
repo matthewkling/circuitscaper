@@ -18,6 +18,7 @@
 #' @param included_pairs_file Character or NULL. Path to included pairs file.
 #' @param source_ground_conflict Character. How to handle source/ground overlap (advanced mode).
 #' @param four_neighbors Logical. Use 4-neighbor connectivity.
+#' @param avg_resistances Logical. Use average resistance for diagonal connections.
 #' @param solver Character. Solver type.
 #' @param write_voltage Logical. Write voltage maps (advanced mode).
 #' @param variable_source_file Character or NULL. Path to variable source
@@ -40,6 +41,7 @@ build_cs_config <- function(mode,
                             included_pairs_file = NULL,
                             source_ground_conflict = "keepall",
                             four_neighbors = FALSE,
+                            avg_resistances = FALSE,
                             solver = "cg+amg",
                             write_voltage = FALSE,
                             cumulative_only = TRUE,
@@ -66,10 +68,9 @@ build_cs_config <- function(mode,
   )
 
   # Connection scheme
-  connect_val <- if (four_neighbors) "connect_four_neighbors" else "connect_eight_neighbors"
   config[["Connection scheme for raster habitat data"]] <- list(
     connect_four_neighbors = if (four_neighbors) "true" else "false",
-    connect_using_avg_resistances = "false"
+    connect_using_avg_resistances = if (avg_resistances) "true" else "false"
   )
 
   # Short-circuit regions

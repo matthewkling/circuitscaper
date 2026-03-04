@@ -256,6 +256,39 @@ test_that("build_cs_config omits variable source strengths when NULL", {
   expect_false(any(grepl("variable_source_file", content)))
 })
 
+test_that("build_cs_config sets avg_resistances in connection scheme", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    avg_resistances = TRUE
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("connect_using_avg_resistances = true", content)))
+})
+
+test_that("build_cs_config defaults avg_resistances to false", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc"
+  )
+
+  content <- readLines(ini_path)
+  expect_true(any(grepl("connect_using_avg_resistances = false", content)))
+})
+
 test_that("build_os_config handles conditional connectivity", {
   tmp_dir <- tempfile("os_test_")
   dir.create(tmp_dir)
