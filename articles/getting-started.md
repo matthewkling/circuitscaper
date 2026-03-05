@@ -3,20 +3,27 @@
 ## What is circuit-theory connectivity?
 
 Landscape connectivity — how easily organisms, genes, or ecological
-processes can move across a landscape — is central to conservation
-biology. Circuit theory offers a powerful way to model it. The idea is
-to treat a landscape as an electrical circuit: each raster cell is a
-node, adjacent cells are connected by resistors, and current flowing
-through the network reveals movement patterns. Unlike least-cost path
-methods, which find only the single cheapest route, circuit theory
-considers all possible pathways simultaneously. This makes it especially
-effective at identifying movement corridors and pinch points — places
-where connectivity is funneled through narrow gaps.
+processes can move across a landscape — is central to spatial ecology
+and conservation biology. Circuit theory offers a powerful way to model
+it. The idea is to treat a landscape as an electrical circuit: each
+raster cell is a node, adjacent cells are connected by resistors, and
+current flowing through the network reveals movement patterns. Unlike
+least-cost path methods, which find only the single cheapest route,
+circuit theory considers all possible pathways simultaneously. This
+makes it especially effective at identifying movement corridors and
+pinch points — places where connectivity is funneled through narrow
+gaps.
 
 circuitscaper brings this approach to R by wrapping two Julia tools:
 **Circuitscape** (which computes connectivity between specific sites)
 and **Omniscape** (which maps connectivity continuously across an entire
 landscape).
+
+This vignette provides a basic overview of the circuitscaper R package.
+For more details on circuit theory and the underlying Julia algorithms,
+see the [Circuitscape](https://circuitscape.org) and
+[Omniscape](https://docs.circuitscape.org/Omniscape.jl/latest/)
+documentation.
 
 ## Installation
 
@@ -51,7 +58,9 @@ process of interest to move through that location. These are typically
 derived from land cover or habitat suitability models. For example, a
 resistance surface for a forest-dwelling mammal might assign low values
 to forest (easy to traverse), moderate values to grassland, and high
-values to urban areas or water.
+values to urban areas or water. (Note that while the Circuitscape.jl
+Julia library allows resistance datasets to be specified as adjacency
+graph networks, circuitscaper currently only supports rasters.)
 
 Resistance values must be positive. If your data represents conductance
 (ease of movement) rather than resistance, set
@@ -72,11 +81,11 @@ protected areas, or sampling locations. You can provide them as:
 circuitscaper provides four Circuitscape modes and one Omniscape mode.
 Here’s how to choose:
 
-**Pairwise** is the most common starting point. Use it when you have
-discrete sites (habitat patches, populations) and want to know how
-well-connected they are to each other. The resistance matrix is useful
-as a distance metric for analyses such as isolation by resistance in
-population genetics.
+**Pairwise** is a common starting point. Use it when you have discrete
+sites (habitat patches, populations) and want to know how well-connected
+they are to each other. The resistance matrix is useful as a distance
+metric for analyses such as isolation by resistance in population
+genetics.
 
 **One-to-all** iterates over each focal node, injecting current at that
 node and grounding all others. This emphasizes how current disperses
@@ -93,8 +102,8 @@ example, which protected areas are easiest to reach via migration.
 placement rather than using focal nodes. You provide explicit source
 current and ground conductance rasters, and a single circuit is solved.
 This is useful for modeling directional movement between a defined
-source area and a destination (e.g., current flow from a species’ range
-edge toward a climate refuge).
+source area and a destination (e.g., current flow between a migratory
+species’ winter and summer ranges).
 
 **Omniscape** is fundamentally different — it doesn’t require focal
 nodes at all. It uses a moving window to compute omnidirectional
@@ -109,53 +118,107 @@ library(terra)
 library(circuitscaper)
 
 # Resistance surface (higher values = harder to traverse)
-resistance <- rast("path/to/resistance.tif")
+resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
 # Option 1: Focal nodes as coordinates (simplest)
-coords <- matrix(c(-120.5, 37.2,
-                    -119.8, 36.9,
-                    -121.1, 37.8), ncol = 2, byrow = TRUE)
+coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(resistance, coords)
 
 # Option 2: Focal nodes as a raster (integer IDs; 0 and NA are not nodes)
-locations <- rast("path/to/focal_nodes.tif")
-result <- cs_pairwise(resistance, locations)
+# locations <- rast("path/to/focal_nodes.tif")
+# result <- cs_pairwise(resistance, locations)
 
-# Cumulative current map — high values indicate important movement corridors
+# Cumulative current map -- high values indicate important movement corridors
 plot(result$current_map)
 
-# Pairwise resistance matrix — can be used as a connectivity distance metric
+# Pairwise resistance matrix -- can be used as a connectivity distance metric
 result$resistance_matrix
 ```
 
 ## Circuitscape: One-to-All and All-to-One Modes
 
 ``` r
-result <- cs_one_to_all(resistance, locations)
-
-# Cumulative current across all iterations
-plot(result[["cumulative_current"]])
+result <- cs_one_to_all(resistance, coords)
+plot(result)
 ```
 
 ``` r
-result <- cs_all_to_one(resistance, locations)
-plot(result[["cumulative_current"]])
+result <- cs_all_to_one(resistance, coords)
+plot(result$cumulative_current)
 ```
 
 ## Circuitscape: Advanced Mode
 
 ``` r
-source_layer <- rast("path/to/sources.tif")
-ground_layer <- rast("path/to/grounds.tif")
+source_layer <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
+ground_layer <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 
-result <- cs_advanced(resistance, source_layer, ground_layer)
+result <- cs_advanced(resistance, source_layer, ground_layer,
+                      ground_is = "conductances")
 
-# Current density — where flow is concentrated
+# Current density -- corridors and pinch points where flow is concentrated
+# i.e. possible preservation priorities
 plot(result[["current"]])
 
-# Voltage — analogous to movement probability, decreasing with distance
+# Voltage -- analogous to movement probability, decreasing with distance
 # and resistance from sources
 plot(result[["voltage"]])
+
+# Power dissipation -- areas of current flow through high-resistance areas,
+# i.e. possible restoration priorities
+plot(result[["current"]]^2 * resistance)
+```
+
+## Additional Circuitscape Options
+
+The `cs_*` functions expose several additional Circuitscape features.
+
+### Per-pair current and voltage maps
+
+By default, pairwise, one-to-all, and all-to-one modes return only the
+cumulative current map. Set `cumulative_only = FALSE` to include
+per-pair (or per-node) current layers, and `write_voltage = TRUE` to
+include voltage layers:
+
+``` r
+result <- cs_pairwise(resistance, coords,
+                      cumulative_only = FALSE,
+                      write_voltage = TRUE)
+names(result$current_map)
+```
+
+### Variable source strengths
+
+By default, each focal node injects 1 amp of current. Use
+`source_strengths` to assign different injection strengths per node —
+useful when sites differ in population size or habitat area:
+
+``` r
+# Strengths in the same order as the locations
+strengths <- c(2.5, 1.0, 0.5)
+result <- cs_one_to_all(resistance, coords, source_strengths = strengths)
+```
+
+### Short-circuit regions
+
+Short-circuit regions represent areas of zero resistance (e.g., lakes
+that can be crossed freely, or developed areas that funnel movement).
+Pass a raster where cells sharing the same positive integer value are
+short-circuited:
+
+``` r
+polygons <- rast("path/to/short_circuit_regions.tif")
+result <- cs_pairwise(resistance, locations, short_circuit = polygons)
+```
+
+### Include/exclude pairs
+
+For large numbers of focal nodes, you may want to restrict analysis to a
+subset of pairs:
+
+``` r
+result <- cs_pairwise(resistance, locations,
+                      included_pairs = "path/to/pairs.txt")
 ```
 
 ## Omniscape: Moving-Window Connectivity
@@ -173,10 +236,10 @@ The two key parameters are:
   aggregation). Setting `block_size = 3` groups sources into 3x3 blocks,
   reducing the number of circuit solves with typically negligible
   effects on results. This is the primary knob for trading off speed
-  vs. resolution.
+  vs. precision.
 
 ``` r
-result <- os_run(resistance, radius = 100, block_size = 5)
+result <- os_run(resistance, radius = 20, block_size = 3)
 ```
 
 Omniscape returns up to three layers:
@@ -194,11 +257,10 @@ Omniscape returns up to three layers:
   informative layer.
 
 ``` r
-plot(result[["normalized_current"]])
-plot(result[["flow_potential"]])
+plot(result)
 ```
 
-### With Source Strength Weights
+### With source strength weights
 
 By default, source strength is derived from the inverse of resistance.
 You can provide an explicit source strength raster (e.g., habitat
@@ -207,15 +269,14 @@ quality) to weight sources independently of resistance:
 ``` r
 source_strength <- rast("path/to/habitat_quality.tif")
 
-result <- os_run(resistance, radius = 100,
-                 source_strength = source_strength,
-                 block_size = 5)
+result <- os_run(resistance, radius = 20,
+                 source_strength = source_strength)
 ```
 
-### Parallel Processing
+### Parallel processing
 
-For large landscapes, enable Julia multithreading. Julia’s thread count
-is fixed at startup, so set it via
+For large landscapes, enable Julia multithreading to reduce compute
+times. Julia’s thread count is fixed at startup, so set it via
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
 before any other circuitscaper calls:
 
@@ -223,72 +284,9 @@ before any other circuitscaper calls:
 # Set thread count at the start of your session
 cs_setup(threads = 4)
 
-result <- os_run(resistance, radius = 100,
+result <- os_run(resistance, radius = 20,
                  block_size = 5,
                  parallelize = TRUE)
-```
-
-## Additional Options
-
-The `cs_*` functions expose several additional Circuitscape features.
-
-### Per-Pair Current and Voltage Maps
-
-By default, pairwise, one-to-all, and all-to-one modes return only the
-cumulative current map. Set `cumulative_only = FALSE` to include
-per-pair (or per-node) current layers, and `write_voltage = TRUE` to
-include voltage layers:
-
-``` r
-result <- cs_pairwise(resistance, locations,
-                      cumulative_only = FALSE,
-                      write_voltage = TRUE)
-names(result$current_map)  # e.g. cumulative_current, current_1_2, voltage_1_2, ...
-```
-
-### Variable Source Strengths
-
-By default, each focal node injects 1 amp of current. Use
-`source_strengths` to assign different injection strengths per node —
-useful when sites differ in population size or habitat area:
-
-``` r
-# Strengths in the same order as the locations
-strengths <- c(2.5, 1.0, 0.5)
-result <- cs_one_to_all(resistance, coords, source_strengths = strengths)
-```
-
-### Short-Circuit Regions
-
-Short-circuit regions represent areas of zero resistance (e.g., lakes
-that can be crossed freely, or developed areas that funnel movement).
-Pass a raster where cells sharing the same positive integer value are
-short-circuited:
-
-``` r
-polygons <- rast("path/to/short_circuit_regions.tif")
-result <- cs_pairwise(resistance, locations, short_circuit = polygons)
-```
-
-### Include/Exclude Pairs
-
-For large numbers of focal nodes, you may want to restrict analysis to a
-subset of pairs:
-
-``` r
-result <- cs_pairwise(resistance, locations,
-                      included_pairs = "path/to/pairs.txt")
-```
-
-## Saving Outputs
-
-By default, intermediate files are written to a temporary directory and
-cleaned up. To persist output files (ASC rasters, INI configuration, and
-resistance matrices), use `output_dir`:
-
-``` r
-result <- cs_pairwise(resistance, locations,
-                      output_dir = "my_output_directory")
 ```
 
 ## Performance
@@ -311,6 +309,17 @@ pairs or iterations. A few practical guidelines:
   well for large problems. For small rasters (under ~10,000 cells),
   `"cholmod"` (direct solver) may be faster.
 
+## Saving Outputs
+
+By default, intermediate files are written to a temporary directory and
+cleaned up. To persist output files (ASC rasters, INI configuration, and
+resistance matrices), use `output_dir`:
+
+``` r
+result <- cs_pairwise(resistance, locations,
+                      output_dir = "my_output_directory")
+```
+
 ## Tips
 
 - **CRS preservation**: circuitscaper captures the CRS from your input
@@ -319,7 +328,8 @@ pairs or iterations. A few practical guidelines:
 
 - **Conductance input**: If your surface represents ease of movement
   rather than difficulty, set `resistance_is = "conductances"` to avoid
-  inverting values manually.
+  inverting values manually. There’s a similar option for grounds in
+  advanced mode.
 
 - **Verbose output**: Set `verbose = TRUE` to see Circuitscape’s solver
   progress, useful for debugging or monitoring long runs.

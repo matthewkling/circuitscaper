@@ -19,4 +19,4 @@ Useful links:
 
 ## Author
 
-**Maintainer**: Matthew Kling <mattkling@gmail.com>
+**Maintainer**: Matthew Kling <mattkling@berkeley.edu>

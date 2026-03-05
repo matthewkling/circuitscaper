@@ -7,24 +7,22 @@ JuliaCall.
 
 ## Overview
 
-How easily can organisms, genes, or ecological processes move across a
-landscape? **circuitscaper** answers this using circuit theory, where
-the landscape is modeled as an electrical circuit and current flow
-reveals connectivity patterns.
+Landscape connectivity models estimate how easily organisms, genes, or
+ecological processes can move across a landscape. Circuit theory-based
+methods model the landscape as an electrical circuit in which current
+flow across a resistance surface reveals connectivity patterns. This
+approach captures all possible movement pathways simultaneously, making
+it especially useful for identifying corridors and pinch points.
 
-The package wraps [Circuitscape](https://circuitscape.org) and
+These methods are implemented in a pair of open-source Julia packages,
+[Circuitscape](https://circuitscape.org) and
 [Omniscape](https://docs.circuitscape.org/Omniscape.jl/latest/),
-open-source Julia tools developed by Brad McRae, Viral Shah, Ranjan
-Anantharaman, and collaborators. The key input is a **resistance
-surface** — a raster where each cell’s value represents how difficult it
-is for an organism to cross (typically derived from land cover, with
-higher values for hostile habitat). Circuitscape treats each cell as a
-node in a circuit and computes current flow between focal sites. Unlike
-least-cost path methods, this captures all possible pathways
-simultaneously, making it especially useful for identifying corridors
-and pinch points. Omniscape extends this by applying Circuitscape in a
-moving window across the entire landscape, producing wall-to-wall
-connectivity maps without predefined focal sites.
+developed by Brad McRae, Viral Shah, Tanmay Mohapatra, Ranjan
+Anantharaman, and collaborators. Circuitscape treats each cell as a node
+in a circuit and computes current flow between focal sites. Omniscape
+extends this by applying Circuitscape in a moving window across the
+entire landscape, producing wall-to-wall connectivity maps without
+predefined focal sites.
 
 **circuitscaper** is an independent R package (not affiliated with the
 Circuitscape development team) that provides an R-native interface to
@@ -43,29 +41,33 @@ library(circuitscaper)
 cs_install_julia()
 ```
 
-## Quick Example
+## Example
 
 ``` r
 library(circuitscaper)
 library(terra)
+#> Warning: package 'terra' was built under R version 4.3.3
+#> terra 1.8.10
 
-# Create a simple resistance surface (or load your own with rast("file.tif"))
-resistance <- rast(nrows = 50, ncols = 50, vals = runif(2500, 1, 10))
+# Load an example resistance raster
+resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
-# Focal nodes as coordinates (x, y)
-coords <- matrix(c(-140, 50,
-                     -60, 50,
-                    -100, 10), ncol = 2, byrow = TRUE)
-
-# Pairwise Circuitscape — resistance matrix + cumulative current map
-result <- cs_pairwise(resistance, coords)
+# Pairwise Circuitscape -- resistance matrix + cumulative current map
+focal_sites <- matrix(c(10, 40, 40, 40, 25, 10), ncol = 2, byrow = TRUE)
+result <- cs_pairwise(resistance, focal_sites)
 plot(result$current_map)
-result$resistance_matrix
+```
 
-# Omniscape — wall-to-wall moving-window connectivity
+![](reference/figures/README-example-1.png)
+
+``` r
+
+# Omniscape -- wall-to-wall moving-window connectivity
 result <- os_run(resistance, radius = 10)
 plot(result[["normalized_current"]])
 ```
+
+![](reference/figures/README-example-2.png)
 
 ## Functions
 

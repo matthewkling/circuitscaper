@@ -69,8 +69,8 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>How easily can organisms, genes, or ecological processes move across a landscape? <strong>circuitscaper</strong> answers this using circuit theory, where the landscape is modeled as an electrical circuit and current flow reveals connectivity patterns.</p>
-<p>The package wraps <a href="https://circuitscape.org" class="external-link">Circuitscape</a> and <a href="https://docs.circuitscape.org/Omniscape.jl/latest/" class="external-link">Omniscape</a>, open-source Julia tools developed by Brad McRae, Viral Shah, Ranjan Anantharaman, and collaborators. The key input is a <strong>resistance surface</strong> — a raster where each cell’s value represents how difficult it is for an organism to cross (typically derived from land cover, with higher values for hostile habitat). Circuitscape treats each cell as a node in a circuit and computes current flow between focal sites. Unlike least-cost path methods, this captures all possible pathways simultaneously, making it especially useful for identifying corridors and pinch points. Omniscape extends this by applying Circuitscape in a moving window across the entire landscape, producing wall-to-wall connectivity maps without predefined focal sites.</p>
+<p>Landscape connectivity models estimate how easily organisms, genes, or ecological processes can move across a landscape. Circuit theory-based methods model the landscape as an electrical circuit in which current flow across a resistance surface reveals connectivity patterns. This approach captures all possible movement pathways simultaneously, making it especially useful for identifying corridors and pinch points.</p>
+<p>These methods are implemented in a pair of open-source Julia packages, <a href="https://circuitscape.org" class="external-link">Circuitscape</a> and <a href="https://docs.circuitscape.org/Omniscape.jl/latest/" class="external-link">Omniscape</a>, developed by Brad McRae, Viral Shah, Tanmay Mohapatra, Ranjan Anantharaman, and collaborators. Circuitscape treats each cell as a node in a circuit and computes current flow between focal sites. Omniscape extends this by applying Circuitscape in a moving window across the entire landscape, producing wall-to-wall connectivity maps without predefined focal sites.</p>
 <p><strong>circuitscaper</strong> is an independent R package (not affiliated with the Circuitscape development team) that provides an R-native interface to both tools. Users work entirely in R with <code><a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a></code> objects while Julia handles computation behind the scenes.</p>
 </div>
 <div class="section level2">
@@ -85,33 +85,37 @@
 <span><span class="fu"><a href="reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="quick-example">Quick Example<a class="anchor" aria-label="anchor" href="#quick-example"></a>
+<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: package 'terra' was built under R version 4.3.3</span></span>
+<span><span class="co">#&gt; terra 1.8.10</span></span>
 <span></span>
-<span><span class="co"># Create a simple resistance surface (or load your own with rast("file.tif"))</span></span>
-<span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span>nrows <span class="op">=</span> <span class="fl">50</span>, ncols <span class="op">=</span> <span class="fl">50</span>, vals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">2500</span>, <span class="fl">1</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Load an example resistance raster</span></span>
+<span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/resistance.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Focal nodes as coordinates (x, y)</span></span>
-<span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">140</span>, <span class="fl">50</span>,</span>
-<span>                     <span class="op">-</span><span class="fl">60</span>, <span class="fl">50</span>,</span>
-<span>                    <span class="op">-</span><span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Pairwise Circuitscape — resistance matrix + cumulative current map</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">resistance_matrix</span></span>
-<span></span>
-<span><span class="co"># Omniscape — wall-to-wall moving-window connectivity</span></span>
+<span><span class="co"># Pairwise Circuitscape -- resistance matrix + cumulative current map</span></span>
+<span><span class="va">focal_sites</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">25</span>, <span class="fl">10</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">focal_sites</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-1.png" width="100%"></p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Omniscape -- wall-to-wall moving-window connectivity</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"normalized_current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-2.png" width="100%"></p>
 </div>
 <div class="section level2">
 <h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a>
 </h2>
 <table class="table">
+<colgroup>
+<col width="31%">
+<col width="68%">
+</colgroup>
 <thead><tr class="header">
 <th>Function</th>
 <th>Description</th>

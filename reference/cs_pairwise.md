@@ -39,8 +39,9 @@ cs_pairwise(
 
   - A
     [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-    with positive integer IDs identifying each node. Cells with value 0
-    or `NA` are not treated as focal nodes.
+    (or `raster::RasterLayer`) with positive integer IDs identifying
+    each node. Cells with value 0 or `NA` are not treated as focal
+    nodes.
 
   - A file path to a raster file (e.g., `.tif`, `.asc`).
 
@@ -172,9 +173,9 @@ Circuitscape user guide:
 ``` r
 if (FALSE) { # \dontrun{
 library(terra)
-res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
-result <- cs_pairwise(res, coords)
+res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
+result <- cs_pairwise(res, coords, cumulative_only = FALSE)
 plot(result$current_map)
 result$resistance_matrix
 } # }
