@@ -28,8 +28,9 @@ conductances instead.}
 
 \item{locations}{Focal node locations, provided as any of:
 \itemize{
-\item A \link[terra:SpatRaster-class]{terra::SpatRaster} with positive integer IDs identifying each node.
-Cells with value 0 or \code{NA} are not treated as focal nodes.
+\item A \link[terra:SpatRaster-class]{terra::SpatRaster} (or \code{raster::RasterLayer}) with positive integer IDs
+identifying each node. Cells with value 0 or \code{NA} are not treated as focal
+nodes.
 \item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
 \item A two-column matrix or data.frame of x/y coordinates. Each row becomes
 a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
@@ -111,8 +112,8 @@ important for connectivity across the full set of nodes.
 \examples{
 \dontrun{
 library(terra)
-res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_all_to_one(res, coords)
 plot(result)
 }

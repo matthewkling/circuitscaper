@@ -53,8 +53,12 @@ cs_locations <- function(coords, resistance) {
     resistance <- terra::rast(resistance)
   }
 
+  if (inherits(resistance, "RasterLayer")) {
+    resistance <- terra::rast(resistance)
+  }
+
   if (!inherits(resistance, "SpatRaster")) {
-    stop("`resistance` must be a SpatRaster or file path to a raster.",
+    stop("`resistance` must be a SpatRaster or RasterLayer, or a file path to a raster.",
          call. = FALSE)
   }
 

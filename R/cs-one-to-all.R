@@ -33,8 +33,8 @@
 #' @examples
 #' \dontrun{
 #' library(terra)
-#' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-#' coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
+#' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+#' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 #' result <- cs_one_to_all(res, coords)
 #' plot(result)
 #' }

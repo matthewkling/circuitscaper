@@ -62,14 +62,11 @@
 #' @examples
 #' \dontrun{
 #' library(terra)
-#' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-#' src <- rast(nrows = 10, ncols = 10, vals = 0)
-#' src[1, 1] <- 1
-#' gnd <- rast(nrows = 10, ncols = 10, vals = 0)
-#' gnd[10, 10] <- 1
-#' result <- cs_advanced(res, src, gnd)
+#' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+#' origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
+#' dest <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+#' result <- cs_advanced(res, origin, dest, ground_is = "conductances")
 #' plot(result)
-#' plot(result[["voltage"]])
 #' }
 #'
 #' @export

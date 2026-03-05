@@ -111,10 +111,9 @@ connectivity using a moving window approach based on circuit theory.
 \examples{
 \dontrun{
 library(terra)
-res <- rast(nrows = 50, ncols = 50, vals = runif(2500, 1, 10))
-result <- os_run(res, radius = 10)
+res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+result <- os_run(res, radius = 20)
 plot(result)
-plot(result[["normalized_current"]])
 }
 
 }

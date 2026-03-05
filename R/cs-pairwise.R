@@ -8,8 +8,9 @@
 #'   movement. Use the `resistance_is` argument if your surface represents
 #'   conductances instead.
 #' @param locations Focal node locations, provided as any of:
-#'   * A [terra::SpatRaster] with positive integer IDs identifying each node.
-#'     Cells with value 0 or `NA` are not treated as focal nodes.
+#'   * A [terra::SpatRaster] (or `raster::RasterLayer`) with positive integer IDs
+#'     identifying each node. Cells with value 0 or `NA` are not treated as focal
+#'     nodes.
 #'   * A file path to a raster file (e.g., `.tif`, `.asc`).
 #'   * A two-column matrix or data.frame of x/y coordinates. Each row becomes
 #'     a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
@@ -83,9 +84,9 @@
 #' @examples
 #' \dontrun{
 #' library(terra)
-#' res <- rast(nrows = 10, ncols = 10, vals = runif(100, 1, 10))
-#' coords <- matrix(c(-140, 70, -60, 70, -100, 30), ncol = 2, byrow = TRUE)
-#' result <- cs_pairwise(res, coords)
+#' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+#' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
+#' result <- cs_pairwise(res, coords, cumulative_only = FALSE)
 #' plot(result$current_map)
 #' result$resistance_matrix
 #' }
@@ -159,6 +160,11 @@ run_cs_mode <- function(mode,
   work_dir <- if (use_temp) tempfile("cs_") else output_dir
   dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
   if (use_temp) on.exit(unlink(work_dir, recursive = TRUE), add = TRUE)
+
+  # Convert RasterLayer to SpatRaster if applicable
+  if (inherits(resistance, "RasterLayer")) {
+    resistance <- terra::rast(resistance)
+  }
 
   # Capture CRS before writing to ASC
   input_crs <- get_input_crs(resistance)

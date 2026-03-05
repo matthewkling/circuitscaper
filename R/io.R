@@ -17,13 +17,13 @@ ensure_asc <- function(x, dir, name) {
     return(normalizePath(x, mustWork = TRUE))
   }
 
-  if (inherits(x, "SpatRaster")) {
+  if (inherits(x, c("SpatRaster", "RasterLayer"))) {
     path <- file.path(dir, paste0(name, ".asc"))
     terra::writeRaster(x, path, overwrite = TRUE, NAflag = -9999)
     return(normalizePath(path, mustWork = TRUE))
   }
 
-  stop("`", name, "` must be a SpatRaster or a file path to a raster.",
+  stop("`", name, "` must be a SpatRaster or RasterLayer, or a file path to a raster.",
        call. = FALSE)
 }
 
@@ -37,6 +37,9 @@ ensure_asc <- function(x, dir, name) {
 #' @return Character. CRS in WKT format.
 #' @noRd
 get_input_crs <- function(x) {
+  if (inherits(x, "RasterLayer")) {
+    x <- terra::rast(x)
+  }
   if (inherits(x, "SpatRaster")) {
     return(terra::crs(x))
   }
