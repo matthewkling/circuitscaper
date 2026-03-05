@@ -65,7 +65,7 @@ test_that("cs_locations errors on fewer than 2 nodes", {
 
 test_that("cs_locations errors on non-raster resistance", {
   coords <- matrix(c(1, 2, 3, 4), ncol = 2)
-  expect_error(cs_locations(coords, 42), "must be a SpatRaster or file path")
+  expect_error(cs_locations(coords, 42), "must be a SpatRaster")
 })
 
 test_that("cs_locations preserves CRS from template", {

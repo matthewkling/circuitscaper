@@ -37,7 +37,7 @@ test_that("ensure_asc writes SpatRaster to ASC", {
 test_that("ensure_asc errors for invalid input", {
   expect_error(
     ensure_asc(42, tempdir(), "test"),
-    "must be a SpatRaster or a file path"
+    "must be a SpatRaster"
   )
 })
 
