@@ -42,14 +42,12 @@ cs_install_julia()
 ``` r
 library(circuitscaper)
 library(terra)
-#> Warning: package 'terra' was built under R version 4.3.3
-#> terra 1.8.10
 
 # Load an example resistance raster
 resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
 # Pairwise Circuitscape
-# result is a list containing the pairwise resistance matrix and current maps
+# (result is a list containing the pairwise resistance matrix and current maps)
 focal_sites <- matrix(c(10, 40, 40, 40, 25, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(resistance, focal_sites)
 plot(result$current_map)
@@ -60,7 +58,7 @@ plot(result$current_map)
 ``` r
 
 # Omniscape -- wall-to-wall moving-window connectivity
-# result is a multi-layer SpatRaster of current flow variables
+# (result is a multi-layer SpatRaster of current flow variables)
 result <- os_run(resistance, radius = 10)
 plot(result$normalized_current)
 ```
@@ -69,16 +67,16 @@ plot(result$normalized_current)
 
 ## Functions
 
-| Function                 | Description                                    | Julia backend                                                      |
-|--------------------------|------------------------------------------------|--------------------------------------------------------------------|
-| **`cs_pairwise()`**      | Pairwise effective resistance and current flow | `Circuitscape.compute()`                                           |
-| **`cs_one_to_all()`**    | One-to-all connectivity analysis               | `Circuitscape.compute()`                                           |
-| **`cs_all_to_one()`**    | All-to-one connectivity analysis               | `Circuitscape.compute()`                                           |
-| **`cs_advanced()`**      | Advanced mode with custom sources and grounds  | `Circuitscape.compute()`                                           |
-| **`os_run()`**           | Omniscape moving-window connectivity           | `Omniscape.run_omniscape()`                                        |
-| **`cs_locations()`**     | Create focal node raster from coordinates      | \-                                                                 |
-| **`cs_setup()`**         | Initialize Julia session (called automatically)        | `JuliaCall::julia_library()`                                       |
-| **`cs_install_julia()`** | Install Julia and required packages            | `JuliaCall::install_julia()`, `JuliaCall::julia_install_package()` |
+| Function                 | Description                                     | Julia backend                                                      |
+|--------------------------|-------------------------------------------------|--------------------------------------------------------------------|
+| **`cs_pairwise()`**      | Pairwise effective resistance and current flow  | `Circuitscape.compute()`                                           |
+| **`cs_one_to_all()`**    | One-to-all connectivity analysis                | `Circuitscape.compute()`                                           |
+| **`cs_all_to_one()`**    | All-to-one connectivity analysis                | `Circuitscape.compute()`                                           |
+| **`cs_advanced()`**      | Advanced mode with custom sources and grounds   | `Circuitscape.compute()`                                           |
+| **`os_run()`**           | Omniscape moving-window connectivity            | `Omniscape.run_omniscape()`                                        |
+| **`cs_locations()`**     | Create focal node raster from coordinates       | \-                                                                 |
+| **`cs_setup()`**         | Initialize Julia session (called automatically) | `JuliaCall::julia_library()`                                       |
+| **`cs_install_julia()`** | Install Julia and required packages             | `JuliaCall::install_julia()`, `JuliaCall::julia_install_package()` |
 
 ## Requirements
 
