@@ -14,8 +14,7 @@
 #'   * A file path to a raster file (e.g., `.tif`, `.asc`).
 #'   * A two-column matrix or data.frame of x/y coordinates. Each row becomes
 #'     a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
-#'     are snapped to the nearest cell of the `resistance` raster. See
-#'     [cs_locations()].
+#'     are snapped to the nearest cell of the `resistance` raster.
 #' @param resistance_is Character. Whether the resistance surface represents
 #'   `"resistances"` (default) or `"conductances"`.
 #' @param four_neighbors Logical. Use 4-neighbor (rook) connectivity instead of

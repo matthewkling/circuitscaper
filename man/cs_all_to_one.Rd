@@ -34,8 +34,7 @@ nodes.
 \item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
 \item A two-column matrix or data.frame of x/y coordinates. Each row becomes
 a focal node, auto-assigned IDs 1, 2, 3, ... in row order. Coordinates
-are snapped to the nearest cell of the \code{resistance} raster. See
-\code{\link[=cs_locations]{cs_locations()}}.
+are snapped to the nearest cell of the \code{resistance} raster.
 }}
 
 \item{resistance_is}{Character. Whether the resistance surface represents
