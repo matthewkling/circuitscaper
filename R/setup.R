@@ -5,8 +5,12 @@
 #' function. Call explicitly to control the Julia path, number of threads, or
 #' pre-warm the session.
 #'
-#' @param julia_home Character. Path to the Julia installation directory. If
-#'   `NULL` (default), JuliaCall searches standard locations.
+#' `cs_setup()` does **not** install Julia or Julia packages. If Julia is not
+#' found or the required packages are missing, it throws an informative error
+#' directing you to [cs_install_julia()].
+#'
+#' @param julia_home Character. Path to the Julia `bin/` directory. If
+#'   `NULL` (default), the system PATH and common locations are searched.
 #' @param threads Integer. Number of Julia threads to start. Default `1L`.
 #'   Must be set before Julia initializes — once Julia is running, the thread
 #'   count cannot be changed without restarting R. Set this to a value greater
@@ -17,11 +21,10 @@
 #' @return Invisibly returns `TRUE` on success.
 #'
 #' @details
-#' Following the pattern established by diffeqr, `cs_setup()` will:
-#' * Install Julia automatically if missing (via `installJulia = TRUE`).
-#' * Install the Circuitscape and Omniscape Julia packages if missing.
-#' * Pass `...` through to [JuliaCall::julia_setup()] so users can set
-#'   `JULIA_HOME`, `rebuild`, etc.
+#' `cs_setup()` will:
+#' * Verify that Julia is installed and accessible.
+#' * Verify that the Circuitscape and Omniscape Julia packages are installed.
+#' * Load both packages and warm up the JIT compiler.
 #'
 #' Once Julia is initialized, it stays warm for the R session. Subsequent calls
 #' to `cs_setup()` return immediately.
@@ -56,6 +59,20 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     return(invisible(TRUE))
   }
 
+  # --- Check that Julia is available ---
+  if (is.null(julia_home)) {
+    julia_home <- find_system_julia()
+  }
+  if (is.null(julia_home)) {
+    stop(
+      "Julia not found. To fix this, run:\n",
+      "  cs_install_julia()\n",
+      "If Julia is already installed elsewhere, specify the path:\n",
+      "  cs_setup(julia_home = \"/path/to/julia/bin\")",
+      call. = FALSE
+    )
+  }
+
   # Set thread count before Julia initializes
   threads <- as.integer(threads)
   if (threads > 1L) {
@@ -67,27 +84,32 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   }
   .cs_env$julia_threads <- threads
 
-  setup_args <- list(installJulia = TRUE, ...)
-  if (!is.null(julia_home)) {
-    setup_args$JULIA_HOME <- julia_home
-  } else if (is.null(setup_args$JULIA_HOME)) {
-    # Auto-detect system Julia to avoid JuliaCall defaulting to a stale
-    # bundled installation (e.g. 1.9) when a newer system Julia exists
-    sys_julia <- find_system_julia()
-    if (!is.null(sys_julia)) {
-      setup_args$JULIA_HOME <- sys_julia
-    }
-  }
-
+  # Initialize Julia (do NOT auto-install)
+  setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home, ...)
   if (quiet) {
     suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
   } else {
     do.call(JuliaCall::julia_setup, setup_args)
   }
 
-  JuliaCall::julia_install_package_if_needed("Circuitscape")
-  JuliaCall::julia_install_package_if_needed("Omniscape")
+  # --- Check that required Julia packages are installed ---
+  missing_pkgs <- character(0)
+  if (identical(JuliaCall::julia_installed_package("Circuitscape"), "nothing")) {
+    missing_pkgs <- c(missing_pkgs, "Circuitscape")
+  }
+  if (identical(JuliaCall::julia_installed_package("Omniscape"), "nothing")) {
+    missing_pkgs <- c(missing_pkgs, "Omniscape")
+  }
+  if (length(missing_pkgs) > 0) {
+    stop(
+      "Required Julia package(s) not installed: ",
+      paste(missing_pkgs, collapse = ", "), ".\n",
+      "Run cs_install_julia() to install all required packages.",
+      call. = FALSE
+    )
+  }
 
+  # Load packages
   JuliaCall::julia_library("Circuitscape")
   .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Circuitscape")
 
@@ -101,7 +123,6 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   }
 
   # Warm up Julia's JIT compiler by running a tiny Circuitscape problem.
-
   # Without this, the first real cs_*() call pays a ~20 s compilation penalty.
   if (!quiet) message("Warming up Circuitscape JIT compiler...")
   warmup_jl <- '
@@ -170,33 +191,88 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 
 #' Install Julia and Required Packages
 #'
-#' One-time helper that installs Julia and the Circuitscape and Omniscape Julia
-#' packages. Intended for first-time users.
+#' Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
+#' the recommended first step after installing the circuitscaper R package.
 #'
+#' In interactive sessions, prompts for confirmation before downloading. In
+#' non-interactive sessions (e.g., CI), proceeds without prompting.
+#'
+#' @param force Logical. If `TRUE`, reinstall Julia and packages even if they
+#'   appear to be already present. Default `FALSE`.
 #' @param version Character. Julia version to install. Default `"latest"`.
 #'
-#' @return Invisibly returns `TRUE` on success.
+#' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
 #' @examples
 #' \dontrun{
 #' cs_install_julia()
+#' cs_install_julia(force = TRUE)
 #' }
 #'
 #' @export
-cs_install_julia <- function(version = "latest") {
-  if (version == "latest") {
-    JuliaCall::install_julia()
-  } else {
-    JuliaCall::install_julia(version = version)
+cs_install_julia <- function(force = FALSE, version = "latest") {
+  julia_home <- find_system_julia()
+  need_julia <- force || is.null(julia_home)
+
+  # Prompt for confirmation in interactive sessions
+  if (interactive()) {
+    if (need_julia) {
+      msg <- paste0(
+        "circuitscaper requires Julia and two Julia packages.\n",
+        "This will download and install:\n",
+        "
+ Julia (~500 MB)\n",
+        "
+ Circuitscape.jl and Omniscape.jl (~500 MB)\n",
+        "\nProceed?"
+      )
+    } else {
+      msg <- paste0(
+        "Julia found at: ", julia_home, "\n",
+        "This will install/update the required Julia packages:\n",
+        "
+ Circuitscape.jl and Omniscape.jl (~500 MB)\n",
+        "\nProceed?"
+      )
+    }
+    answer <- utils::askYesNo(msg, default = TRUE)
+    if (!isTRUE(answer)) {
+      message("Installation cancelled.")
+      return(invisible(FALSE))
+    }
   }
 
-  JuliaCall::julia_setup(installJulia = FALSE)
+  # Step 1: Install Julia if needed
+  if (need_julia) {
+    message("Installing Julia...")
+    if (version == "latest") {
+      JuliaCall::install_julia()
+    } else {
+      JuliaCall::install_julia(version = version)
+    }
+  } else {
+    message("Julia already installed at: ", julia_home)
+  }
+
+  # Step 2: Initialize Julia so we can install packages
+  message("Initializing Julia...")
+  julia_home <- find_system_julia()
+  setup_args <- list(installJulia = FALSE)
+  if (!is.null(julia_home)) {
+    setup_args$JULIA_HOME <- julia_home
+  }
+  suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
+
+  # Step 3: Install Julia packages
+  message("Installing Circuitscape.jl...")
   JuliaCall::julia_install_package("Circuitscape")
+
+  message("Installing Omniscape.jl...")
   JuliaCall::julia_install_package("Omniscape")
 
-  message("Julia, Circuitscape, and Omniscape installed successfully.")
+  message("Installation complete. Julia and all required packages are ready.")
 
-  # Set up the session so subsequent cs_*/os_* calls don't redo setup
+  # Step 4: Complete session setup (loads packages, JIT warmup, etc.)
   cs_setup(quiet = TRUE)
 
   invisible(TRUE)
@@ -205,14 +281,15 @@ cs_install_julia <- function(version = "latest") {
 
 #' Ensure Julia is Ready
 #'
-#' Internal helper that calls [cs_setup()] if Julia hasn't been initialized yet.
+#' Internal helper that calls [cs_setup()] if Julia hasn't been initialized
+#' yet. If Julia or required packages are not installed, an informative error
+#' is thrown directing the user to [cs_install_julia()].
 #'
-#' @param ... Arguments passed to [cs_setup()].
 #' @return `TRUE` invisibly.
 #' @noRd
-ensure_julia <- function(...) {
+ensure_julia <- function() {
   if (!.cs_env$julia_ready) {
-    cs_setup(...)
+    cs_setup()
   }
   invisible(TRUE)
 }

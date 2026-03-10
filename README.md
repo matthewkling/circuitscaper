@@ -8,42 +8,31 @@
 [![R-CMD-check](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/matthewkling/circuitscaper/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-R interface to
+**circuitscaper** provides a streamlined R interface for
 [Circuitscape.jl](https://github.com/Circuitscape/Circuitscape.jl) and
-[Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl) via
-JuliaCall.
+[Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl). It allows
+you to run these high-performance landscape connectivity models entirely
+from R, while Julia handles the heavy lifting under the hood.
 
-## Overview
+- **Native R Workflow:** Input and output `terra` raster objects
+  directly.
+- **Automated Setup:** One-line installation of Julia and all required
+  dependencies.
+- **High Performance:** Leverages Julia’s state-of-the-art solvers for
+  large landscapes.
 
-Landscape connectivity models estimate how easily organisms, genes, or
-ecological processes can move across a landscape. Circuit theory-based
-methods model the landscape as an electrical circuit in which current
-flow across a resistance surface reveals connectivity patterns. This
-approach captures all possible movement pathways simultaneously, making
-it especially useful for identifying corridors and pinch points.
-
-These methods are implemented in a pair of open-source Julia packages,
-[Circuitscape](https://circuitscape.org) and
-[Omniscape](https://docs.circuitscape.org/Omniscape.jl/latest/),
-developed by Brad McRae, Viral Shah, Tanmay Mohapatra, Ranjan
-Anantharaman, and collaborators. Circuitscape treats each cell as a node
-in a circuit and computes current flow between focal sites. Omniscape
-extends this by applying Circuitscape in a moving window across the
-entire landscape, producing wall-to-wall connectivity maps without
-predefined focal sites.
-
-**circuitscaper** is an independent R package (not affiliated with the
-Circuitscape development team) that provides an R-native interface to
-both tools. Users work entirely in R with `terra::SpatRaster` objects
-while Julia handles computation behind the scenes.
+> Note: **circuitscaper** is an independent R package and is not
+> affiliated with the Circuitscape development team. It is a lightweight
+> wrapper to the excellent Julia tools developed by Brad McRae, Viral
+> Shah, Tanmay Mohapatra, Ranjan Anantharaman, and collaborators.
 
 ## Installation
 
 ``` r
-# Install from GitHub
+# 1. Install the R package
 remotes::install_github("matthewkling/circuitscaper")
 
-# First time: install Julia and required packages
+# 2. Let the package install Julia and the necessary Julia libraries
 library(circuitscaper)
 cs_install_julia()
 ```
@@ -59,7 +48,8 @@ library(terra)
 # Load an example resistance raster
 resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
-# Pairwise Circuitscape -- resistance matrix + cumulative current map
+# Pairwise Circuitscape
+# result is a list containing the pairwise resistance matrix and current maps
 focal_sites <- matrix(c(10, 40, 40, 40, 25, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(resistance, focal_sites)
 plot(result$current_map)
@@ -70,24 +60,25 @@ plot(result$current_map)
 ``` r
 
 # Omniscape -- wall-to-wall moving-window connectivity
+# result is a multi-layer SpatRaster of current flow variables
 result <- os_run(resistance, radius = 10)
-plot(result[["normalized_current"]])
+plot(result$normalized_current)
 ```
 
 <img src="man/figures/README-example-2.png" width="100%" />
 
 ## Functions
 
-| Function             | Description                                    |
-|----------------------|------------------------------------------------|
-| `cs_pairwise()`      | Pairwise effective resistance and current flow |
-| `cs_one_to_all()`    | One-to-all connectivity analysis               |
-| `cs_all_to_one()`    | All-to-one connectivity analysis               |
-| `cs_advanced()`      | Advanced mode with custom sources and grounds  |
-| `os_run()`           | Omniscape moving-window connectivity           |
-| `cs_locations()`     | Create focal node raster from coordinates      |
-| `cs_setup()`         | Initialize Julia (called automatically)        |
-| `cs_install_julia()` | Install Julia and required packages            |
+| Function                 | Description                                    | Julia backend                                                      |
+|--------------------------|------------------------------------------------|--------------------------------------------------------------------|
+| **`cs_pairwise()`**      | Pairwise effective resistance and current flow | `Circuitscape.compute()`                                           |
+| **`cs_one_to_all()`**    | One-to-all connectivity analysis               | `Circuitscape.compute()`                                           |
+| **`cs_all_to_one()`**    | All-to-one connectivity analysis               | `Circuitscape.compute()`                                           |
+| **`cs_advanced()`**      | Advanced mode with custom sources and grounds  | `Circuitscape.compute()`                                           |
+| **`os_run()`**           | Omniscape moving-window connectivity           | `Omniscape.run_omniscape()`                                        |
+| **`cs_locations()`**     | Create focal node raster from coordinates      | \-                                                                 |
+| **`cs_setup()`**         | Initialize Julia session (called automatically)        | `JuliaCall::julia_library()`                                       |
+| **`cs_install_julia()`** | Install Julia and required packages            | `JuliaCall::install_julia()`, `JuliaCall::julia_install_package()` |
 
 ## Requirements
 

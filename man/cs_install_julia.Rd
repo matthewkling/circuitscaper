@@ -4,21 +4,29 @@
 \alias{cs_install_julia}
 \title{Install Julia and Required Packages}
 \usage{
-cs_install_julia(version = "latest")
+cs_install_julia(force = FALSE, version = "latest")
 }
 \arguments{
+\item{force}{Logical. If \code{TRUE}, reinstall Julia and packages even if they
+appear to be already present. Default \code{FALSE}.}
+
 \item{version}{Character. Julia version to install. Default \code{"latest"}.}
 }
 \value{
-Invisibly returns \code{TRUE} on success.
+Invisibly returns \code{TRUE} on success, \code{FALSE} if cancelled.
 }
 \description{
-One-time helper that installs Julia and the Circuitscape and Omniscape Julia
-packages. Intended for first-time users.
+Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
+the recommended first step after installing the circuitscaper R package.
+}
+\details{
+In interactive sessions, prompts for confirmation before downloading. In
+non-interactive sessions (e.g., CI), proceeds without prompting.
 }
 \examples{
 \dontrun{
 cs_install_julia()
+cs_install_julia(force = TRUE)
 }
 
 }

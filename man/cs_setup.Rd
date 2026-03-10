@@ -7,8 +7,8 @@
 cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE, ...)
 }
 \arguments{
-\item{julia_home}{Character. Path to the Julia installation directory. If
-\code{NULL} (default), JuliaCall searches standard locations.}
+\item{julia_home}{Character. Path to the Julia \verb{bin/} directory. If
+\code{NULL} (default), the system PATH and common locations are searched.}
 
 \item{threads}{Integer. Number of Julia threads to start. Default \code{1L}.
 Must be set before Julia initializes — once Julia is running, the thread
@@ -29,12 +29,15 @@ function. Call explicitly to control the Julia path, number of threads, or
 pre-warm the session.
 }
 \details{
-Following the pattern established by diffeqr, \code{cs_setup()} will:
+\code{cs_setup()} does \strong{not} install Julia or Julia packages. If Julia is not
+found or the required packages are missing, it throws an informative error
+directing you to \code{\link[=cs_install_julia]{cs_install_julia()}}.
+
+\code{cs_setup()} will:
 \itemize{
-\item Install Julia automatically if missing (via \code{installJulia = TRUE}).
-\item Install the Circuitscape and Omniscape Julia packages if missing.
-\item Pass \code{...} through to \code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}} so users can set
-\code{JULIA_HOME}, \code{rebuild}, etc.
+\item Verify that Julia is installed and accessible.
+\item Verify that the Circuitscape and Omniscape Julia packages are installed.
+\item Load both packages and warm up the JIT compiler.
 }
 
 Once Julia is initialized, it stays warm for the R session. Subsequent calls
