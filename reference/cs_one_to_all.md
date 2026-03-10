@@ -48,8 +48,7 @@ cs_one_to_all(
   - A two-column matrix or data.frame of x/y coordinates. Each row
     becomes a focal node, auto-assigned IDs 1, 2, 3, ... in row order.
     Coordinates are snapped to the nearest cell of the `resistance`
-    raster. See
-    [`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md).
+    raster. See `cs_locations()`.
 
 - resistance_is:
 

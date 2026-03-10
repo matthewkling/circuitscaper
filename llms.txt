@@ -66,7 +66,6 @@ plot(result$normalized_current)
 | **[`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)**       | All-to-one connectivity analysis                | `Circuitscape.compute()`                                                                                                                                                           |
 | **[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)**           | Advanced mode with custom sources and grounds   | `Circuitscape.compute()`                                                                                                                                                           |
 | **[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)**                     | Omniscape moving-window connectivity            | `Omniscape.run_omniscape()`                                                                                                                                                        |
-| **[`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md)**         | Create focal node raster from coordinates       | \-                                                                                                                                                                                 |
 | **[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)**                 | Initialize Julia session (called automatically) | [`JuliaCall::julia_library()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html)                                                                                               |
 | **[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)** | Install Julia and required packages             | [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html), [`JuliaCall::julia_install_package()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html) |
 
@@ -103,8 +102,6 @@ plot(result$normalized_current)
   : All-to-One Circuitscape Analysis
 - [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
   : Install Julia and Required Packages
-- [`cs_locations()`](https://matthewkling.github.io/circuitscaper/reference/cs_locations.md)
-  : Create a Focal Node Raster from Coordinates
 - [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
   : One-to-All Circuitscape Analysis
 - [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
