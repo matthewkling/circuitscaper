@@ -1,15 +1,20 @@
 # Install Julia and Required Packages
 
-One-time helper that installs Julia and the Circuitscape and Omniscape
-Julia packages. Intended for first-time users.
+Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
+the recommended first step after installing the circuitscaper R package.
 
 ## Usage
 
 ``` r
-cs_install_julia(version = "latest")
+cs_install_julia(force = FALSE, version = "latest")
 ```
 
 ## Arguments
+
+- force:
+
+  Logical. If `TRUE`, reinstall Julia and packages even if they appear
+  to be already present. Default `FALSE`.
 
 - version:
 
@@ -17,12 +22,18 @@ cs_install_julia(version = "latest")
 
 ## Value
 
-Invisibly returns `TRUE` on success.
+Invisibly returns `TRUE` on success, `FALSE` if cancelled.
+
+## Details
+
+In interactive sessions, prompts for confirmation before downloading. In
+non-interactive sessions (e.g., CI), proceeds without prompting.
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
 cs_install_julia()
+cs_install_julia(force = TRUE)
 } # }
 ```

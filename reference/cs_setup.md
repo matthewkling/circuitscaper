@@ -15,8 +15,8 @@ cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE, ...)
 
 - julia_home:
 
-  Character. Path to the Julia installation directory. If `NULL`
-  (default), JuliaCall searches standard locations.
+  Character. Path to the Julia `bin/` directory. If `NULL` (default),
+  the system PATH and common locations are searched.
 
 - threads:
 
@@ -42,15 +42,19 @@ Invisibly returns `TRUE` on success.
 
 ## Details
 
-Following the pattern established by diffeqr, `cs_setup()` will:
+`cs_setup()` does **not** install Julia or Julia packages. If Julia is
+not found or the required packages are missing, it throws an informative
+error directing you to
+[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md).
 
-- Install Julia automatically if missing (via `installJulia = TRUE`).
+`cs_setup()` will:
 
-- Install the Circuitscape and Omniscape Julia packages if missing.
+- Verify that Julia is installed and accessible.
 
-- Pass `...` through to
-  [`JuliaCall::julia_setup()`](https://rdrr.io/pkg/JuliaCall/man/julia_setup.html)
-  so users can set `JULIA_HOME`, `rebuild`, etc.
+- Verify that the Circuitscape and Omniscape Julia packages are
+  installed.
+
+- Load both packages and warm up the JIT compiler.
 
 Once Julia is initialized, it stays warm for the R session. Subsequent
 calls to `cs_setup()` return immediately.

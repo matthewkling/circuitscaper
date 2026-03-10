@@ -58,8 +58,8 @@ pre-warm the session.</p>
 
 
 <dl><dt id="arg-julia-home">julia_home<a class="anchor" aria-label="anchor" href="#arg-julia-home"></a></dt>
-<dd><p>Character. Path to the Julia installation directory. If
-<code>NULL</code> (default), JuliaCall searches standard locations.</p></dd>
+<dd><p>Character. Path to the Julia <code>bin/</code> directory. If
+<code>NULL</code> (default), the system PATH and common locations are searched.</p></dd>
 
 
 <dt id="arg-threads">threads<a class="anchor" aria-label="anchor" href="#arg-threads"></a></dt>
@@ -83,10 +83,12 @@ than 1 if you plan to use <code><a href="os_run.html">os_run()</a></code> with <
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Following the pattern established by diffeqr, <code>cs_setup()</code> will:</p><ul><li><p>Install Julia automatically if missing (via <code>installJulia = TRUE</code>).</p></li>
-<li><p>Install the Circuitscape and Omniscape Julia packages if missing.</p></li>
-<li><p>Pass <code>...</code> through to <code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code> so users can set
-<code>JULIA_HOME</code>, <code>rebuild</code>, etc.</p></li>
+    <p><code>cs_setup()</code> does <strong>not</strong> install Julia or Julia packages. If Julia is not
+found or the required packages are missing, it throws an informative error
+directing you to <code><a href="cs_install_julia.html">cs_install_julia()</a></code>.</p>
+<p><code>cs_setup()</code> will:</p><ul><li><p>Verify that Julia is installed and accessible.</p></li>
+<li><p>Verify that the Circuitscape and Omniscape Julia packages are installed.</p></li>
+<li><p>Load both packages and warm up the JIT compiler.</p></li>
 </ul><p>Once Julia is initialized, it stays warm for the R session. Subsequent calls
 to <code>cs_setup()</code> return immediately.</p><div class="section">
 <h3 id="threading">Threading<a class="anchor" aria-label="anchor" href="#threading"></a></h3>
