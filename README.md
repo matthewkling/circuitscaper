@@ -74,7 +74,6 @@ plot(result$normalized_current)
 | **`cs_all_to_one()`**    | All-to-one connectivity analysis                | `Circuitscape.compute()`                                           |
 | **`cs_advanced()`**      | Advanced mode with custom sources and grounds   | `Circuitscape.compute()`                                           |
 | **`os_run()`**           | Omniscape moving-window connectivity            | `Omniscape.run_omniscape()`                                        |
-| **`cs_locations()`**     | Create focal node raster from coordinates       | \-                                                                 |
 | **`cs_setup()`**         | Initialize Julia session (called automatically) | `JuliaCall::julia_library()`                                       |
 | **`cs_install_julia()`** | Install Julia and required packages             | `JuliaCall::install_julia()`, `JuliaCall::julia_install_package()` |
 
