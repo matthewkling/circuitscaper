@@ -34,14 +34,12 @@ cs_install_julia()
 ``` r
 library(circuitscaper)
 library(terra)
-#> Warning: package 'terra' was built under R version 4.3.3
-#> terra 1.8.10
 
 # Load an example resistance raster
 resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
 # Pairwise Circuitscape
-# result is a list containing the pairwise resistance matrix and current maps
+# (result is a list containing the pairwise resistance matrix and current maps)
 focal_sites <- matrix(c(10, 40, 40, 40, 25, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(resistance, focal_sites)
 plot(result$current_map)
@@ -52,7 +50,7 @@ plot(result$current_map)
 ``` r
 
 # Omniscape -- wall-to-wall moving-window connectivity
-# result is a multi-layer SpatRaster of current flow variables
+# (result is a multi-layer SpatRaster of current flow variables)
 result <- os_run(resistance, radius = 10)
 plot(result$normalized_current)
 ```
