@@ -48,7 +48,7 @@ cs_all_to_one(
   - A two-column matrix or data.frame of x/y coordinates. Each row
     becomes a focal node, auto-assigned IDs 1, 2, 3, ... in row order.
     Coordinates are snapped to the nearest cell of the `resistance`
-    raster. See `cs_locations()`.
+    raster.
 
 - resistance_is:
 
