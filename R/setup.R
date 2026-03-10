@@ -85,6 +85,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   .cs_env$julia_threads <- threads
 
   # Initialize Julia (do NOT auto-install)
+  message("Initializing Julia (one-time per session)...")
   setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home, ...)
   if (quiet) {
     suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
@@ -110,6 +111,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   }
 
   # Load packages
+  message("Loading Circuitscape and Omniscape...")
   JuliaCall::julia_library("Circuitscape")
   .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Circuitscape")
 
@@ -124,7 +126,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 
   # Warm up Julia's JIT compiler by running a tiny Circuitscape problem.
   # Without this, the first real cs_*() call pays a ~20 s compilation penalty.
-  if (!quiet) message("Warming up Circuitscape JIT compiler...")
+  message("Warming up JIT compiler (this may take a moment)...")
   warmup_jl <- '
     let
       d = mktempdir()
@@ -184,6 +186,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     }
   )
 
+  message("Ready.")
   .cs_env$julia_ready <- TRUE
   invisible(TRUE)
 }
