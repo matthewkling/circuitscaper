@@ -13,8 +13,9 @@
 #'   `NULL` (default), the system PATH and common locations are searched.
 #' @param threads Integer. Number of Julia threads to start. Default `1L`.
 #'   Must be set before Julia initializes — once Julia is running, the thread
-#'   count cannot be changed without restarting R. Set this to a value greater
-#'   than 1 if you plan to use [os_run()] with `parallelize = TRUE`.
+#'   count cannot be changed without restarting R. This setting controls
+#'   parallelism for [os_run()] only; Circuitscape functions (`cs_*`) run
+#'   single-threaded regardless of this value.
 #' @param quiet Logical. Suppress Julia startup messages. Default `TRUE`.
 #' @param ... Additional arguments passed to [JuliaCall::julia_setup()].
 #'
@@ -31,8 +32,9 @@
 #'
 #' ## Threading
 #' Julia's thread count is fixed at startup and cannot be changed mid-session.
-#' If you need parallelization for Omniscape, set `threads` here before calling
-#' any other circuitscaper function:
+#' Multi-threading is used by [os_run()] when `parallelize = TRUE`.
+#' Circuitscape functions (`cs_pairwise`, `cs_one_to_all`, etc.) do not
+#' benefit from multiple threads.
 #'
 #' ```
 #' cs_setup(threads = 4)
