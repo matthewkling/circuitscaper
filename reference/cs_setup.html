@@ -65,8 +65,9 @@ pre-warm the session.</p>
 <dt id="arg-threads">threads<a class="anchor" aria-label="anchor" href="#arg-threads"></a></dt>
 <dd><p>Integer. Number of Julia threads to start. Default <code>1L</code>.
 Must be set before Julia initializes — once Julia is running, the thread
-count cannot be changed without restarting R. Set this to a value greater
-than 1 if you plan to use <code><a href="os_run.html">os_run()</a></code> with <code>parallelize = TRUE</code>.</p></dd>
+count cannot be changed without restarting R. This setting controls
+parallelism for <code><a href="os_run.html">os_run()</a></code> only; Circuitscape functions (<code>cs_*</code>) run
+single-threaded regardless of this value.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
@@ -95,8 +96,9 @@ to <code>cs_setup()</code> return immediately.</p><div class="section">
 
 
 <p>Julia's thread count is fixed at startup and cannot be changed mid-session.
-If you need parallelization for Omniscape, set <code>threads</code> here before calling
-any other circuitscaper function:</p>
+Multi-threading is used by <code><a href="os_run.html">os_run()</a></code> when <code>parallelize = TRUE</code>.
+Circuitscape functions (<code>cs_pairwise</code>, <code>cs_one_to_all</code>, etc.) do not
+benefit from multiple threads.</p>
 <p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">cs_setup</span>(<span class="at">threads =</span> <span class="dv">4</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">os_run</span>(resistance, <span class="at">radius =</span> <span class="dv">50</span>, <span class="at">parallelize =</span> <span class="cn">TRUE</span>)</span></code></pre><p></p></div>
 </div>
