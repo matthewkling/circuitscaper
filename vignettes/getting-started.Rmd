@@ -8,13 +8,10 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-has_julia <- nchar(Sys.which("julia")) > 0
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = has_julia,
-  fig.width = 7,
-  fig.height = 5
+  eval = FALSE
 )
 ```
 
@@ -123,45 +120,43 @@ when you want to identify corridors and barriers across the full extent.
 
 ## Circuitscape: Pairwise Mode
 
-```{r load, message = FALSE, warning = FALSE}
+```{r pairwise}
 library(terra)
 library(circuitscaper)
 
 # Resistance surface (higher values = harder to traverse)
 resistance <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 
-# Focal nodes as coordinates
-focal_sites <- matrix(c(10, 40, 40, 40, 25, 10), ncol = 2, byrow = TRUE)
-```
+# Option 1: Focal nodes as coordinates (simplest)
+coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
+result <- cs_pairwise(resistance, coords)
 
-```{r pairwise, message = FALSE}
-result <- cs_pairwise(resistance, focal_sites)
+# Option 2: Focal nodes as a raster (integer IDs; 0 and NA are not nodes)
+# locations <- rast("path/to/focal_nodes.tif")
+# result <- cs_pairwise(resistance, locations)
 
 # Cumulative current map -- high values indicate important movement corridors
-plot(result$current_map, main = "Pairwise: Cumulative Current")
+plot(result$current_map)
 
 # Pairwise resistance matrix -- can be used as a connectivity distance metric
 result$resistance_matrix
 ```
 
-You can also provide focal nodes as a raster with positive integer IDs (0 and
-NA are ignored).
-
 ## Circuitscape: One-to-All and All-to-One Modes
 
-```{r one-to-all, message = FALSE}
-result <- cs_one_to_all(resistance, focal_sites)
-plot(result$cumulative_current, main = "One-to-All: Cumulative Current")
+```{r one-to-all}
+result <- cs_one_to_all(resistance, coords)
+plot(result)
 ```
 
-```{r all-to-one, message = FALSE}
-result <- cs_all_to_one(resistance, focal_sites)
-plot(result$cumulative_current, main = "All-to-One: Cumulative Current")
+```{r all-to-one}
+result <- cs_all_to_one(resistance, coords)
+plot(result$cumulative_current)
 ```
 
 ## Circuitscape: Advanced Mode
 
-```{r advanced, message = FALSE}
+```{r advanced}
 source_layer <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
 ground_layer <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 
@@ -170,11 +165,15 @@ result <- cs_advanced(resistance, source_layer, ground_layer,
 
 # Current density -- corridors and pinch points where flow is concentrated
 # i.e. possible preservation priorities
-plot(result[["current"]], main = "Advanced: Current Density")
+plot(result[["current"]])
 
 # Voltage -- analogous to movement probability, decreasing with distance
 # and resistance from sources
-plot(result[["voltage"]], main = "Advanced: Voltage")
+plot(result[["voltage"]])
+
+# Power dissipation -- areas of current flow through high-resistance areas,
+# i.e. possible restoration priorities
+plot(result[["current"]]^2 * resistance)
 ```
 
 ## Additional Circuitscape Options
@@ -188,8 +187,8 @@ cumulative current map. Set `cumulative_only = FALSE` to include per-pair
 (or per-node) current layers, and `write_voltage = TRUE` to include voltage
 layers:
 
-```{r per-pair, message = FALSE}
-result <- cs_pairwise(resistance, focal_sites,
+```{r per-pair}
+result <- cs_pairwise(resistance, coords,
                       cumulative_only = FALSE,
                       write_voltage = TRUE)
 names(result$current_map)
@@ -204,7 +203,7 @@ in population size or habitat area:
 ```{r source-strengths, eval = FALSE}
 # Strengths in the same order as the locations
 strengths <- c(2.5, 1.0, 0.5)
-result <- cs_one_to_all(resistance, focal_sites, source_strengths = strengths)
+result <- cs_one_to_all(resistance, coords, source_strengths = strengths)
 ```
 
 ### Short-circuit regions
@@ -246,8 +245,8 @@ The two key parameters are:
   reducing the number of circuit solves with typically negligible effects on
   results. This is the primary knob for trading off speed vs. precision.
 
-```{r omniscape, message = FALSE}
-result <- os_run(resistance, radius = 10)
+```{r omniscape}
+result <- os_run(resistance, radius = 20, block_size = 3)
 ```
 
 Omniscape returns up to three layers:
@@ -262,7 +261,7 @@ Omniscape returns up to three layers:
   expected given the arrangement of sources; values less than 1 indicate
   relative barriers. This is usually the most informative layer.
 
-```{r omniscape-plot, fig.height = 4}
+```{r omniscape-plot}
 plot(result)
 ```
 
@@ -281,10 +280,9 @@ result <- os_run(resistance, radius = 20,
 
 ### Parallel processing
 
-For large landscapes, enable Julia multithreading to reduce Omniscape compute
-times. Julia's thread count is fixed at startup, so set it via `cs_setup()`
-before any other circuitscaper calls. Note that threading benefits Omniscape
-only; Circuitscape functions (`cs_*`) run single-threaded.
+For large landscapes, enable Julia multithreading to reduce compute times. 
+Julia's thread count is fixed at startup, so set it via `cs_setup()` before any 
+other circuitscaper calls: 
 
 ```{r omniscape-parallel, eval = FALSE}
 # Set thread count at the start of your session

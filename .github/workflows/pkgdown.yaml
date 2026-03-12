@@ -36,14 +36,6 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: '1'
-
-      - name: Install Julia packages
-        run: |
-          julia -e 'using Pkg; Pkg.add("Circuitscape"); Pkg.add("Omniscape")'
-
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
