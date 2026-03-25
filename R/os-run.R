@@ -75,7 +75,7 @@
 #' @seealso [cs_pairwise()], [cs_setup()]
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' result <- os_run(res, radius = 20)

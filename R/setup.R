@@ -49,7 +49,7 @@
 #' @seealso [cs_install_julia()], [cs_pairwise()], [os_run()]
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' cs_setup()
 #' cs_setup(threads = 4)
 #' cs_setup(julia_home = "/usr/local/julia/bin")
@@ -209,7 +209,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' cs_install_julia()
 #' cs_install_julia(force = TRUE)
 #' }

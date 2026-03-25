@@ -56,7 +56,7 @@ os_run(resistance, radius = 50, parallelize = TRUE)
 }
 }
 \examples{
-\dontrun{
+\donttest{
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")

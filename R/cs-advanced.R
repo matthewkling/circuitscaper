@@ -60,7 +60,7 @@
 #' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_all_to_one()], [cs_setup()]
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))

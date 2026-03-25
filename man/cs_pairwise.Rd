@@ -114,7 +114,7 @@ matrix can be used as a distance metric in analyses such as isolation by
 resistance.
 }
 \examples{
-\dontrun{
+\donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)

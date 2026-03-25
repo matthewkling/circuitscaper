@@ -91,7 +91,7 @@ scenarios such as directional movement between a defined source area and
 destination.
 }
 \examples{
-\dontrun{
+\donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))

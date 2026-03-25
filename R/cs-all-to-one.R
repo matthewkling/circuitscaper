@@ -31,7 +31,7 @@
 #' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_advanced()], [cs_setup()]
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
