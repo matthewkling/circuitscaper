@@ -1,6 +1,6 @@
 Package: circuitscaper
-Title: R Interface to Circuitscape and Omniscape via Julia
-Version: 0.1.0
+Title: R Interface to Circuitscape and Omniscape
+Version: 0.0.0.9000
 Authors@R: person("Matthew", "Kling", email = "mattkling@berkeley.edu",
                   role = c("aut", "cre"))
 Author: Matthew Kling [aut, cre]
