@@ -150,7 +150,6 @@ Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 ## Examples
 
 ``` r
-# \donttest{
 library(terra)
 #> terra 1.9.1
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
@@ -164,5 +163,4 @@ result <- cs_advanced(res, origin, dest, ground_is = "conductances")
 #>                         you could considering running the command in Julia directly
 plot(result)
 #> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
-# }
 ```

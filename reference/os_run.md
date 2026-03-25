@@ -168,7 +168,6 @@ Omniscape.jl: <https://docs.circuitscape.org/Omniscape.jl/latest/>
 ## Examples
 
 ``` r
-# \donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)
@@ -179,5 +178,4 @@ result <- os_run(res, radius = 20)
 #>                         you could considering running the command in Julia directly
 plot(result)
 #> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
-# }
 ```

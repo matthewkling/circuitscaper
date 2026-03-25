@@ -32,7 +32,6 @@ non-interactive sessions (e.g., CI), proceeds without prompting.
 ## Examples
 
 ``` r
-# \donttest{
 cs_install_julia()
 #> Julia already installed at: /usr/local/julia1.12.5/bin
 #> Initializing Julia...
@@ -48,5 +47,4 @@ cs_install_julia(force = TRUE)
 #> Error in .julia$cmd(paste0(Rhomeset, "Base.include(Main,\"", system.file("julia/setup.jl",     package = "JuliaCall"), "\")")): Error happens when you try to execute command ENV["R_HOME"] = "/opt/R/4.5.3/lib/R";Base.include(Main,"/home/runner/work/_temp/Library/JuliaCall/julia/setup.jl") in Julia.
 #>                         To have more helpful error messages,
 #>                         you could considering running the command in Julia directly
-# }
 ```

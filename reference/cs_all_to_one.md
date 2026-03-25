@@ -167,7 +167,6 @@ Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 ## Examples
 
 ``` r
-# \donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
@@ -179,5 +178,4 @@ result <- cs_all_to_one(res, coords)
 #>                         you could considering running the command in Julia directly
 plot(result)
 #> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
-# }
 ```
