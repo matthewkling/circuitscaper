@@ -114,15 +114,14 @@ matrix can be used as a distance metric in analyses such as isolation by
 resistance.
 }
 \examples{
-\donttest{
+\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(res, coords, cumulative_only = FALSE)
 plot(result$current_map)
 result$resistance_matrix
-}
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),

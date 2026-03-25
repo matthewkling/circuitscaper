@@ -78,13 +78,11 @@
 #'
 #' @seealso [cs_pairwise()], [cs_setup()]
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf nchar(Sys.which("julia")) > 0
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' result <- os_run(res, radius = 20)
 #' plot(result)
-#' }
 #'
 #' @export
 os_run <- function(resistance,

@@ -32,14 +32,12 @@
 #'
 #' @seealso [cs_pairwise()], [cs_all_to_one()], [cs_advanced()], [cs_setup()]
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf nchar(Sys.which("julia")) > 0
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 #' result <- cs_one_to_all(res, coords)
 #' plot(result)
-#' }
 #'
 #' @export
 cs_one_to_all <- function(resistance,

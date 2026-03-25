@@ -109,14 +109,13 @@ cumulative map sums across all iterations and highlights cells that are
 important for connectivity across the full set of nodes.
 }
 \examples{
-\donttest{
+\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_all_to_one(res, coords)
 plot(result)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),

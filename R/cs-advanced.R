@@ -61,15 +61,13 @@
 #'
 #' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_all_to_one()], [cs_setup()]
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf nchar(Sys.which("julia")) > 0
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
 #' dest <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 #' result <- cs_advanced(res, origin, dest, ground_is = "conductances")
 #' plot(result)
-#' }
 #'
 #' @export
 cs_advanced <- function(resistance,

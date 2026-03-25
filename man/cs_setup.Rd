@@ -56,12 +56,11 @@ os_run(resistance, radius = 50, parallelize = TRUE)
 }
 }
 \examples{
-\donttest{
+\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
-}
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),

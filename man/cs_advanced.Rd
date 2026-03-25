@@ -91,15 +91,14 @@ scenarios such as directional movement between a defined source area and
 destination.
 }
 \examples{
-\donttest{
+\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
 dest <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 result <- cs_advanced(res, origin, dest, ground_is = "conductances")
 plot(result)
-}
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
