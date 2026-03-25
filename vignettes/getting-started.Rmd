@@ -338,5 +338,20 @@ result <- cs_pairwise(resistance, locations,
   than difficulty, set `resistance_is = "conductances"` to avoid inverting
   values manually. There's a similar option for grounds in advanced mode.
 
+- **Normalized current for Circuitscape**: Omniscape returns normalized
+  current (actual current / flow potential) automatically. You can compute
+  the equivalent for Circuitscape by running the analysis twice — once with
+  your resistance surface and once with a uniform surface — and dividing:
+
+    ```r
+    result      <- cs_pairwise(resistance, sites)
+    result_null <- cs_pairwise(resistance * 0 + 1, sites)
+    normalized  <- result$current_map / result_null$current_map
+    ```
+
+  Values greater than 1 indicate areas where landscape resistance is
+  concentrating current flow; values less than 1 indicate areas where
+  current is lower than expected from geometry alone.
+
 - **Verbose output**: Set `verbose = TRUE` to see Circuitscape's solver
   progress, useful for debugging or monitoring long runs.
