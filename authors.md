@@ -2,19 +2,19 @@
 
 ## Authors
 
-- **Matthew Kling**. Author, maintainer.
+- **Matthew Kling**. Author, maintainer, copyright holder.
 
 ## Citation
 
 Source:
 [`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/main/DESCRIPTION)
 
-Kling M (2026). *circuitscaper: R Interface to Circuitscape and
-Omniscape*. R package version 0.0.0.9000,
+Kling M (2026). *circuitscaper: 'Circuitscape' and 'Omniscape'
+Connectivity Analysis via 'Julia'*. R package version 0.0.0.9000,
 <https://github.com/matthewkling/circuitscaper>.
 
     @Manual{,
-      title = {circuitscaper: R Interface to Circuitscape and Omniscape},
+      title = {circuitscaper: 'Circuitscape' and 'Omniscape' Connectivity Analysis via 'Julia'},
       author = {Matthew Kling},
       year = {2026},
       note = {R package version 0.0.0.9000},

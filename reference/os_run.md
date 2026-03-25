@@ -153,8 +153,12 @@ with the following layers (depending on options):
 
 ## References
 
-Omniscape documentation:
-<https://docs.circuitscape.org/Omniscape.jl/latest/>
+Landau, V.A., Shah, V.B., Anantharaman, R. & Hall, K.R. (2021).
+Omniscape.jl: Software to compute omnidirectional landscape
+connectivity. *Journal of Open Source Software*, 6(57), 2829.
+[doi:10.21105/joss.02829](https://doi.org/10.21105/joss.02829)
+
+Omniscape.jl: <https://docs.circuitscape.org/Omniscape.jl/latest/>
 
 ## See also
 
@@ -164,10 +168,16 @@ Omniscape documentation:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)
+#> Initializing Julia (one-time per session)...
+#> Warning: running command ''/usr/local/julia1.12.5/bin/julia' '--startup-file=no' '/home/runner/work/_temp/Library/JuliaCall/julia/install_dependency.jl' '/opt/R/4.5.3/lib/R' 2>&1' had status 139
+#> Error in .julia$cmd(paste0(Rhomeset, "Base.include(Main,\"", system.file("julia/setup.jl",     package = "JuliaCall"), "\")")): Error happens when you try to execute command ENV["R_HOME"] = "/opt/R/4.5.3/lib/R";Base.include(Main,"/home/runner/work/_temp/Library/JuliaCall/julia/setup.jl") in Julia.
+#>                         To have more helpful error messages,
+#>                         you could considering running the command in Julia directly
 plot(result)
-} # }
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
+# }
 ```

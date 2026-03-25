@@ -157,8 +157,11 @@ as isolation by resistance.
 
 ## References
 
-Circuitscape user guide:
-<https://docs.circuitscape.org/Circuitscape.jl/latest/usage/>
+McRae, B.H. (2006). Isolation by resistance. *Evolution*, 60(8),
+1551–1561.
+[doi:10.1111/j.1558-5646.2006.tb00500.x](https://doi.org/10.1111/j.1558-5646.2006.tb00500.x)
+
+Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 
 ## See also
 
@@ -170,12 +173,19 @@ Circuitscape user guide:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(res, coords, cumulative_only = FALSE)
+#> Initializing Julia (one-time per session)...
+#> Warning: running command ''/usr/local/julia1.12.5/bin/julia' '--startup-file=no' '/home/runner/work/_temp/Library/JuliaCall/julia/install_dependency.jl' '/opt/R/4.5.3/lib/R' 2>&1' had status 139
+#> Error in .julia$cmd(paste0(Rhomeset, "Base.include(Main,\"", system.file("julia/setup.jl",     package = "JuliaCall"), "\")")): Error happens when you try to execute command ENV["R_HOME"] = "/opt/R/4.5.3/lib/R";Base.include(Main,"/home/runner/work/_temp/Library/JuliaCall/julia/setup.jl") in Julia.
+#>                         To have more helpful error messages,
+#>                         you could considering running the command in Julia directly
 plot(result$current_map)
+#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
 result$resistance_matrix
-} # }
+#> Error: object 'result' not found
+# }
 ```
