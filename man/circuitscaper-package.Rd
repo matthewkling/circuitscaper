@@ -4,11 +4,11 @@
 \name{circuitscaper-package}
 \alias{circuitscaper}
 \alias{circuitscaper-package}
-\title{circuitscaper: 'Circuitscape' and 'Omniscape' Connecitivity Analysis via Julia}
+\title{circuitscaper: 'Circuitscape' and 'Omniscape' Connectivity Analysis via 'Julia'}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Provides an R-native interface to the 'Circuitscape.jl' and 'Omniscape.jl' Julia packages for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while Julia handles computation invisibly. Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis.
+Provides an R-native interface to the 'Circuitscape.jl' and 'Omniscape.jl' Julia packages for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while 'Julia' handles computation invisibly. Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis. Methods are described in McRae (2006) \doi{10.1111/j.1558-5646.2006.tb00500.x}, McRae and Beier (2007) \doi{10.1073/pnas.0706568104}, and McRae et al. (2008) \doi{10.1890/07-1861.1}.
 }
 \seealso{
 Useful links:
