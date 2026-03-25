@@ -404,6 +404,20 @@ ease of movement rather than difficulty, set
 <code>resistance_is = "conductances"</code> to avoid inverting values
 manually. There’s a similar option for grounds in advanced
 mode.</p></li>
+<li>
+<p><strong>Normalized current for Circuitscape</strong>: Omniscape
+returns normalized current (actual current / flow potential)
+automatically. You can compute the equivalent for Circuitscape by
+running the analysis twice — once with your resistance surface and once
+with a uniform surface — and dividing:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">result</span>      <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">sites</span><span class="op">)</span></span>
+<span><span class="va">result_null</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span> <span class="op">*</span> <span class="fl">0</span> <span class="op">+</span> <span class="fl">1</span>, <span class="va">sites</span><span class="op">)</span></span>
+<span><span class="va">normalized</span>  <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">current_map</span> <span class="op">/</span> <span class="va">result_null</span><span class="op">$</span><span class="va">current_map</span></span></code></pre></div>
+<p>Values greater than 1 indicate areas where landscape resistance is
+concentrating current flow; values less than 1 indicate areas where
+current is lower than expected from geometry alone.</p>
+</li>
 <li><p><strong>Verbose output</strong>: Set <code>verbose = TRUE</code>
 to see Circuitscape’s solver progress, useful for debugging or
 monitoring long runs.</p></li>
