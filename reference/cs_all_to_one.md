@@ -167,15 +167,11 @@ Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 ## Examples
 
 ``` r
+if (FALSE) { # circuitscaper:::julia_check()
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_all_to_one(res, coords)
-#> Initializing Julia (one-time per session)...
-#> Warning: running command ''/usr/local/julia1.12.5/bin/julia' '--startup-file=no' '/home/runner/work/_temp/Library/JuliaCall/julia/install_dependency.jl' '/opt/R/4.5.3/lib/R' 2>&1' had status 139
-#> Error in .julia$cmd(paste0(Rhomeset, "Base.include(Main,\"", system.file("julia/setup.jl",     package = "JuliaCall"), "\")")): Error happens when you try to execute command ENV["R_HOME"] = "/opt/R/4.5.3/lib/R";Base.include(Main,"/home/runner/work/_temp/Library/JuliaCall/julia/setup.jl") in Julia.
-#>                         To have more helpful error messages,
-#>                         you could considering running the command in Julia directly
 plot(result)
-#> Error in h(simpleError(msg, call)): error in evaluating the argument 'x' in selecting a method for function 'plot': object 'result' not found
+}
 ```
