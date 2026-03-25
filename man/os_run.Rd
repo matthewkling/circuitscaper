@@ -109,7 +109,7 @@ Performs an Omniscape analysis, computing omnidirectional landscape
 connectivity using a moving window approach based on circuit theory.
 }
 \examples{
-\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper:::julia_check()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)

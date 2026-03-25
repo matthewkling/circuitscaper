@@ -56,7 +56,7 @@ os_run(resistance, radius = 50, parallelize = TRUE)
 }
 }
 \examples{
-\dontshow{if (nchar(Sys.which("julia")) > 0) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper:::julia_check()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")

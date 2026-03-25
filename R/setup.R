@@ -56,7 +56,7 @@
 #'
 #' @seealso [cs_install_julia()], [cs_pairwise()], [os_run()]
 #'
-#' @examplesIf nchar(Sys.which("julia")) > 0
+#' @examplesIf circuitscaper:::julia_check()
 #' cs_setup()
 #' cs_setup(threads = 4)
 #' cs_setup(julia_home = "/usr/local/julia/bin")
@@ -214,7 +214,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #'
 #' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
-#' @examplesIf nchar(Sys.which("julia")) > 0
+#' @examplesIf circuitscaper:::julia_check()
 #' cs_install_julia()
 #' cs_install_julia(force = TRUE)
 #'
@@ -301,6 +301,27 @@ ensure_julia <- function() {
     cs_setup()
   }
   invisible(TRUE)
+}
+
+
+#' Check if Julia and Required Packages Are Available
+#'
+#' Lightweight check used by `@examplesIf` to determine whether examples
+#' requiring Julia should run. Returns `TRUE` only if Julia is on the
+#' system PATH and the Circuitscape Julia package can be loaded.
+#'
+#' @return Logical scalar.
+#' @noRd
+julia_check <- function() {
+  if (nchar(Sys.which("julia")) == 0) return(FALSE)
+  tryCatch({
+    out <- system2(
+      "julia",
+      c("--startup-file=no", "-e", '"using Circuitscape; println(true)"'),
+      stdout = TRUE, stderr = FALSE
+    )
+    any(trimws(out) == "true")
+  }, error = function(e) FALSE)
 }
 
 

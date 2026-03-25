@@ -61,7 +61,7 @@
 #'
 #' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_all_to_one()], [cs_setup()]
 #'
-#' @examplesIf nchar(Sys.which("julia")) > 0
+#' @examplesIf circuitscaper:::julia_check()
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
