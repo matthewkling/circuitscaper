@@ -64,9 +64,17 @@ cs_setup(julia_home = "/usr/local/julia/bin")
 
 }
 \references{
-Circuitscape: \url{https://docs.circuitscape.org/Circuitscape.jl/latest/}
+McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
+1551--1561. \doi{10.1111/j.1558-5646.2006.tb00500.x}
 
-Omniscape: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
+Landau, V.A., Shah, V.B., Anantharaman, R. & Hall, K.R. (2021).
+Omniscape.jl: Software to compute omnidirectional landscape connectivity.
+\emph{Journal of Open Source Software}, 6(57), 2829.
+\doi{10.21105/joss.02829}
+
+Circuitscape.jl: \url{https://docs.circuitscape.org/Circuitscape.jl/latest/}
+
+Omniscape.jl: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 }
 \seealso{
 \code{\link[=cs_install_julia]{cs_install_julia()}}, \code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=os_run]{os_run()}}

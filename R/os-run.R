@@ -69,8 +69,12 @@
 #' }
 #'
 #' @references
-#' Omniscape documentation:
-#' \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
+#' Landau, V.A., Shah, V.B., Anantharaman, R. & Hall, K.R. (2021).
+#' Omniscape.jl: Software to compute omnidirectional landscape connectivity.
+#' \emph{Journal of Open Source Software}, 6(57), 2829.
+#' \doi{10.21105/joss.02829}
+#'
+#' Omniscape.jl: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 #'
 #' @seealso [cs_pairwise()], [cs_setup()]
 #'

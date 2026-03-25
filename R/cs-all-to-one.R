@@ -25,8 +25,10 @@
 #' }
 #'
 #' @references
-#' Circuitscape user guide:
-#' \url{https://docs.circuitscape.org/Circuitscape.jl/latest/usage/}
+#' McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
+#' 1551--1561. \doi{10.1111/j.1558-5646.2006.tb00500.x}
+#'
+#' Circuitscape.jl: \url{https://docs.circuitscape.org/Circuitscape.jl/latest/}
 #'
 #' @seealso [cs_pairwise()], [cs_one_to_all()], [cs_advanced()], [cs_setup()]
 #'
