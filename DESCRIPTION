@@ -11,9 +11,8 @@ Description: Provides an R-native interface to the 'Circuitscape.jl' and
     (SpatRaster, file paths) while 'Julia' handles computation invisibly.
     Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one,
     advanced) and Omniscape moving-window analysis. Methods are
-    described in McRae (2006) <doi:10.1111/j.1558-5646.2006.tb00500.x>,
-    McRae and Beier (2007) <doi:10.1073/pnas.0706568104>, and McRae
-    et al. (2008) <doi:10.1890/07-1861.1>.
+    described in McRae (2006) <doi:10.1111/j.1558-5646.2006.tb00500.x>
+    and Landau et al. (2021) <doi:10.21105/joss.02829>.
 License: MIT + file LICENSE
 URL: https://github.com/matthewkling/circuitscaper, https://matthewkling.github.io/circuitscaper/
 BugReports: https://github.com/matthewkling/circuitscaper/issues
