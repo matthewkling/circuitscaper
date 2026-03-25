@@ -10,13 +10,13 @@ Source:
 [`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/main/DESCRIPTION)
 
 Kling M (2026). *circuitscaper: R Interface to Circuitscape and
-Omniscape via Julia*. R package version 0.1.0,
+Omniscape*. R package version 0.0.0.9000,
 <https://github.com/matthewkling/circuitscaper>.
 
     @Manual{,
-      title = {circuitscaper: R Interface to Circuitscape and Omniscape via Julia},
+      title = {circuitscaper: R Interface to Circuitscape and Omniscape},
       author = {Matthew Kling},
       year = {2026},
-      note = {R package version 0.1.0},
+      note = {R package version 0.0.0.9000},
       url = {https://github.com/matthewkling/circuitscaper},
     }
