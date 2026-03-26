@@ -90,3 +90,4 @@ plot(result$normalized_current)
 - McRae, B.H. (2006). Isolation by resistance. *Evolution*, 60(8), 1551-1561.
 - McRae, B.H. & Beier, P. (2007). Circuit theory predicts gene flow in plant and animal populations. *PNAS*, 104(50), 19885-19890.
 - McRae, B.H., Dickson, B.G., Keitt, T.H. & Shah, V.B. (2008). Using circuit theory to model connectivity in ecology, evolution, and conservation. *Ecology*, 89(10), 2712-2724.
+

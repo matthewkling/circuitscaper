@@ -64,7 +64,7 @@ cs_setup(julia_home = "/usr/local/julia/bin")
 }
 \references{
 McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
-1551--1561. \doi{10.1111/j.1558-5646.2006.tb00500.x}
+1551--1561. \doi{10.1111/j.0014-3820.2006.tb00500.x}
 
 Landau, V.A., Shah, V.B., Anantharaman, R. & Hall, K.R. (2021).
 Omniscape.jl: Software to compute omnidirectional landscape connectivity.

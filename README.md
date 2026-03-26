@@ -58,7 +58,7 @@ plot(result$current_map)
 ``` r
 
 # Omniscape -- wall-to-wall moving-window connectivity
-# (result is a multi-layer SpatRaster of current flow variables)
+# (result is a multi-layer raster of current flow variables)
 result <- os_run(resistance, radius = 10)
 plot(result$normalized_current)
 ```
