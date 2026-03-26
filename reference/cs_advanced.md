@@ -136,7 +136,7 @@ defined source area and destination.
 
 McRae, B.H. (2006). Isolation by resistance. *Evolution*, 60(8),
 1551–1561.
-[doi:10.1111/j.1558-5646.2006.tb00500.x](https://doi.org/10.1111/j.1558-5646.2006.tb00500.x)
+[doi:10.1111/j.0014-3820.2006.tb00500.x](https://doi.org/10.1111/j.0014-3820.2006.tb00500.x)
 
 Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 

@@ -7,7 +7,7 @@ circuit theory. Users work entirely in R with familiar objects
 Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one,
 advanced) and Omniscape moving-window analysis. Methods are described in
 McRae (2006)
-[doi:10.1111/j.1558-5646.2006.tb00500.x](https://doi.org/10.1111/j.1558-5646.2006.tb00500.x)
+[doi:10.1111/j.0014-3820.2006.tb00500.x](https://doi.org/10.1111/j.0014-3820.2006.tb00500.x)
 and Landau et al. (2021)
 [doi:10.21105/joss.02829](https://doi.org/10.21105/joss.02829) .
 
