@@ -167,7 +167,7 @@ Circuitscape.jl: <https://docs.circuitscape.org/Circuitscape.jl/latest/>
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper:::julia_check()
+if (FALSE) { # circuitscaper::cs_julia_available()
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)

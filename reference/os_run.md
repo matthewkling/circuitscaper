@@ -168,7 +168,7 @@ Omniscape.jl: <https://docs.circuitscape.org/Omniscape.jl/latest/>
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper:::julia_check()
+if (FALSE) { # circuitscaper::cs_julia_available()
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)

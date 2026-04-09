@@ -32,7 +32,7 @@ non-interactive sessions (e.g., CI), proceeds without prompting.
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper:::julia_check()
+if (FALSE) { # circuitscaper::cs_julia_available()
 cs_install_julia()
 cs_install_julia(force = TRUE)
 }

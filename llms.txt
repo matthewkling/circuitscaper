@@ -102,6 +102,8 @@ plot(result$normalized_current)
   : All-to-One Circuitscape Analysis
 - [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
   : Install Julia and Required Packages
+- [`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md)
+  : Check if Julia and Required Packages Are Available
 - [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
   : One-to-All Circuitscape Analysis
 - [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)

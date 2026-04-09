@@ -95,7 +95,7 @@ Omniscape.jl: <https://docs.circuitscape.org/Omniscape.jl/latest/>
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper:::julia_check()
+if (FALSE) { # circuitscaper::cs_julia_available()
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
