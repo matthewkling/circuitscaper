@@ -24,7 +24,7 @@ In interactive sessions, prompts for confirmation before downloading. In
 non-interactive sessions (e.g., CI), proceeds without prompting.
 }
 \examples{
-\dontshow{if (circuitscaper:::julia_check()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 cs_install_julia()
 cs_install_julia(force = TRUE)
 \dontshow{\}) # examplesIf}

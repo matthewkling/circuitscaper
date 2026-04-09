@@ -91,7 +91,7 @@ scenarios such as directional movement between a defined source area and
 destination.
 }
 \examples{
-\dontshow{if (circuitscaper:::julia_check()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))

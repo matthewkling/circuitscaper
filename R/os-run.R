@@ -78,7 +78,7 @@
 #'
 #' @seealso [cs_pairwise()], [cs_setup()]
 #'
-#' @examplesIf circuitscaper:::julia_check()
+#' @examplesIf circuitscaper::cs_julia_available()
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' result <- os_run(res, radius = 20)

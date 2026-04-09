@@ -10,3 +10,4 @@
 ^pkgdown$
 notes
 ^cran-comments\.md$
+^CRAN-SUBMISSION$

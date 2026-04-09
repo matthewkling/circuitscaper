@@ -82,7 +82,7 @@
 #'
 #' @seealso [cs_one_to_all()], [cs_all_to_one()], [cs_advanced()], [cs_setup()]
 #'
-#' @examplesIf circuitscaper:::julia_check()
+#' @examplesIf circuitscaper::cs_julia_available()
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)

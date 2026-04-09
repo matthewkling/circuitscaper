@@ -3,6 +3,7 @@
 export(cs_advanced)
 export(cs_all_to_one)
 export(cs_install_julia)
+export(cs_julia_available)
 export(cs_one_to_all)
 export(cs_pairwise)
 export(cs_setup)

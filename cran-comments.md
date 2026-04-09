@@ -1,3 +1,10 @@
+## Resubmission
+
+This is a resubmission. Changes made in response to reviewer comments:
+
+* Single-quoted 'Julia' in DESCRIPTION.
+* Replaced `:::` with `::` in `@examplesIf` conditions.
+
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
@@ -6,7 +13,7 @@
 
 ## Test environments
 
-* macOS (local), R 4.3.x
+* macOS (local), R 4.3.0
 * GitHub Actions: macOS-latest (R release), windows-latest (R release),
   ubuntu-latest (R devel, release, oldrel-1)
 
