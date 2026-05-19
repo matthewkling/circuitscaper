@@ -31,6 +31,7 @@ circuitscaper requires Julia (\>= 1.9) with the Circuitscape and
 Omniscape packages. You can install everything from R:
 
 ``` r
+
 # Install circuitscaper (from GitHub during development)
 # remotes::install_github("matthewkling/circuitscaper")
 
@@ -45,6 +46,7 @@ If you already have Julia installed,
 will find it automatically or you can point to it:
 
 ``` r
+
 cs_setup(julia_home = "/path/to/julia/bin")
 ```
 
@@ -114,6 +116,7 @@ across the full extent.
 ## Circuitscape: Pairwise Mode
 
 ``` r
+
 library(terra)
 library(circuitscaper)
 
@@ -138,11 +141,13 @@ result$resistance_matrix
 ## Circuitscape: One-to-All and All-to-One Modes
 
 ``` r
+
 result <- cs_one_to_all(resistance, coords)
 plot(result)
 ```
 
 ``` r
+
 result <- cs_all_to_one(resistance, coords)
 plot(result$cumulative_current)
 ```
@@ -150,6 +155,7 @@ plot(result$cumulative_current)
 ## Circuitscape: Advanced Mode
 
 ``` r
+
 source_layer <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
 ground_layer <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 
@@ -181,6 +187,7 @@ per-pair (or per-node) current layers, and `write_voltage = TRUE` to
 include voltage layers:
 
 ``` r
+
 result <- cs_pairwise(resistance, coords,
                       cumulative_only = FALSE,
                       write_voltage = TRUE)
@@ -194,6 +201,7 @@ By default, each focal node injects 1 amp of current. Use
 useful when sites differ in population size or habitat area:
 
 ``` r
+
 # Strengths in the same order as the locations
 strengths <- c(2.5, 1.0, 0.5)
 result <- cs_one_to_all(resistance, coords, source_strengths = strengths)
@@ -207,6 +215,7 @@ Pass a raster where cells sharing the same positive integer value are
 short-circuited:
 
 ``` r
+
 polygons <- rast("path/to/short_circuit_regions.tif")
 result <- cs_pairwise(resistance, locations, short_circuit = polygons)
 ```
@@ -217,6 +226,7 @@ For large numbers of focal nodes, you may want to restrict analysis to a
 subset of pairs:
 
 ``` r
+
 result <- cs_pairwise(resistance, locations,
                       included_pairs = "path/to/pairs.txt")
 ```
@@ -239,6 +249,7 @@ The two key parameters are:
   vs. precision.
 
 ``` r
+
 result <- os_run(resistance, radius = 20, block_size = 3)
 ```
 
@@ -257,6 +268,7 @@ Omniscape returns up to three layers:
   informative layer.
 
 ``` r
+
 plot(result)
 ```
 
@@ -267,6 +279,7 @@ You can provide an explicit source strength raster (e.g., habitat
 quality) to weight sources independently of resistance:
 
 ``` r
+
 source_strength <- rast("path/to/habitat_quality.tif")
 
 result <- os_run(resistance, radius = 20,
@@ -281,6 +294,7 @@ times. Julia’s thread count is fixed at startup, so set it via
 before any other circuitscaper calls:
 
 ``` r
+
 # Set thread count at the start of your session
 cs_setup(threads = 4)
 
@@ -316,6 +330,7 @@ cleaned up. To persist output files (ASC rasters, INI configuration, and
 resistance matrices), use `output_dir`:
 
 ``` r
+
 result <- cs_pairwise(resistance, locations,
                       output_dir = "my_output_directory")
 ```
@@ -338,6 +353,7 @@ result <- cs_pairwise(resistance, locations,
   and dividing:
 
   ``` r
+
   result      <- cs_pairwise(resistance, sites)
   result_null <- cs_pairwise(resistance * 0 + 1, sites)
   normalized  <- result$current_map / result_null$current_map

@@ -21,6 +21,7 @@ from R, while Julia handles the heavy lifting under the hood.
 ## Installation
 
 ``` r
+
 # 1. Install the R package
 remotes::install_github("matthewkling/circuitscaper")
 
@@ -32,6 +33,7 @@ cs_install_julia()
 ## Example
 
 ``` r
+
 library(circuitscaper)
 library(terra)
 
@@ -49,6 +51,7 @@ plot(result$current_map)
 
 ``` r
 
+
 # Omniscape -- wall-to-wall moving-window connectivity
 # (result is a multi-layer raster of current flow variables)
 result <- os_run(resistance, radius = 10)
@@ -59,15 +62,15 @@ plot(result$normalized_current)
 
 ## Functions
 
-| Function                                                                                               | Description                                     | Julia backend                                                                                                                                                                      |
-|--------------------------------------------------------------------------------------------------------|-------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)**           | Pairwise effective resistance and current flow  | `Circuitscape.compute()`                                                                                                                                                           |
-| **[`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)**       | One-to-all connectivity analysis                | `Circuitscape.compute()`                                                                                                                                                           |
-| **[`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)**       | All-to-one connectivity analysis                | `Circuitscape.compute()`                                                                                                                                                           |
-| **[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)**           | Advanced mode with custom sources and grounds   | `Circuitscape.compute()`                                                                                                                                                           |
-| **[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)**                     | Omniscape moving-window connectivity            | `Omniscape.run_omniscape()`                                                                                                                                                        |
-| **[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)**                 | Initialize Julia session (called automatically) | [`JuliaCall::julia_library()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html)                                                                                               |
-| **[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)** | Install Julia and required packages             | [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html), [`JuliaCall::julia_install_package()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html) |
+| Function | Description | Julia backend |
+|----|----|----|
+| **[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)** | Pairwise effective resistance and current flow | `Circuitscape.compute()` |
+| **[`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)** | One-to-all connectivity analysis | `Circuitscape.compute()` |
+| **[`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)** | All-to-one connectivity analysis | `Circuitscape.compute()` |
+| **[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)** | Advanced mode with custom sources and grounds | `Circuitscape.compute()` |
+| **[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)** | Omniscape moving-window connectivity | `Omniscape.run_omniscape()` |
+| **[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)** | Initialize Julia session (called automatically) | [`JuliaCall::julia_library()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html) |
+| **[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)** | Install Julia and required packages | [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html), [`JuliaCall::julia_install_package()`](https://rdrr.io/pkg/JuliaCall/man/julia_package.html) |
 
 ## Requirements
 
