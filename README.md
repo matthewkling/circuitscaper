@@ -29,8 +29,10 @@ from R, while Julia handles the heavy lifting under the hood.
 ## Installation
 
 ``` r
-# 1. Install the R package
-remotes::install_github("matthewkling/circuitscaper")
+# 1. Install the R package from CRAN
+install.packages("circuitscaper")
+# or install the development version from GitHub
+# remotes::install_github("matthewkling/circuitscaper")
 
 # 2. Let the package install Julia and the necessary Julia libraries
 library(circuitscaper)
