@@ -8,11 +8,12 @@ cs_julia_available()
 }
 \value{
 \code{TRUE} if Julia is found on the system PATH and the
-'Circuitscape' Julia package loads successfully, \code{FALSE} otherwise.
+'Circuitscape' and 'Omniscape' Julia packages load successfully,
+\code{FALSE} otherwise.
 }
 \description{
-Tests whether Julia is installed and the Circuitscape Julia package can be
-loaded. This is a lightweight check that does not initialize a full Julia
+Tests whether Julia is installed and the Circuitscape and Omniscape Julia packages
+can be loaded. This is a lightweight check that does not initialize a full Julia
 session. It is used internally by example code and can be called by users
 to verify their setup before running analyses.
 }
