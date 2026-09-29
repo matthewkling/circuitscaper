@@ -21,14 +21,14 @@ cs_all_to_one(
 )
 }
 \arguments{
-\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
+\item{resistance}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. The resistance (or
 conductance) surface. Higher values represent greater resistance to
 movement. Use the \code{resistance_is} argument if your surface represents
 conductances instead.}
 
 \item{locations}{Focal node locations, provided as any of:
 \itemize{
-\item A \link[terra:SpatRaster-class]{terra::SpatRaster} (or \code{raster::RasterLayer}) with positive integer IDs
+\item A \link[terra:SpatRaster]{terra::SpatRaster} (or \code{raster::RasterLayer}) with positive integer IDs
 identifying each node. Cells with value 0 or \code{NA} are not treated as focal
 nodes.
 \item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
@@ -48,7 +48,7 @@ the resistance of diagonal connections as the average of the two cells
 rather than their sum. Default \code{FALSE} (Circuitscape default). Ignored when
 \code{four_neighbors = TRUE}.}
 
-\item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
+\item{short_circuit}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path. Raster
 identifying short-circuit regions (aka polygons). Cells sharing the same
 positive integer value are treated as short-circuit regions with zero
 resistance between them. Default \code{NULL} (no short-circuit regions).}
@@ -85,7 +85,7 @@ automatically.}
 \item{verbose}{Logical. Print Circuitscape solver output. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
+A \link[terra:SpatRaster]{terra::SpatRaster} with the following layers:
 \describe{
 \item{cumulative_current}{Current flow summed across all iterations.}
 \item{current_\emph{N}}{Per-node current map for focal node \emph{N}, where
@@ -109,7 +109,7 @@ cumulative map sums across all iterations and highlights cells that are
 important for connectivity across the full set of nodes.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)

@@ -41,3 +41,8 @@
 * `os_run()`'s `condition_type` argument is deprecated. `condition_type =
   "equal"` still works with a warning; `condition_type = "within"` now errors,
   since it has no way to specify bounds.
+
+
+# circuitscaper 0.1.0
+
+* Initial release

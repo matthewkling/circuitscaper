@@ -13,10 +13,10 @@ os_condition(
 )
 }
 \arguments{
-\item{present}{A single-layer \link[terra:SpatRaster-class]{terra::SpatRaster} or file path giving
+\item{present}{A single-layer \link[terra:SpatRaster]{terra::SpatRaster} or file path giving
 present-day condition values. Must align with the resistance surface.}
 
-\item{future}{Optional single-layer \link[terra:SpatRaster-class]{terra::SpatRaster} or file path giving
+\item{future}{Optional single-layer \link[terra:SpatRaster]{terra::SpatRaster} or file path giving
 future condition values. If supplied, each source's \emph{present} value is
 compared against the target's \emph{future} value. If \code{NULL} (default), present
 values are used for both sources and targets.}

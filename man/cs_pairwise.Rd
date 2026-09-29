@@ -21,14 +21,14 @@ cs_pairwise(
 )
 }
 \arguments{
-\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
+\item{resistance}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. The resistance (or
 conductance) surface. Higher values represent greater resistance to
 movement. Use the \code{resistance_is} argument if your surface represents
 conductances instead.}
 
 \item{locations}{Focal node locations, provided as any of:
 \itemize{
-\item A \link[terra:SpatRaster-class]{terra::SpatRaster} (or \code{raster::RasterLayer}) with positive integer IDs
+\item A \link[terra:SpatRaster]{terra::SpatRaster} (or \code{raster::RasterLayer}) with positive integer IDs
 identifying each node. Cells with value 0 or \code{NA} are not treated as focal
 nodes.
 \item A file path to a raster file (e.g., \code{.tif}, \code{.asc}).
@@ -48,7 +48,7 @@ the resistance of diagonal connections as the average of the two cells
 rather than their sum. Default \code{FALSE} (Circuitscape default). Ignored when
 \code{four_neighbors = TRUE}.}
 
-\item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
+\item{short_circuit}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path. Raster
 identifying short-circuit regions (aka polygons). Cells sharing the same
 positive integer value are treated as short-circuit regions with zero
 resistance between them. Default \code{NULL} (no short-circuit regions).}
@@ -87,7 +87,7 @@ automatically.}
 \value{
 A named list with:
 \describe{
-\item{current_map}{A \link[terra:SpatRaster-class]{terra::SpatRaster}. By default contains a single
+\item{current_map}{A \link[terra:SpatRaster]{terra::SpatRaster}. By default contains a single
 \code{cumulative_current} layer (current flow summed across all pairs). When
 \code{cumulative_only = FALSE}, additional per-pair layers are included
 (e.g., \code{current_1_2}, \code{current_1_3}). When \code{write_voltage = TRUE},
@@ -114,7 +114,7 @@ matrix can be used as a distance metric in analyses such as isolation by
 resistance.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)

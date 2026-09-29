@@ -24,7 +24,7 @@ os_run(
 )
 }
 \arguments{
-\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
+\item{resistance}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. The resistance (or
 conductance) surface. Higher values represent greater resistance to
 movement.}
 
@@ -32,7 +32,7 @@ movement.}
 maximum distance over which connectivity is evaluated from each source
 pixel.}
 
-\item{source_strength}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Source
+\item{source_strength}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path. Source
 strength weights, often derived from habitat quality or suitability, where
 higher values indicate stronger sources of movement. If \code{NULL} (default),
 source strength is set to the inverse of resistance (i.e., all non-nodata
@@ -64,7 +64,7 @@ Default \code{TRUE}.}
 restricts each target to sources with compatible values on one or two
 condition layers. Either an \code{\link[=os_condition]{os_condition()}} object, a list of two
 \code{\link[=os_condition]{os_condition()}} objects (sources must satisfy both), or a single
-\link[terra:SpatRaster-class]{terra::SpatRaster} or file path, which is shorthand for
+\link[terra:SpatRaster]{terra::SpatRaster} or file path, which is shorthand for
 \code{os_condition(x, type = "equal")}. Use \code{\link[=os_condition]{os_condition()}} for range-based
 (\code{"within"}) comparisons and for comparing present-day source values
 against future target values. Default \code{NULL} (no conditions).}
@@ -88,7 +88,7 @@ there. Default \code{NULL} uses a temporary directory.}
 \item{verbose}{Logical. Print Omniscape output. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers (depending on
+A \link[terra:SpatRaster]{terra::SpatRaster} with the following layers (depending on
 options):
 \describe{
 \item{cumulative_current}{Raw cumulative current flow. Always present.
@@ -110,7 +110,7 @@ Performs an Omniscape analysis, computing omnidirectional landscape
 connectivity using a moving window approach based on circuit theory.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)

@@ -22,14 +22,14 @@ cs_advanced(
 )
 }
 \arguments{
-\item{resistance}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. The resistance (or
+\item{resistance}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. The resistance (or
 conductance) surface. Higher values represent greater resistance to
 movement.}
 
-\item{source}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Source current strengths
+\item{source}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. Source current strengths
 (amps per cell). Cells with value 0 or NA are not sources.}
 
-\item{ground}{A \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Ground node values.
+\item{ground}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path. Ground node values.
 Interpretation depends on \code{ground_is}: resistances to ground (default)
 or conductances to ground. Cells with value 0 or NA are not grounds.}
 
@@ -46,7 +46,7 @@ or conductances to ground. Cells with value 0 or NA are not grounds.}
 directly to ground (zero resistance), regardless of the values in the
 ground raster. Default \code{FALSE}.}
 
-\item{short_circuit}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Raster
+\item{short_circuit}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path. Raster
 identifying short-circuit regions (aka polygons). Cells sharing the same
 positive integer value are treated as short-circuit regions with zero
 resistance between them. Default \code{NULL} (no short-circuit regions).}
@@ -72,7 +72,7 @@ there. Default \code{NULL} uses a temporary directory.}
 \item{verbose}{Logical. Print Circuitscape solver output. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster-class]{terra::SpatRaster} with the following layers:
+A \link[terra:SpatRaster]{terra::SpatRaster} with the following layers:
 \describe{
 \item{current}{Current density at each cell.}
 \item{voltage}{Voltage at each cell. Voltage is analogous to movement
@@ -91,7 +91,7 @@ scenarios such as directional movement between a defined source area and
 destination.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
