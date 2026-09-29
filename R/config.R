@@ -69,7 +69,7 @@ build_cs_config <- function(mode,
 
   # Connection scheme
   config[["Connection scheme for raster habitat data"]] <- list(
-    connect_four_neighbors = if (four_neighbors) "true" else "false",
+    connect_four_neighbors_only = if (four_neighbors) "true" else "false",
     connect_using_avg_resistances = if (avg_resistances) "true" else "false"
   )
 
@@ -147,8 +147,9 @@ build_cs_config <- function(mode,
 #' @param resistance_is Character. "resistances" or "conductances".
 #' @param calc_normalized_current Logical.
 #' @param calc_flow_potential Logical.
-#' @param condition_file Character or NULL. Path to condition raster.
-#' @param condition_type Character or NULL.
+#' @param conditions List of zero to two condition specs, each a list with
+#'   elements `present_file`, `future_file` (or NULL), `type` ("equal" or
+#'   "within"), and `lower`/`upper` (numeric, used only for "within").
 #' @param parallelize Logical.
 #' @param julia_threads Integer.
 #' @param solver Character.
@@ -165,8 +166,7 @@ build_os_config <- function(resistance_file,
                             resistance_is = "resistances",
                             calc_normalized_current = TRUE,
                             calc_flow_potential = TRUE,
-                            condition_file = NULL,
-                            condition_type = NULL,
+                            conditions = NULL,
                             parallelize = FALSE,
                             julia_threads = 2L,
                             solver = "cg+amg") {
@@ -207,18 +207,59 @@ build_os_config <- function(resistance_file,
   }
 
   # Conditional connectivity
-  if (!is.null(condition_file)) {
-    config[["Conditional connectivity"]] <- list(
-      conditional = "true",
-      condition1_file = condition_file
-    )
-    if (!is.null(condition_type)) {
-      config[["Conditional connectivity"]]$condition1_type <- condition_type
-    }
+  if (length(conditions) > 0) {
+    config[["Conditional connectivity"]] <- build_os_conditions(conditions)
   }
 
   # Write INI file
   ini_path <- file.path(output_dir, "omniscape.ini")
   write_ini(config, ini_path)
   ini_path
+}
+
+
+#' Build the Conditional Connectivity INI Section for Omniscape
+#'
+#' @param conditions List of one or two condition specs (see
+#'   `build_os_config()`).
+#' @return Named list of INI key-value pairs.
+#' @noRd
+build_os_conditions <- function(conditions) {
+  n <- length(conditions)
+  if (!n %in% 1:2) {
+    stop("Omniscape supports one or two conditions; got ", n, ".",
+         call. = FALSE)
+  }
+
+  has_future <- vapply(conditions, function(x) !is.null(x$future_file),
+                       logical(1))
+  compare_to_future <- if (!any(has_future)) {
+    "none"
+  } else if (all(has_future) && n == 2) {
+    "both"
+  } else {
+    as.character(which(has_future))
+  }
+
+  section <- list(
+    conditional = "true",
+    n_conditions = as.integer(n),
+    compare_to_future = compare_to_future
+  )
+
+  for (i in seq_len(n)) {
+    x <- conditions[[i]]
+    type <- match.arg(x$type, c("equal", "within"))
+    section[[paste0("condition", i, "_file")]] <- x$present_file
+    section[[paste0("comparison", i)]] <- type
+    if (type == "within") {
+      section[[paste0("condition", i, "_lower")]] <- x$lower
+      section[[paste0("condition", i, "_upper")]] <- x$upper
+    }
+    if (!is.null(x$future_file)) {
+      section[[paste0("condition", i, "_future_file")]] <- x$future_file
+    }
+  }
+
+  section
 }

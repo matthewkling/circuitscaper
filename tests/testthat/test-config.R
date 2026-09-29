@@ -289,21 +289,111 @@ test_that("build_cs_config defaults avg_resistances to false", {
   expect_true(any(grepl("connect_using_avg_resistances = false", content)))
 })
 
-test_that("build_os_config handles conditional connectivity", {
+# Helper: build an Omniscape INI and return its lines
+os_ini_lines <- function(conditions) {
   tmp_dir <- tempfile("os_test_")
   dir.create(tmp_dir)
   on.exit(unlink(tmp_dir, recursive = TRUE))
-
   ini_path <- build_os_config(
     resistance_file = "/path/to/resistance.asc",
     radius = 50,
     output_dir = tmp_dir,
-    condition_file = "/path/to/condition.asc",
-    condition_type = "within"
+    conditions = conditions
   )
+  readLines(ini_path)
+}
 
+test_that("build_os_config writes no conditional section without conditions", {
+  content <- os_ini_lines(NULL)
+  expect_false(any(grepl("conditional", content)))
+  expect_false(any(grepl("condition1", content)))
+})
+
+test_that("build_os_config writes an 'equal' condition", {
+  content <- os_ini_lines(list(
+    list(present_file = "/path/to/cond.asc", future_file = NULL,
+         type = "equal")
+  ))
+  expect_true("conditional = true" %in% content)
+  expect_true("n_conditions = 1" %in% content)
+  expect_true("compare_to_future = none" %in% content)
+  expect_true("condition1_file = /path/to/cond.asc" %in% content)
+  expect_true("comparison1 = equal" %in% content)
+  expect_false(any(grepl("condition1_lower|condition1_upper", content)))
+  expect_false(any(grepl("future_file", content)))
+  # Regression: the old, unrecognized key must not be written
+  expect_false(any(grepl("condition1_type", content)))
+})
+
+test_that("build_os_config writes a bounded 'within' condition", {
+  content <- os_ini_lines(list(
+    list(present_file = "/path/to/cond.asc", future_file = NULL,
+         type = "within", lower = -1.5, upper = 0.25)
+  ))
+  expect_true("comparison1 = within" %in% content)
+  expect_true("condition1_lower = -1.5" %in% content)
+  expect_true("condition1_upper = 0.25" %in% content)
+})
+
+test_that("build_os_config writes infinite bounds Julia can parse", {
+  content <- os_ini_lines(list(
+    list(present_file = "/path/to/cond.asc", future_file = NULL,
+         type = "within", lower = -Inf, upper = 2)
+  ))
+  expect_true("condition1_lower = -Inf" %in% content)
+  expect_true("condition1_upper = 2" %in% content)
+})
+
+test_that("build_os_config writes present-vs-future conditions", {
+  content <- os_ini_lines(list(
+    list(present_file = "/path/to/now.asc", future_file = "/path/to/fut.asc",
+         type = "within", lower = -1, upper = 1)
+  ))
+  expect_true("compare_to_future = 1" %in% content)
+  expect_true("condition1_future_file = /path/to/fut.asc" %in% content)
+})
+
+test_that("build_os_config sets compare_to_future for two conditions", {
+  now1 <- list(present_file = "/c1.asc", future_file = NULL, type = "equal")
+  fut1 <- list(present_file = "/c1.asc", future_file = "/c1f.asc",
+               type = "equal")
+  now2 <- list(present_file = "/c2.asc", future_file = NULL,
+               type = "within", lower = 0, upper = 1)
+  fut2 <- list(present_file = "/c2.asc", future_file = "/c2f.asc",
+               type = "within", lower = 0, upper = 1)
+
+  content <- os_ini_lines(list(now1, now2))
+  expect_true("n_conditions = 2" %in% content)
+  expect_true("compare_to_future = none" %in% content)
+  expect_true("comparison1 = equal" %in% content)
+  expect_true("comparison2 = within" %in% content)
+  expect_true("condition2_file = /c2.asc" %in% content)
+
+  expect_true("compare_to_future = 1" %in% os_ini_lines(list(fut1, now2)))
+  expect_true("compare_to_future = 2" %in% os_ini_lines(list(now1, fut2)))
+  both <- os_ini_lines(list(fut1, fut2))
+  expect_true("compare_to_future = both" %in% both)
+  expect_true("condition2_future_file = /c2f.asc" %in% both)
+})
+
+test_that("build_os_config rejects more than two conditions", {
+  cond <- list(present_file = "/c.asc", future_file = NULL, type = "equal")
+  expect_error(os_ini_lines(list(cond, cond, cond)), "one or two")
+})
+
+test_that("build_cs_config writes the four-neighbor key Circuitscape reads", {
+  tmp_dir <- tempfile("cs_test_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+
+  ini_path <- build_cs_config(
+    mode = "pairwise",
+    resistance_file = "/path/to/resistance.asc",
+    output_dir = tmp_dir,
+    locations_file = "/path/to/locations.asc",
+    four_neighbors = TRUE
+  )
   content <- readLines(ini_path)
-  expect_true(any(grepl("conditional = true", content)))
-  expect_true(any(grepl("condition1_file = /path/to/condition.asc", content)))
-  expect_true(any(grepl("condition1_type = within", content)))
+  expect_true("connect_four_neighbors_only = true" %in% content)
+  expect_false(any(grepl("^connect_four_neighbors =", content)))
 })

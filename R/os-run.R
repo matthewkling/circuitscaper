@@ -30,16 +30,17 @@
 #' @param calc_normalized_current Logical. Compute normalized current flow.
 #'   Default `TRUE`.
 #' @param calc_flow_potential Logical. Compute flow potential. Default `TRUE`.
-#' @param condition Optional [terra::SpatRaster] or file path. Conditional layer
-#'   for targeted connectivity analysis.
-#' @param condition_type Character. How the condition layer filters connectivity:
-#'   `"within"` (connectivity only between source and target cells whose
-#'   condition values fall within a specified range) or `"equal"` (connectivity
-#'   only between cells with equal condition values, evaluated pairwise). Only
-#'   relevant if `condition` is provided. Note: `"within"` currently uses
-#'   Omniscape's default unbounded range (`-Inf` to `Inf`), which effectively
-#'   includes all cells. Finer control over range bounds is planned for a
-#'   future version.
+#' @param condition Optional conditional connectivity specification, which
+#'   restricts each target to sources with compatible values on one or two
+#'   condition layers. Either an [os_condition()] object, a list of two
+#'   [os_condition()] objects (sources must satisfy both), or a single
+#'   [terra::SpatRaster] or file path, which is shorthand for
+#'   `os_condition(x, type = "equal")`. Use [os_condition()] for range-based
+#'   (`"within"`) comparisons and for comparing present-day source values
+#'   against future target values. Default `NULL` (no conditions).
+#' @param condition_type Deprecated. Use
+#'   `condition = os_condition(x, type = ...)` instead. Only `"equal"` is
+#'   still accepted here.
 #' @param parallelize Logical. Use Julia multithreading. Default `FALSE`.
 #'   Julia's thread count is fixed at startup. If Julia was already initialized
 #'   without enough threads, a warning is issued. To avoid this, call
@@ -76,13 +77,19 @@
 #'
 #' Omniscape.jl: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 #'
-#' @seealso [cs_pairwise()], [cs_setup()]
+#' @seealso [os_condition()], [cs_pairwise()], [cs_setup()]
 #'
 #' @examplesIf circuitscaper::cs_julia_available()
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 #' result <- os_run(res, radius = 20)
 #' plot(result)
+#'
+#' # Conditional connectivity: only connect cells in the same zone
+#' # (here, the left and right halves of the landscape)
+#' zones <- (init(res, "col") > ncol(res) / 2) + 1
+#' result_cond <- os_run(res, radius = 20, condition = zones)
+#' plot(result_cond)
 #'
 #' @export
 os_run <- function(resistance,
@@ -117,15 +124,22 @@ os_run <- function(resistance,
     )
   }
 
-  ensure_julia()
-
-  # Validate arguments
+  # Validate arguments (before starting Julia, so errors are fast)
   match.arg(resistance_is, c("resistances", "conductances"))
   match.arg(solver, c("cg+amg", "cholmod"))
-  if (!is.null(condition_type)) {
-    condition_type <- match.arg(condition_type, c("within", "equal"))
-  }
+  conditions <- resolve_conditions(condition, condition_type)
   validate_resistance_values(resistance, resistance_is)
+  if (!is.null(conditions)) {
+    check_conditions_against_inputs(
+      conditions, resistance,
+      source_strength = source_strength,
+      source_threshold = source_threshold,
+      r_cutoff = r_cutoff,
+      resistance_is = resistance_is
+    )
+  }
+
+  ensure_julia()
 
   # Set up working directory
   use_temp <- is.null(output_dir)
@@ -149,14 +163,18 @@ os_run <- function(resistance,
     src_path <- ensure_asc(source_strength, work_dir, "source_strength")
   }
 
-  cond_path <- NULL
-  if (!is.null(condition)) {
-    if (inherits(resistance, "SpatRaster") &&
-        inherits(condition, "SpatRaster")) {
-      validate_raster_match(resistance, condition, "resistance", "condition")
-    }
-    cond_path <- ensure_asc(condition, work_dir, "condition")
-  }
+  cond_specs <- lapply(seq_along(conditions), function(i) {
+    x <- conditions[[i]]
+    list(
+      present_file = ensure_asc(x$present, work_dir, paste0("condition", i)),
+      future_file = if (!is.null(x$future)) {
+        ensure_asc(x$future, work_dir, paste0("condition", i, "_future"))
+      },
+      type = x$type,
+      lower = x$lower,
+      upper = x$upper
+    )
+  })
 
   # Build INI configuration
   ini_path <- build_os_config(
@@ -170,12 +188,14 @@ os_run <- function(resistance,
     resistance_is = resistance_is,
     calc_normalized_current = calc_normalized_current,
     calc_flow_potential = calc_flow_potential,
-    condition_file = cond_path,
-    condition_type = condition_type,
+    conditions = cond_specs,
     parallelize = parallelize,
     julia_threads = julia_threads,
     solver = solver
   )
+
+  warn_unsupported_ini_keys(ini_path, supported_ini_keys("Omniscape"),
+                            "Omniscape")
 
   # Run Omniscape
   julia_expr <- paste0(

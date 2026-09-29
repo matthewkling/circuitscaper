@@ -240,6 +240,9 @@ run_cs_mode <- function(mode,
     variable_source_file = vs_path
   )
 
+  warn_unsupported_ini_keys(ini_path, supported_ini_keys("Circuitscape"),
+                            "Circuitscape")
+
   # Run Circuitscape
   julia_expr <- paste0(
     'Circuitscape.compute("', gsub("\\\\", "/", ini_path), '")'

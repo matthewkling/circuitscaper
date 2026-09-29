@@ -267,3 +267,77 @@ read_resistance_matrix <- function(dir, prefix) {
   # one-to-all and all-to-one modes don't produce resistance files
   NULL
 }
+
+
+#' Read the Keys from an INI File
+#'
+#' @param path Character. Path to an INI file.
+#' @return Character vector of keys, in file order.
+#' @noRd
+read_ini_keys <- function(path) {
+  lines <- trimws(readLines(path, warn = FALSE))
+  lines <- lines[nzchar(lines) & !grepl("^(\\[|#|;)", lines) & grepl("=", lines)]
+  trimws(sub("=.*$", "", lines))
+}
+
+
+#' Look Up the INI Keys Supported by the Loaded Julia Package
+#'
+#' Queries the loaded Circuitscape.jl or Omniscape.jl for the configuration
+#' keys it recognizes, caching the result for the session. Returns NULL if
+#' the lookup fails (e.g., an upstream version without the expected internal
+#' constant), in which case key checking is skipped.
+#'
+#' @param tool Character. "Circuitscape" or "Omniscape".
+#' @return Character vector of supported keys, or NULL.
+#' @noRd
+supported_ini_keys <- function(tool = c("Circuitscape", "Omniscape")) {
+  tool <- match.arg(tool)
+  cache_name <- paste0("supported_keys_", tool)
+  if (!is.null(.cs_env[[cache_name]])) {
+    return(.cs_env[[cache_name]])
+  }
+
+  expr <- switch(tool,
+    Circuitscape = "collect(String, keys(Circuitscape.init_config()))",
+    Omniscape = "collect(String, Omniscape.SUPPORTED_ARGS)"
+  )
+  keys <- tryCatch(
+    as.character(unlist(JuliaCall::julia_eval(expr))),
+    error = function(e) NULL
+  )
+  if (length(keys) == 0) return(NULL)
+
+  .cs_env[[cache_name]] <- keys
+  keys
+}
+
+
+#' Warn About INI Keys the Julia Package Will Ignore
+#'
+#' Circuitscape.jl and Omniscape.jl ignore unrecognized configuration keys,
+#' reporting them only via a log message that is hidden when
+#' `verbose = FALSE`. Since circuitscaper writes every key itself, an
+#' unrecognized key indicates a circuitscaper bug or an upstream change, and
+#' the corresponding option would silently have no effect.
+#'
+#' @param ini_path Character. Path to the INI file.
+#' @param supported Character vector of supported keys, or NULL to skip.
+#' @param tool Character. Name of the Julia package, for the message.
+#' @return Character vector of unsupported keys (invisibly).
+#' @noRd
+warn_unsupported_ini_keys <- function(ini_path, supported, tool) {
+  if (is.null(supported)) return(invisible(character()))
+  bad <- setdiff(read_ini_keys(ini_path), supported)
+  if (length(bad) > 0) {
+    warning(
+      "The installed version of ", tool, ".jl does not recognize the ",
+      "following configuration option(s), which will have no effect: ",
+      paste(bad, collapse = ", "), ". This may indicate a version ",
+      "incompatibility; please report it at ",
+      "https://github.com/matthewkling/circuitscaper/issues",
+      call. = FALSE
+    )
+  }
+  invisible(bad)
+}

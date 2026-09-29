@@ -60,17 +60,18 @@ Default \code{TRUE}.}
 
 \item{calc_flow_potential}{Logical. Compute flow potential. Default \code{TRUE}.}
 
-\item{condition}{Optional \link[terra:SpatRaster-class]{terra::SpatRaster} or file path. Conditional layer
-for targeted connectivity analysis.}
+\item{condition}{Optional conditional connectivity specification, which
+restricts each target to sources with compatible values on one or two
+condition layers. Either an \code{\link[=os_condition]{os_condition()}} object, a list of two
+\code{\link[=os_condition]{os_condition()}} objects (sources must satisfy both), or a single
+\link[terra:SpatRaster-class]{terra::SpatRaster} or file path, which is shorthand for
+\code{os_condition(x, type = "equal")}. Use \code{\link[=os_condition]{os_condition()}} for range-based
+(\code{"within"}) comparisons and for comparing present-day source values
+against future target values. Default \code{NULL} (no conditions).}
 
-\item{condition_type}{Character. How the condition layer filters connectivity:
-\code{"within"} (connectivity only between source and target cells whose
-condition values fall within a specified range) or \code{"equal"} (connectivity
-only between cells with equal condition values, evaluated pairwise). Only
-relevant if \code{condition} is provided. Note: \code{"within"} currently uses
-Omniscape's default unbounded range (\code{-Inf} to \code{Inf}), which effectively
-includes all cells. Finer control over range bounds is planned for a
-future version.}
+\item{condition_type}{Deprecated. Use
+\code{condition = os_condition(x, type = ...)} instead. Only \code{"equal"} is
+still accepted here.}
 
 \item{parallelize}{Logical. Use Julia multithreading. Default \code{FALSE}.
 Julia's thread count is fixed at startup. If Julia was already initialized
@@ -114,6 +115,12 @@ library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)
 plot(result)
+
+# Conditional connectivity: only connect cells in the same zone
+# (here, the left and right halves of the landscape)
+zones <- (init(res, "col") > ncol(res) / 2) + 1
+result_cond <- os_run(res, radius = 20, condition = zones)
+plot(result_cond)
 \dontshow{\}) # examplesIf}
 }
 \references{
@@ -125,5 +132,5 @@ Omniscape.jl: Software to compute omnidirectional landscape connectivity.
 Omniscape.jl: \url{https://docs.circuitscape.org/Omniscape.jl/latest/}
 }
 \seealso{
-\code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=cs_setup]{cs_setup()}}
+\code{\link[=os_condition]{os_condition()}}, \code{\link[=cs_pairwise]{cs_pairwise()}}, \code{\link[=cs_setup]{cs_setup()}}
 }
