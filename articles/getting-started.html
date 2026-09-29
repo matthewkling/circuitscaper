@@ -340,12 +340,43 @@ habitat quality) to weight sources independently of resistance:</p>
 <span>                 source_strength <span class="op">=</span> <span class="va">source_strength</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="conditional-connectivity">Conditional connectivity<a class="anchor" aria-label="anchor" href="#conditional-connectivity"></a>
+</h3>
+<p>Conditional connectivity restricts which sources are connected to
+each target, based on their values on a condition layer. Use
+<code><a href="../reference/os_condition.html">os_condition()</a></code> to define the comparison. For categorical
+data, <code>type = "equal"</code> connects only cells in the same
+class:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">landcover</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/landcover.tif"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>                 condition <span class="op">=</span> <span class="fu"><a href="../reference/os_condition.html">os_condition</a></span><span class="op">(</span><span class="va">landcover</span>, type <span class="op">=</span> <span class="st">"equal"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>For continuous data, <code>lower</code> and <code>upper</code> bound
+the difference between source and target values. Supplying a
+<code>future</code> layer compares each source’s present-day value
+against the target’s future value, as in climate-tracking connectivity.
+Here, sources connect to targets whose future temperature is between 1
+degree cooler and 3 degrees warmer than the source’s present
+temperature:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">temp_now</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/temperature_current.tif"</span><span class="op">)</span></span>
+<span><span class="va">temp_future</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/temperature_2080.tif"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>                 condition <span class="op">=</span> <span class="fu"><a href="../reference/os_condition.html">os_condition</a></span><span class="op">(</span><span class="va">temp_now</span>, future <span class="op">=</span> <span class="va">temp_future</span>,</span>
+<span>                                          lower <span class="op">=</span> <span class="op">-</span><span class="fl">3</span>, upper <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Up to two conditions can be combined by passing a list of
+<code><a href="../reference/os_condition.html">os_condition()</a></code> objects; see <code><a href="../reference/os_condition.html">?os_condition</a></code> for
+details.</p>
+</div>
+<div class="section level3">
 <h3 id="parallel-processing">Parallel processing<a class="anchor" aria-label="anchor" href="#parallel-processing"></a>
 </h3>
 <p>For large landscapes, enable Julia multithreading to reduce compute
 times. Julia’s thread count is fixed at startup, so set it via
 <code><a href="../reference/cs_setup.html">cs_setup()</a></code> before any other circuitscaper calls:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set thread count at the start of your session</span></span>
 <span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
 <span></span>
@@ -389,7 +420,7 @@ faster.</li>
 <p>By default, intermediate files are written to a temporary directory
 and cleaned up. To persist output files (ASC rasters, INI configuration,
 and resistance matrices), use <code>output_dir</code>:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span>,</span>
 <span>                      output_dir <span class="op">=</span> <span class="st">"my_output_directory"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -411,7 +442,7 @@ returns normalized current (actual current / flow potential)
 automatically. You can compute the equivalent for Circuitscape by
 running the analysis twice — once with your resistance surface and once
 with a uniform surface — and dividing:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span>      <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">sites</span><span class="op">)</span></span>
 <span><span class="va">result_null</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span> <span class="op">*</span> <span class="fl">0</span> <span class="op">+</span> <span class="fl">1</span>, <span class="va">sites</span><span class="op">)</span></span>
 <span><span class="va">normalized</span>  <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">current_map</span> <span class="op">/</span> <span class="va">result_null</span><span class="op">$</span><span class="va">current_map</span></span></code></pre></div>
@@ -435,7 +466,7 @@ monitoring long runs.</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

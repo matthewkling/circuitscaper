@@ -124,19 +124,20 @@ Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-condition">condition<a class="anchor" aria-label="anchor" href="#arg-condition"></a></dt>
-<dd><p>Optional <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path. Conditional layer
-for targeted connectivity analysis.</p></dd>
+<dd><p>Optional conditional connectivity specification, which
+restricts each target to sources with compatible values on one or two
+condition layers. Either an <code><a href="os_condition.html">os_condition()</a></code> object, a list of two
+<code><a href="os_condition.html">os_condition()</a></code> objects (sources must satisfy both), or a single
+<a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path, which is shorthand for
+<code>os_condition(x, type = "equal")</code>. Use <code><a href="os_condition.html">os_condition()</a></code> for range-based
+(<code>"within"</code>) comparisons and for comparing present-day source values
+against future target values. Default <code>NULL</code> (no conditions).</p></dd>
 
 
 <dt id="arg-condition-type">condition_type<a class="anchor" aria-label="anchor" href="#arg-condition-type"></a></dt>
-<dd><p>Character. How the condition layer filters connectivity:
-<code>"within"</code> (connectivity only between source and target cells whose
-condition values fall within a specified range) or <code>"equal"</code> (connectivity
-only between cells with equal condition values, evaluated pairwise). Only
-relevant if <code>condition</code> is provided. Note: <code>"within"</code> currently uses
-Omniscape's default unbounded range (<code>-Inf</code> to <code>Inf</code>), which effectively
-includes all cells. Finer control over range bounds is planned for a
-future version.</p></dd>
+<dd><p>Deprecated. Use
+<code>condition = os_condition(x, type = ...)</code> instead. Only <code>"equal"</code> is
+still accepted here.</p></dd>
 
 
 <dt id="arg-parallelize">parallelize<a class="anchor" aria-label="anchor" href="#arg-parallelize"></a></dt>
@@ -196,7 +197,7 @@ Omniscape.jl: Software to compute omnidirectional landscape connectivity.
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="cs_pairwise.html">cs_pairwise()</a></code>, <code><a href="cs_setup.html">cs_setup()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="os_condition.html">os_condition()</a></code>, <code><a href="cs_pairwise.html">cs_pairwise()</a></code>, <code><a href="cs_setup.html">cs_setup()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -206,6 +207,12 @@ Omniscape.jl: Software to compute omnidirectional landscape connectivity.
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/resistance.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">os_run</span><span class="op">(</span><span class="va">res</span>, radius <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Conditional connectivity: only connect cells in the same zone</span></span></span>
+<span class="r-in"><span><span class="co"># (here, the left and right halves of the landscape)</span></span></span>
+<span class="r-in"><span><span class="va">zones</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/init.html" class="external-link">init</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"col"</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1</span></span></span>
+<span class="r-in"><span><span class="va">result_cond</span> <span class="op">&lt;-</span> <span class="fu">os_run</span><span class="op">(</span><span class="va">res</span>, radius <span class="op">=</span> <span class="fl">20</span>, condition <span class="op">=</span> <span class="va">zones</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result_cond</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
@@ -218,7 +225,7 @@ Omniscape.jl: Software to compute omnidirectional landscape connectivity.
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

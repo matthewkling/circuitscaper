@@ -16,5 +16,7 @@
   : Pairwise Circuitscape Analysis
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   : Set Up Julia and Load Circuitscape/Omniscape
+- [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+  : Define a Condition for Conditional Omniscape Connectivity
 - [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
   : Run Omniscape Moving-Window Connectivity Analysis

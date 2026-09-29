@@ -286,6 +286,45 @@ result <- os_run(resistance, radius = 20,
                  source_strength = source_strength)
 ```
 
+### Conditional connectivity
+
+Conditional connectivity restricts which sources are connected to each
+target, based on their values on a condition layer. Use
+[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+to define the comparison. For categorical data, `type = "equal"`
+connects only cells in the same class:
+
+``` r
+
+landcover <- rast("path/to/landcover.tif")
+
+result <- os_run(resistance, radius = 20,
+                 condition = os_condition(landcover, type = "equal"))
+```
+
+For continuous data, `lower` and `upper` bound the difference between
+source and target values. Supplying a `future` layer compares each
+source’s present-day value against the target’s future value, as in
+climate-tracking connectivity. Here, sources connect to targets whose
+future temperature is between 1 degree cooler and 3 degrees warmer than
+the source’s present temperature:
+
+``` r
+
+temp_now <- rast("path/to/temperature_current.tif")
+temp_future <- rast("path/to/temperature_2080.tif")
+
+result <- os_run(resistance, radius = 20,
+                 condition = os_condition(temp_now, future = temp_future,
+                                          lower = -3, upper = 1))
+```
+
+Up to two conditions can be combined by passing a list of
+[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+objects; see
+[`?os_condition`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+for details.
+
 ### Parallel processing
 
 For large landscapes, enable Julia multithreading to reduce compute

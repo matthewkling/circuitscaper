@@ -84,20 +84,25 @@ os_run(
 
 - condition:
 
-  Optional
+  Optional conditional connectivity specification, which restricts each
+  target to sources with compatible values on one or two condition
+  layers. Either an
+  [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+  object, a list of two
+  [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+  objects (sources must satisfy both), or a single
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-  or file path. Conditional layer for targeted connectivity analysis.
+  or file path, which is shorthand for
+  `os_condition(x, type = "equal")`. Use
+  [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+  for range-based (`"within"`) comparisons and for comparing present-day
+  source values against future target values. Default `NULL` (no
+  conditions).
 
 - condition_type:
 
-  Character. How the condition layer filters connectivity: `"within"`
-  (connectivity only between source and target cells whose condition
-  values fall within a specified range) or `"equal"` (connectivity only
-  between cells with equal condition values, evaluated pairwise). Only
-  relevant if `condition` is provided. Note: `"within"` currently uses
-  Omniscape's default unbounded range (`-Inf` to `Inf`), which
-  effectively includes all cells. Finer control over range bounds is
-  planned for a future version.
+  Deprecated. Use `condition = os_condition(x, type = ...)` instead.
+  Only `"equal"` is still accepted here.
 
 - parallelize:
 
@@ -162,6 +167,7 @@ Omniscape.jl: <https://docs.circuitscape.org/Omniscape.jl/latest/>
 
 ## See also
 
+[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md),
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md),
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
 
@@ -173,5 +179,11 @@ library(terra)
 res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
 result <- os_run(res, radius = 20)
 plot(result)
+
+# Conditional connectivity: only connect cells in the same zone
+# (here, the left and right halves of the landscape)
+zones <- (init(res, "col") > ncol(res) / 2) + 1
+result_cond <- os_run(res, radius = 20, condition = zones)
+plot(result_cond)
 }
 ```

@@ -37,9 +37,38 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="circuitscaper-development-version">circuitscaper (development version)<a class="anchor" aria-label="anchor" href="#circuitscaper-development-version"></a></h2>
-<ul><li>Added a <code>NEWS.md</code> file to track changes to the package.</li>
+<div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li>New <code><a href="../reference/os_condition.html">os_condition()</a></code> constructor gives <code><a href="../reference/os_run.html">os_run()</a></code> full access to Omniscape’s conditional connectivity (<a href="https://github.com/matthewkling/circuitscaper/issues/2" class="external-link">#2</a>):
+<ul><li>
+<code>"within"</code> comparisons with user-specified bounds (<code>lower</code>, <code>upper</code>).</li>
+<li>Present-vs-future comparisons (<code>future</code>), in which sources’ present-day values are compared against targets’ future values, as in climate-tracking connectivity analyses.</li>
+<li>Two simultaneous conditions, by passing a list of two <code><a href="../reference/os_condition.html">os_condition()</a></code> objects.</li>
+</ul></li>
+<li>
+<code><a href="../reference/os_run.html">os_run()</a></code> now warns when a condition layer has missing values at source cells, which Omniscape does not filter.</li>
+<li>All <code>cs_*()</code> functions and <code><a href="../reference/os_run.html">os_run()</a></code> now warn if the installed Circuitscape.jl or Omniscape.jl does not recognize a configuration option written by circuitscaper, rather than letting the option silently have no effect.</li>
 </ul></div>
-  </main></div>
+<div class="section level3">
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>In 0.1.0, <code><a href="../reference/os_run.html">os_run()</a></code>’s <code>condition_type</code> argument was written to the Omniscape configuration under a key Omniscape does not recognize, so it was silently ignored. All conditional analyses instead used Omniscape’s defaults, <code>"within"</code> with bounds of 0 and 0: a source was connected to a target only if its condition value exactly equaled the median value of the target block. This was neither the documented behavior (an unbounded range) nor the requested <code>"equal"</code> comparison. <strong>Results from 0.1.0 that used <code>condition</code> should be rerun.</strong>
+</li>
+<li>In 0.1.0, <code>four_neighbors = TRUE</code> was written to the Circuitscape configuration under an unrecognized key and silently ignored in <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>, <code><a href="../reference/cs_one_to_all.html">cs_one_to_all()</a></code>, <code><a href="../reference/cs_all_to_one.html">cs_all_to_one()</a></code>, and <code><a href="../reference/cs_advanced.html">cs_advanced()</a></code>; all analyses used 8-neighbor connectivity. <strong>Results from 0.1.0 that used <code>four_neighbors = TRUE</code> should be rerun.</strong>
+</li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-and-deprecations-development-version">Breaking changes and deprecations<a class="anchor" aria-label="anchor" href="#breaking-changes-and-deprecations-development-version"></a></h3>
+<ul><li>Passing a raster directly as <code>os_run(condition = )</code> is now shorthand for <code>os_condition(x, type = "equal")</code>. Use <code><a href="../reference/os_condition.html">os_condition()</a></code> for <code>"within"</code> comparisons, which now require explicit bounds.</li>
+<li>
+<code><a href="../reference/os_run.html">os_run()</a></code>’s <code>condition_type</code> argument is deprecated. <code>condition_type = "equal"</code> still works with a warning; <code>condition_type = "within"</code> now errors, since it has no way to specify bounds.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.0" id="circuitscaper-010">circuitscaper 0.1.0<a class="anchor" aria-label="anchor" href="#circuitscaper-010"></a></h2><p class="text-muted">CRAN release: 2026-04-09</p>
+<ul><li>Initial release</li>
+</ul></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
@@ -47,7 +76,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
