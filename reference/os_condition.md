@@ -101,8 +101,8 @@ Omniscape.jl conditional connectivity options:
 ## Examples
 
 ``` r
+if (FALSE) { # circuitscaper::cs_julia_available()
 library(terra)
-#> terra 1.9.50
 temp_now <- rast(nrows = 20, ncols = 20, vals = rep(1:20, each = 20))
 temp_future <- temp_now + 2
 
@@ -110,13 +110,9 @@ temp_future <- temp_now + 2
 # between 1 unit cooler and 3 units warmer than the source's present value
 # (i.e., source - target_future within [-3, 1])
 os_condition(temp_now, future = temp_future, lower = -3, upper = 1)
-#> <os_condition> within: target + -3 <= source <= target + 1 
-#>   present: SpatRaster (20 x 20) 
-#>   future:  SpatRaster (20 x 20) (compared at targets)
 
 # Categorical: connect only cells of the same land cover class
 landcover <- rast(nrows = 20, ncols = 20, vals = sample(1:3, 400, TRUE))
 os_condition(landcover, type = "equal")
-#> <os_condition> equal: source == target 
-#>   present: SpatRaster (20 x 20) 
+}
 ```
