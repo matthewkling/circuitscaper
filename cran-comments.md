@@ -1,15 +1,6 @@
-## Resubmission
-
-This is a resubmission. Changes made in response to reviewer comments:
-
-* Single-quoted 'Julia' in DESCRIPTION.
-* Replaced `:::` with `::` in `@examplesIf` conditions.
-
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
-
-* This is a new release.
+0 errors | 0 warnings | 0 notes
 
 ## Test environments
 

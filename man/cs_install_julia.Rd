@@ -24,8 +24,8 @@ In interactive sessions, prompts for confirmation before downloading. In
 non-interactive sessions (e.g., CI), proceeds without prompting.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
+\dontrun{
 cs_install_julia()
-cs_install_julia(force = TRUE)
-\dontshow{\}) # examplesIf}
+}
+
 }

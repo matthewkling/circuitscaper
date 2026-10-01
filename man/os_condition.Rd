@@ -69,6 +69,7 @@ Up to two conditions can be combined by passing a list of two
 connected.
 }
 \examples{
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 library(terra)
 temp_now <- rast(nrows = 20, ncols = 20, vals = rep(1:20, each = 20))
 temp_future <- temp_now + 2
@@ -81,7 +82,7 @@ os_condition(temp_now, future = temp_future, lower = -3, upper = 1)
 # Categorical: connect only cells of the same land cover class
 landcover <- rast(nrows = 20, ncols = 20, vals = sample(1:3, 400, TRUE))
 os_condition(landcover, type = "equal")
-
+\dontshow{\}) # examplesIf}
 }
 \references{
 Omniscape.jl conditional connectivity options:

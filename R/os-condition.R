@@ -56,7 +56,7 @@
 #'
 #' @seealso [os_run()]
 #'
-#' @examples
+#' @examplesIf circuitscaper::cs_julia_available()
 #' library(terra)
 #' temp_now <- rast(nrows = 20, ncols = 20, vals = rep(1:20, each = 20))
 #' temp_future <- temp_now + 2

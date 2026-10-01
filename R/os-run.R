@@ -82,13 +82,13 @@
 #' @examplesIf circuitscaper::cs_julia_available()
 #' library(terra)
 #' res <- rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
-#' result <- os_run(res, radius = 20)
+#' result <- os_run(res, radius = 10)
 #' plot(result)
 #'
 #' # Conditional connectivity: only connect cells in the same zone
 #' # (here, the left and right halves of the landscape)
 #' zones <- (init(res, "col") > ncol(res) / 2) + 1
-#' result_cond <- os_run(res, radius = 20, condition = zones)
+#' result_cond <- os_run(res, radius = 10, condition = zones)
 #' plot(result_cond)
 #'
 #' @export

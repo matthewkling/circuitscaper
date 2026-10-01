@@ -214,9 +214,10 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #'
 #' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examples
+#' \dontrun{
 #' cs_install_julia()
-#' cs_install_julia(force = TRUE)
+#' }
 #'
 #' @export
 cs_install_julia <- function(force = FALSE, version = "latest") {
