@@ -1,5 +1,16 @@
 # circuitscaper (development version)
 
+## Bug fixes
+
+* `cs_setup()` now finds Julia wherever `JuliaCall::julia_setup()` would,
+  instead of only on the PATH. Previously, a Julia installed by
+  `cs_install_julia()` (which `JuliaCall::install_julia()` places outside the
+  PATH) was not found in later sessions, so `cs_setup()` failed with "Julia
+  not found" until `julia_home` was given explicitly. The same applied to
+  Julia installed via juliaup or Homebrew when R was started from the macOS
+  GUI, whose PATH lacks the shell's. `cs_install_julia()`,
+  `cs_julia_available()`, and the startup message use the same search.
+
 # circuitscaper 0.1.1
 
 ## New features

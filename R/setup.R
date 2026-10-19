@@ -10,7 +10,11 @@
 #' directing you to [cs_install_julia()].
 #'
 #' @param julia_home Character. Path to the Julia `bin/` directory. If
-#'   `NULL` (default), the system PATH and common locations are searched.
+#'   `NULL` (default), Julia is located the same way as
+#'   [JuliaCall::julia_setup()]: the `JULIA_HOME` option or environment
+#'   variable, a Julia installed by [cs_install_julia()] or
+#'   [JuliaCall::install_julia()], the system PATH (including a login
+#'   shell's PATH on macOS and Linux), and common Windows install locations.
 #' @param threads Integer. Number of Julia threads to start. Default `1L`.
 #'   Must be set before Julia initializes — once Julia is running, the thread
 #'   count cannot be changed without restarting R. This setting controls
@@ -67,20 +71,6 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     return(invisible(TRUE))
   }
 
-  # --- Check that Julia is available ---
-  if (is.null(julia_home)) {
-    julia_home <- find_system_julia()
-  }
-  if (is.null(julia_home)) {
-    stop(
-      "Julia not found. To fix this, run:\n",
-      "  cs_install_julia()\n",
-      "If Julia is already installed elsewhere, specify the path:\n",
-      "  cs_setup(julia_home = \"/path/to/julia/bin\")",
-      call. = FALSE
-    )
-  }
-
   # Set thread count before Julia initializes
   threads <- as.integer(threads)
   if (threads > 1L) {
@@ -92,14 +82,39 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   }
   .cs_env$julia_threads <- threads
 
-  # Initialize Julia (do NOT auto-install)
-  message("Initializing Julia (one-time per session)...")
-  setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home, ...)
-  if (quiet) {
-    suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
-  } else {
-    do.call(JuliaCall::julia_setup, setup_args)
+  # Initialize Julia (do NOT auto-install). Locating Julia is left to
+  # JuliaCall::julia_setup(), which checks the JULIA_HOME option and
+  # environment variable, the install record written by
+  # JuliaCall::install_julia() (and so by cs_install_julia()), the PATH, a
+  # login shell's PATH (for GUI sessions on macOS), and common Windows
+  # install locations. It signals "Julia is not found." if all of these fail,
+  # but only after printing shell warnings, so first rule out the clear-cut
+  # cases quietly. find_julia_bin() searches the same places without
+  # starting Julia.
+  if (is.null(julia_home) && is.null(find_julia_bin())) {
+    stop(julia_not_found_message(), call. = FALSE)
   }
+  if (!is.null(julia_home) && !file.exists(file.path(julia_home, julia_exe()))) {
+    stop(julia_not_found_message(julia_home), call. = FALSE)
+  }
+  message("Initializing Julia (one-time per session)...")
+  setup_args <- list(installJulia = FALSE, ...)
+  if (!is.null(julia_home)) {
+    setup_args$JULIA_HOME <- julia_home
+  }
+  tryCatch(
+    if (quiet) {
+      suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
+    } else {
+      do.call(JuliaCall::julia_setup, setup_args)
+    },
+    error = function(e) {
+      if (grepl("Julia is not found", conditionMessage(e), fixed = TRUE)) {
+        stop(julia_not_found_message(julia_home), call. = FALSE)
+      }
+      stop(e)
+    }
+  )
 
   # --- Check that required Julia packages are installed ---
   missing_pkgs <- character(0)
@@ -221,8 +236,8 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #'
 #' @export
 cs_install_julia <- function(force = FALSE, version = "latest") {
-  julia_home <- find_system_julia()
-  need_julia <- force || is.null(julia_home)
+  julia_bin <- find_julia_bin()
+  need_julia <- force || is.null(julia_bin)
 
   # Prompt for confirmation in interactive sessions
   if (interactive()) {
@@ -238,7 +253,7 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
       )
     } else {
       msg <- paste0(
-        "Julia found at: ", julia_home, "\n",
+        "Julia found at: ", julia_bin, "\n",
         "This will install/update the required Julia packages:\n",
         "
  Circuitscape.jl and Omniscape.jl (~500 MB)\n",
@@ -261,17 +276,13 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
       JuliaCall::install_julia(version = version)
     }
   } else {
-    message("Julia already installed at: ", julia_home)
+    message("Julia already installed at: ", julia_bin)
   }
 
-  # Step 2: Initialize Julia so we can install packages
+  # Step 2: Initialize Julia so we can install packages. JuliaCall locates
+  # Julia itself, including one install_julia() just put outside the PATH.
   message("Initializing Julia...")
-  julia_home <- find_system_julia()
-  setup_args <- list(installJulia = FALSE)
-  if (!is.null(julia_home)) {
-    setup_args$JULIA_HOME <- julia_home
-  }
-  suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
+  suppressMessages(JuliaCall::julia_setup(installJulia = FALSE))
 
   # Step 3: Install Julia packages
   message("Installing Circuitscape.jl...")
@@ -312,8 +323,8 @@ ensure_julia <- function() {
 #' session. It is used internally by example code and can be called by users
 #' to verify their setup before running analyses.
 #'
-#' @return `TRUE` if Julia is found on the system PATH and the
-#'   'Circuitscape' and 'Omniscape' Julia packages load successfully,
+#' @return `TRUE` if Julia is found (in the places [cs_setup()] searches) and
+#'   the 'Circuitscape' and 'Omniscape' Julia packages load successfully,
 #'   `FALSE` otherwise.
 #'
 #' @examples
@@ -321,10 +332,11 @@ ensure_julia <- function() {
 #'
 #' @export
 cs_julia_available <- function() {
-      if (nchar(Sys.which("julia")) == 0) return(FALSE)
+      julia_bin <- find_julia_bin()
+      if (is.null(julia_bin)) return(FALSE)
       tryCatch({
             out <- system2(
-                  "julia",
+                  julia_bin,
                   c("--startup-file=no", "-e", '"using Circuitscape, Omniscape; println(true)"'),
                   stdout = TRUE, stderr = FALSE
             )
@@ -333,27 +345,111 @@ cs_julia_available <- function() {
 }
 
 
-#' Find System Julia Installation
+#' Find a Julia Binary Without Starting Julia
 #'
-#' Searches for a Julia binary on the system PATH or in common locations
-#' (e.g., juliaup). Returns the directory containing the binary, or NULL.
+#' Looks for the Julia executable in the same places, and in the same order,
+#' as JuliaCall's internal locator (which `JuliaCall::julia_setup()` uses but
+#' JuliaCall does not export): the `JULIA_HOME` option, the `JULIA_HOME`
+#' environment variable, the install record that `JuliaCall::install_julia()`
+#' writes to `<depot>/prefs/JuliaCall`, the PATH, a login shell's PATH on
+#' Unix-alikes (GUI sessions on macOS often lack the shell PATH), and
+#' `%LOCALAPPDATA%/Julia*` on Windows.
 #'
-#' @return Character path to the Julia `bin/` directory, or `NULL`.
+#' Unlike JuliaCall's locator, this does not run Julia, so it is cheap enough
+#' for `.onAttach()` and for deciding whether [cs_install_julia()] needs to
+#' download Julia. [cs_setup()] uses it only to fail fast with a clean message
+#' when no Julia exists; the actual locating is left to
+#' `JuliaCall::julia_setup()`.
+#'
+#' @param login_shell Logical. Also ask a login shell (`bash -l`) on
+#'   Unix-alikes. Default `TRUE`.
+#' @return Character path to the Julia executable, or `NULL`.
 #' @noRd
-find_system_julia <- function() {
-  # Check PATH first
-  julia_path <- Sys.which("julia")
-  if (nchar(julia_path) > 0) {
-    # Resolve symlinks/launchers to find the real binary
-    real_path <- tryCatch(
-      system2("julia", c("-e", '"println(Sys.BINDIR)"'), stdout = TRUE, stderr = FALSE),
-      error = function(e) NULL
-    )
-    if (!is.null(real_path) && length(real_path) == 1 && nchar(real_path) > 0) {
-      return(real_path)
-    }
-    # Fall back to the directory of the found binary
-    return(dirname(julia_path))
+find_julia_bin <- function(login_shell = TRUE) {
+  windows <- .Platform$OS.type == "windows"
+  exe <- julia_exe()
+  in_dir <- function(dir) {
+    if (is.null(dir) || !nzchar(dir)) return(NULL)
+    bin <- file.path(dir, exe)
+    if (file.exists(bin)) normalizePath(bin, mustWork = FALSE) else NULL
   }
+
+  # 1-2. JULIA_HOME option, then environment variable
+  bin <- in_dir(getOption("JULIA_HOME"))
+  if (!is.null(bin)) return(bin)
+  bin <- in_dir(Sys.getenv("JULIA_HOME"))
+  if (!is.null(bin)) return(bin)
+
+  # 3. Install record written by JuliaCall::install_julia()
+  depot <- Sys.getenv("JULIA_DEPOT_PATH")
+  if (nzchar(depot)) {
+    depot <- strsplit(depot, .Platform$path.sep, fixed = TRUE)[[1]][1]
+  } else {
+    home <- Sys.getenv(if (windows) "USERPROFILE" else "HOME")
+    depot <- file.path(home, ".julia")
+  }
+  prefs <- file.path(depot, "prefs", "JuliaCall")
+  if (file.exists(prefs)) {
+    recorded <- trimws(readLines(prefs, n = 1L, warn = FALSE))
+    bin <- in_dir(if (length(recorded)) recorded else NULL)
+    if (!is.null(bin)) return(bin)
+  }
+
+  # 4. PATH
+  bin <- Sys.which("julia")
+  if (nzchar(bin)) return(unname(bin))
+
+  # 5. Login shell PATH (Unix-alikes) or common install location (Windows)
+  if (!windows && login_shell) {
+    bin <- tryCatch(
+      suppressWarnings(system2("bash", c("-l", "-c", shQuote("command -v julia")),
+                               stdout = TRUE, stderr = FALSE)),
+      error = function(e) character(0)
+    )
+    bin <- trimws(bin[nzchar(trimws(bin))])
+    if (length(bin) && file.exists(bin[length(bin)])) return(bin[length(bin)])
+  }
+  if (windows) {
+    appdata <- Sys.getenv("LOCALAPPDATA")
+    if (nzchar(appdata) && dir.exists(appdata)) {
+      dirs <- sort(list.dirs(appdata, recursive = FALSE, full.names = TRUE))
+      dirs <- dirs[startsWith(basename(dirs), "Julia")]
+      for (d in rev(dirs)) {
+        bin <- in_dir(file.path(d, "bin"))
+        if (!is.null(bin)) return(bin)
+      }
+    }
+  }
+
   NULL
+}
+
+
+#' Name of the Julia Executable on This Platform
+#' @noRd
+julia_exe <- function() {
+  if (.Platform$OS.type == "windows") "julia.exe" else "julia"
+}
+
+
+#' Message for When Julia Cannot Be Found
+#'
+#' @param julia_home The `julia_home` the user passed to [cs_setup()], or
+#'   `NULL`.
+#' @return Character string.
+#' @noRd
+julia_not_found_message <- function(julia_home = NULL) {
+  if (!is.null(julia_home)) {
+    return(paste0(
+      "Julia not found at julia_home = \"", julia_home, "\".\n",
+      "This should be the directory that contains the julia executable ",
+      "(usually ending in bin/)."
+    ))
+  }
+  paste0(
+    "Julia not found. To fix this, run:\n",
+    "  cs_install_julia()\n",
+    "If Julia is already installed elsewhere, specify the path:\n",
+    "  cs_setup(julia_home = \"/path/to/julia/bin\")"
+  )
 }
