@@ -8,13 +8,18 @@ cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE, ...)
 }
 \arguments{
 \item{julia_home}{Character. Path to the Julia \verb{bin/} directory. If
-\code{NULL} (default), the system PATH and common locations are searched.}
+\code{NULL} (default), Julia is located the same way as
+\code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}}: the \code{JULIA_HOME} option or environment
+variable, a Julia installed by \code{\link[=cs_install_julia]{cs_install_julia()}} or
+\code{\link[JuliaCall:install_julia]{JuliaCall::install_julia()}}, the system PATH (including a login
+shell's PATH on macOS and Linux), and common Windows install locations.}
 
 \item{threads}{Integer. Number of Julia threads to start. Default \code{1L}.
-Must be set before Julia initializes — once Julia is running, the thread
-count cannot be changed without restarting R. This setting controls
-parallelism for \code{\link[=os_run]{os_run()}} only; Circuitscape functions (\verb{cs_*}) run
-single-threaded regardless of this value.}
+Takes effect only if Julia is not yet running in this R session — once
+Julia is running, the thread count cannot be changed without restarting
+R, and a warning is issued. This setting controls parallelism for
+\code{\link[=os_run]{os_run()}} only; Circuitscape functions (\verb{cs_*}) run single-threaded
+regardless of this value.}
 
 \item{quiet}{Logical. Suppress Julia startup messages. Default \code{TRUE}.}
 
@@ -45,14 +50,22 @@ Once Julia is initialized, it stays warm for the R session. Subsequent calls
 to \code{cs_setup()} return immediately.
 \subsection{Threading}{
 
-Julia's thread count is fixed at startup and cannot be changed mid-session.
-Multi-threading is used by \code{\link[=os_run]{os_run()}} when \code{parallelize = TRUE}.
-Circuitscape functions (\code{cs_pairwise}, \code{cs_one_to_all}, etc.) do not
-benefit from multiple threads.
+Julia's thread count is fixed when Julia starts and cannot be changed
+mid-session. Multi-threading is used by \code{\link[=os_run]{os_run()}} when
+\code{parallelize = TRUE}. Circuitscape functions (\code{cs_pairwise},
+\code{cs_one_to_all}, etc.) do not benefit from multiple threads.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{cs_setup(threads = 4)
 os_run(resistance, radius = 50, parallelize = TRUE)
 }\if{html}{\out{</div>}}
+
+Call \code{cs_setup(threads = )} before anything else starts Julia, including
+\code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}} or another package that uses JuliaCall. If you
+need to start Julia yourself, set the thread count first with
+\code{Sys.setenv(JULIA_NUM_THREADS = "4,0")}. The \verb{,0} (no interactive
+threads) matters: Omniscape releases before 0.6.3 fail in parallel when
+Julia has an interactive thread, and \code{\link[=os_run]{os_run()}} then falls back to a
+serial run with a warning.
 }
 }
 \examples{

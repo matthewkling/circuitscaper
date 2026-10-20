@@ -7,8 +7,8 @@
 cs_julia_available()
 }
 \value{
-\code{TRUE} if Julia is found on the system PATH and the
-'Circuitscape' and 'Omniscape' Julia packages load successfully,
+\code{TRUE} if Julia is found (in the places \code{\link[=cs_setup]{cs_setup()}} searches) and
+the 'Circuitscape' and 'Omniscape' Julia packages load successfully,
 \code{FALSE} otherwise.
 }
 \description{

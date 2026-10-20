@@ -16,10 +16,11 @@
 #'   [JuliaCall::install_julia()], the system PATH (including a login
 #'   shell's PATH on macOS and Linux), and common Windows install locations.
 #' @param threads Integer. Number of Julia threads to start. Default `1L`.
-#'   Must be set before Julia initializes — once Julia is running, the thread
-#'   count cannot be changed without restarting R. This setting controls
-#'   parallelism for [os_run()] only; Circuitscape functions (`cs_*`) run
-#'   single-threaded regardless of this value.
+#'   Takes effect only if Julia is not yet running in this R session — once
+#'   Julia is running, the thread count cannot be changed without restarting
+#'   R, and a warning is issued. This setting controls parallelism for
+#'   [os_run()] only; Circuitscape functions (`cs_*`) run single-threaded
+#'   regardless of this value.
 #' @param quiet Logical. Suppress Julia startup messages. Default `TRUE`.
 #' @param ... Additional arguments passed to [JuliaCall::julia_setup()].
 #'
@@ -35,15 +36,23 @@
 #' to `cs_setup()` return immediately.
 #'
 #' ## Threading
-#' Julia's thread count is fixed at startup and cannot be changed mid-session.
-#' Multi-threading is used by [os_run()] when `parallelize = TRUE`.
-#' Circuitscape functions (`cs_pairwise`, `cs_one_to_all`, etc.) do not
-#' benefit from multiple threads.
+#' Julia's thread count is fixed when Julia starts and cannot be changed
+#' mid-session. Multi-threading is used by [os_run()] when
+#' `parallelize = TRUE`. Circuitscape functions (`cs_pairwise`,
+#' `cs_one_to_all`, etc.) do not benefit from multiple threads.
 #'
 #' ```
 #' cs_setup(threads = 4)
 #' os_run(resistance, radius = 50, parallelize = TRUE)
 #' ```
+#'
+#' Call `cs_setup(threads = )` before anything else starts Julia, including
+#' [JuliaCall::julia_setup()] or another package that uses JuliaCall. If you
+#' need to start Julia yourself, set the thread count first with
+#' `Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` (no interactive
+#' threads) matters: Omniscape releases before 0.6.3 fail in parallel when
+#' Julia has an interactive thread, and [os_run()] then falls back to a
+#' serial run with a warning.
 #'
 #' @references
 #' McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
