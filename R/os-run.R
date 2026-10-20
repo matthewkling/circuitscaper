@@ -42,11 +42,16 @@
 #'   `condition = os_condition(x, type = ...)` instead. Only `"equal"` is
 #'   still accepted here.
 #' @param parallelize Logical. Use Julia multithreading. Default `FALSE`.
-#'   Julia's thread count is fixed at startup. If Julia was already initialized
-#'   without enough threads, a warning is issued. To avoid this, call
-#'   [cs_setup()] with the `threads` argument at the start of your session.
-#' @param julia_threads Integer. Number of Julia threads if `parallelize =
-#'   TRUE`. Default `2`. Ignored if Julia is already running with fewer threads.
+#'   Julia's thread count is fixed when Julia starts, so call [cs_setup()]
+#'   with the `threads` argument at the start of your session, before
+#'   anything else starts Julia. If the running Julia session cannot run
+#'   Omniscape in parallel (it has only one thread, or it was started with an
+#'   interactive thread, which Omniscape releases before 0.6.3 do not
+#'   support), `os_run()` warns and runs serially.
+#' @param julia_threads Integer. Number of Julia threads to start if
+#'   `parallelize = TRUE` and Julia is not yet running. Default `2`. Has no
+#'   effect once Julia is running; Omniscape then uses all of Julia's
+#'   threads.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory.
@@ -109,25 +114,18 @@ os_run <- function(resistance,
                    output_dir = NULL,
                    verbose = FALSE) {
 
-  # Handle threading before Julia init
+  # Request threads before Julia starts, if it hasn't yet. (Whether Julia
+  # actually got them is checked after it starts, below.)
+  julia_threads <- as.integer(julia_threads)
   if (parallelize && !.cs_env$julia_ready) {
     Sys.setenv(JULIA_NUM_THREADS = paste0(julia_threads, ",0"))
-    .cs_env$julia_threads <- as.integer(julia_threads)
-  } else if (parallelize && .cs_env$julia_ready &&
-             .cs_env$julia_threads < julia_threads) {
-    warning(
-      "Julia is already running with ", .cs_env$julia_threads, " thread(s). ",
-      "Cannot change to ", julia_threads, " threads mid-session. ",
-      "To use multithreading, restart R and call cs_setup(threads = ",
-      julia_threads, ") before any other circuitscaper functions.",
-      call. = FALSE
-    )
   }
 
   # Validate arguments (before starting Julia, so errors are fast)
   match.arg(resistance_is, c("resistances", "conductances"))
   match.arg(solver, c("cg+amg", "cholmod"))
   conditions <- resolve_conditions(condition, condition_type)
+  validate_omniscape_values(resistance, resistance_is)
   validate_resistance_values(resistance, resistance_is)
   if (!is.null(conditions)) {
     check_conditions_against_inputs(
@@ -140,6 +138,19 @@ os_run <- function(resistance,
   }
 
   ensure_julia()
+
+  # Check that the running Julia session can actually run Omniscape in
+  # parallel; if not, fall back to a serial run with a warning explaining
+  # how to fix it, rather than failing (or crashing inside Omniscape).
+  if (parallelize) {
+    info <- julia_thread_info()
+    decision <- parallel_decision(info$nthreads, info$maxthreadid,
+                                  info$omniscape_version, julia_threads)
+    if (!is.null(decision$warning)) {
+      warning(decision$warning, call. = FALSE)
+    }
+    parallelize <- decision$parallelize
+  }
 
   # Set up working directory
   use_temp <- is.null(output_dir)

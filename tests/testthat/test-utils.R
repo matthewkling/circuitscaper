@@ -111,6 +111,35 @@ test_that("validate_resistance_values no zero warning for conductances", {
   expect_silent(validate_resistance_values(r, "conductances"))
 })
 
+test_that("validate_omniscape_values stops on zero conductance", {
+  skip_if_not_installed("terra")
+  # Unlike Circuitscape, Omniscape rejects zeros in either mode
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, 0, rep(1, 23)))
+  expect_error(validate_omniscape_values(r, "conductances"),
+               "Conductance raster contains 2 cell")
+})
+
+test_that("validate_omniscape_values stops on zero or negative resistance", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, -1, rep(1, 23)))
+  expect_error(validate_omniscape_values(r, "resistances"),
+               "Resistance raster contains 2 cell")
+})
+
+test_that("validate_omniscape_values ignores NA and file paths", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(NA, rep(0.5, 24)))
+  expect_silent(validate_omniscape_values(r, "conductances"))
+  expect_silent(validate_omniscape_values("some/path.tif", "resistances"))
+})
+
+test_that("os_run stops before starting Julia on zero conductance", {
+  skip_if_not_installed("terra")
+  r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, rep(1, 24)))
+  expect_error(os_run(r, radius = 2, resistance_is = "conductances"),
+               "Omniscape does not accept")
+})
+
 
 test_that("write_source_strengths creates correct tab-delimited file", {
   tmp <- tempfile(fileext = ".txt")

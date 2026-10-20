@@ -10,6 +10,22 @@
   Julia installed via juliaup or Homebrew when R was started from the macOS
   GUI, whose PATH lacks the shell's. `cs_install_julia()`,
   `cs_julia_available()`, and the startup message use the same search.
+* `os_run(parallelize = TRUE)` now checks the running Julia session before
+  calling Omniscape, and warns and runs serially if it cannot run in
+  parallel: if Julia has only one thread, or if it was started with an
+  interactive thread (e.g. `JULIA_NUM_THREADS = "4"` rather than `"4,0"`),
+  which makes Omniscape releases before 0.6.3 fail with a BoundsError. This
+  can happen when Julia is started outside `cs_setup()`, for example by
+  calling `JuliaCall::julia_setup()` directly.
+* `cs_setup()` now records the number of threads Julia actually has, and
+  warns when `threads` cannot take effect because Julia was already running
+  (including when started outside circuitscaper). Previously it recorded the
+  requested count, and `os_run(parallelize = TRUE)` could reset the record
+  to 1 when it started Julia.
+* `os_run()` now stops with a clear error if the resistance or conductance
+  surface contains zero or negative values, which Omniscape rejects without
+  writing outputs. Previously this surfaced as an obscure failure to read
+  Omniscape's output.
 
 # circuitscaper 0.1.1
 

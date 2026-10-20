@@ -67,20 +67,26 @@
 #'
 #' @export
 cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
+  threads <- as.integer(threads)
   if (.cs_env$julia_ready) {
+    if (threads > .cs_env$julia_threads) {
+      warning(thread_mismatch_message(.cs_env$julia_threads, threads),
+              call. = FALSE)
+    }
     return(invisible(TRUE))
   }
 
-  # Set thread count before Julia initializes
-  threads <- as.integer(threads)
+  # Set thread count before Julia initializes. This only takes effect if
+  # Julia is not already running in this R session (e.g., started by
+  # JuliaCall::julia_setup() directly); the actual count is checked below.
   if (threads > 1L) {
-    # Use "N,0" format: N default threads, 0 interactive threads.
-    # Without this, JuliaCall runs on Julia's interactive thread whose ID
-    # exceeds nthreads(), causing BoundsError in packages (like Omniscape)
-    # that size thread-local arrays to nthreads().
+    # Use "N,0" format: N default threads, 0 interactive threads. Since
+    # Julia 1.12 the interactive pool takes thread id 1, so with an
+    # interactive thread, worker thread ids run past nthreads(). Omniscape
+    # releases before 0.6.3 index per-thread arrays by threadid() and fail
+    # with a BoundsError in that case.
     Sys.setenv(JULIA_NUM_THREADS = paste0(threads, ",0"))
   }
-  .cs_env$julia_threads <- threads
 
   # Initialize Julia (do NOT auto-install). Locating Julia is left to
   # JuliaCall::julia_setup(), which checks the JULIA_HOME option and
@@ -115,6 +121,14 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
       stop(e)
     }
   )
+
+  # Record the thread count Julia actually has, which can differ from the
+  # request if Julia was started before cs_setup() ran.
+  .cs_env$julia_threads <- julia_nthreads()
+  if (threads > .cs_env$julia_threads) {
+    warning(thread_mismatch_message(.cs_env$julia_threads, threads),
+            call. = FALSE)
+  }
 
   # --- Check that required Julia packages are installed ---
   missing_pkgs <- character(0)

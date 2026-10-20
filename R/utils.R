@@ -88,8 +88,37 @@ validate_resistance_values <- function(resistance, resistance_is = "resistances"
             "infinite conductance and may cause computational issues.",
             call. = FALSE)
   }
-
   invisible(NULL)
+}
+
+
+#' Stop if a Surface Has Values Omniscape Rejects
+#'
+#' Omniscape refuses resistance or conductance surfaces containing zero or
+#' negative values: it logs an error and returns without writing outputs,
+#' which would otherwise surface in [os_run()] as an obscure failure to read
+#' them. (Circuitscape, by contrast, accepts zero conductance as no
+#' connection.)
+#'
+#' @param resistance A SpatRaster or file path. Only checked if SpatRaster.
+#' @param resistance_is Character. "resistances" or "conductances".
+#' @return NULL invisibly. Called for its error.
+#' @noRd
+validate_omniscape_values <- function(resistance, resistance_is = "resistances") {
+  if (!inherits(resistance, "SpatRaster")) return(invisible(NULL))
+
+  vals <- terra::values(resistance)
+  vals <- vals[!is.na(vals)]
+  n_bad <- sum(vals <= 0)
+  if (n_bad == 0) return(invisible(NULL))
+
+  what <- if (resistance_is == "conductances") "Conductance" else "Resistance"
+  stop(
+    what, " raster contains ", n_bad, " cell(s) with zero or negative ",
+    "values, which Omniscape does not accept. To make cells impassable, ",
+    "set them to NA; otherwise use a small positive value.",
+    call. = FALSE
+  )
 }
 
 
