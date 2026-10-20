@@ -107,7 +107,10 @@ Omniscape packages. You can install everything from R:</p>
 <span><span class="co"># First time only: install Julia and required packages</span></span>
 <span><span class="fu"><a href="../reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>If you already have Julia installed, <code><a href="../reference/cs_setup.html">cs_setup()</a></code> will
-find it automatically or you can point to it:</p>
+find it automatically, searching the same places as JuliaCall: the
+<code>JULIA_HOME</code> environment variable, a Julia installed by
+<code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code>, and your PATH. If Julia is somewhere
+else, you can point to it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>julia_home <span class="op">=</span> <span class="st">"/path/to/julia/bin"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -129,7 +132,10 @@ as adjacency graph networks, circuitscaper currently only supports
 rasters.)</p>
 <p>Resistance values must be positive. If your data represents
 conductance (ease of movement) rather than resistance, set
-<code>resistance_is = "conductances"</code>.</p>
+<code>resistance_is = "conductances"</code>. Circuitscape treats a
+conductance of zero as no connection, but Omniscape requires all values
+to be positive in either case. To make cells impassable, set them to
+<code>NA</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="focal-nodes">Focal nodes<a class="anchor" aria-label="anchor" href="#focal-nodes"></a>
@@ -374,7 +380,7 @@ details.</p>
 <h3 id="parallel-processing">Parallel processing<a class="anchor" aria-label="anchor" href="#parallel-processing"></a>
 </h3>
 <p>For large landscapes, enable Julia multithreading to reduce compute
-times. Julia’s thread count is fixed at startup, so set it via
+times. Julia’s thread count is fixed when Julia starts, so set it via
 <code><a href="../reference/cs_setup.html">cs_setup()</a></code> before any other circuitscaper calls:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set thread count at the start of your session</span></span>
@@ -383,6 +389,15 @@ times. Julia’s thread count is fixed at startup, so set it via
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>                 block_size <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>                 parallelize <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>This also means <code><a href="../reference/cs_setup.html">cs_setup()</a></code> must come before anything
+else that starts Julia, such as a direct call to
+<code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code>. If you need to start Julia
+yourself, set the thread count first with
+<code>Sys.setenv(JULIA_NUM_THREADS = "4,0")</code>. The <code>,0</code>
+keeps Julia from adding an “interactive” thread, which makes parallel
+runs fail in Omniscape releases before 0.6.3. If the running Julia
+session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code> warns and runs
+serially.</p>
 </div>
 </div>
 <div class="section level2">

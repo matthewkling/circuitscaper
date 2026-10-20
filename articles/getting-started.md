@@ -43,7 +43,10 @@ cs_install_julia()
 
 If you already have Julia installed,
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-will find it automatically or you can point to it:
+will find it automatically, searching the same places as JuliaCall: the
+`JULIA_HOME` environment variable, a Julia installed by
+[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md),
+and your PATH. If Julia is somewhere else, you can point to it:
 
 ``` r
 
@@ -66,7 +69,9 @@ graph networks, circuitscaper currently only supports rasters.)
 
 Resistance values must be positive. If your data represents conductance
 (ease of movement) rather than resistance, set
-`resistance_is = "conductances"`.
+`resistance_is = "conductances"`. Circuitscape treats a conductance of
+zero as no connection, but Omniscape requires all values to be positive
+in either case. To make cells impassable, set them to `NA`.
 
 ### Focal nodes
 
@@ -328,7 +333,7 @@ for details.
 ### Parallel processing
 
 For large landscapes, enable Julia multithreading to reduce compute
-times. Julia’s thread count is fixed at startup, so set it via
+times. Julia’s thread count is fixed when Julia starts, so set it via
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
 before any other circuitscaper calls:
 
@@ -341,6 +346,19 @@ result <- os_run(resistance, radius = 20,
                  block_size = 5,
                  parallelize = TRUE)
 ```
+
+This also means
+[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+must come before anything else that starts Julia, such as a direct call
+to
+[`JuliaCall::julia_setup()`](https://rdrr.io/pkg/JuliaCall/man/julia_setup.html).
+If you need to start Julia yourself, set the thread count first with
+`Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` keeps Julia from
+adding an “interactive” thread, which makes parallel runs fail in
+Omniscape releases before 0.6.3. If the running Julia session can’t run
+in parallel,
+[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
+warns and runs serially.
 
 ## Performance
 

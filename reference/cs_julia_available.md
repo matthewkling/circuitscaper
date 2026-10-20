@@ -14,13 +14,15 @@ cs_julia_available()
 
 ## Value
 
-`TRUE` if Julia is found on the system PATH and the 'Circuitscape' and
-'Omniscape' Julia packages load successfully, `FALSE` otherwise.
+`TRUE` if Julia is found (in the places
+[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+searches) and the 'Circuitscape' and 'Omniscape' Julia packages load
+successfully, `FALSE` otherwise.
 
 ## Examples
 
 ``` r
 cs_julia_available()
-#> Warning: running command ''julia' --startup-file=no -e "using Circuitscape, Omniscape; println(true)" 2>/dev/null' had status 1
+#> Warning: running command ''/usr/bin/julia' --startup-file=no -e "using Circuitscape, Omniscape; println(true)" 2>/dev/null' had status 1
 #> [1] FALSE
 ```

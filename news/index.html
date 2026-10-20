@@ -37,9 +37,20 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="circuitscaper-development-version">circuitscaper (development version)<a class="anchor" aria-label="anchor" href="#circuitscaper-development-version"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/cs_setup.html">cs_setup()</a></code> now finds Julia wherever <code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code> would, instead of only on the PATH. Previously, a Julia installed by <code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code> (which <code><a href="https://rdrr.io/pkg/JuliaCall/man/install_julia.html" class="external-link">JuliaCall::install_julia()</a></code> places outside the PATH) was not found in later sessions, so <code><a href="../reference/cs_setup.html">cs_setup()</a></code> failed with “Julia not found” until <code>julia_home</code> was given explicitly. The same applied to Julia installed via juliaup or Homebrew when R was started from the macOS GUI, whose PATH lacks the shell’s. <code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code>, <code><a href="../reference/cs_julia_available.html">cs_julia_available()</a></code>, and the startup message use the same search.</li>
+<li>
+<code>os_run(parallelize = TRUE)</code> now checks the running Julia session before calling Omniscape, and warns and runs serially if it cannot run in parallel: if Julia has only one thread, or if it was started with an interactive thread (e.g. <code>JULIA_NUM_THREADS = "4"</code> rather than <code>"4,0"</code>), which makes Omniscape releases before 0.6.3 fail with a BoundsError. This can happen when Julia is started outside <code><a href="../reference/cs_setup.html">cs_setup()</a></code>, for example by calling <code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code> directly.</li>
+<li>
+<code><a href="../reference/cs_setup.html">cs_setup()</a></code> now records the number of threads Julia actually has, and warns when <code>threads</code> cannot take effect because Julia was already running (including when started outside circuitscaper). Previously it recorded the requested count, and <code>os_run(parallelize = TRUE)</code> could reset the record to 1 when it started Julia.</li>
+<li>
+<code><a href="../reference/os_run.html">os_run()</a></code> now stops with a clear error if the resistance or conductance surface contains zero or negative values, which Omniscape rejects without writing outputs. Previously this surfaced as an obscure failure to read Omniscape’s output.</li>
+</ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.1" id="circuitscaper-011">circuitscaper 0.1.1<a class="anchor" aria-label="anchor" href="#circuitscaper-011"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.1" id="circuitscaper-011">circuitscaper 0.1.1<a class="anchor" aria-label="anchor" href="#circuitscaper-011"></a></h2><p class="text-muted">CRAN release: 2026-10-01</p>
 <div class="section level3">
 <h3 id="new-features-0-1-1">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-1"></a></h3>
 <ul><li>New <code><a href="../reference/os_condition.html">os_condition()</a></code> constructor gives <code><a href="../reference/os_run.html">os_run()</a></code> full access to Omniscape’s conditional connectivity (<a href="https://github.com/matthewkling/circuitscaper/issues/2" class="external-link">#2</a>):
