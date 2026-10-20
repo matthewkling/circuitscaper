@@ -30,6 +30,6 @@ VignetteBuilder: knitr
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
-SystemRequirements: Julia (>= 1.9), Circuitscape.jl, Omniscape.jl
+SystemRequirements: Julia (>= 1.10), Circuitscape.jl, Omniscape.jl
 LazyData: true
 Config/roxygen2/version: 8.0.0

@@ -112,6 +112,17 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   if (!is.null(julia_home) && !file.exists(file.path(julia_home, julia_exe()))) {
     stop(julia_not_found_message(julia_home), call. = FALSE)
   }
+
+  # Refuse Julia versions the Julia packages no longer support. Otherwise
+  # Julia's package manager falls back to old releases that fail in obscure
+  # ways (e.g., an RCall.jl that needs symbols R 4.6 no longer exports).
+  julia_bin <- if (is.null(julia_home)) {
+    find_julia_bin()
+  } else {
+    file.path(julia_home, julia_exe())
+  }
+  check_julia_version(julia_bin)
+
   message("Initializing Julia (one-time per session)...")
   setup_args <- list(installJulia = FALSE, ...)
   if (!is.null(julia_home)) {
@@ -246,9 +257,17 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #' In interactive sessions, prompts for confirmation before downloading. In
 #' non-interactive sessions (e.g., CI), proceeds without prompting.
 #'
+#' Julia is installed with [JuliaCall::install_julia()]. The CRAN release of
+#' 'JuliaCall' (0.17.6) cannot install current Julia versions, so if it is
+#' installed, `cs_install_julia()` stops before downloading and explains how
+#' to install the development version of 'JuliaCall' instead. Julia installed
+#' by other means (e.g., juliaup or the official installers) also works.
+#'
 #' @param force Logical. If `TRUE`, reinstall Julia and packages even if they
-#'   appear to be already present. Default `FALSE`.
-#' @param version Character. Julia version to install. Default `"latest"`.
+#'   appear to be already present. Use this to replace a Julia installation
+#'   that is too old. Default `FALSE`.
+#' @param version Character. Julia version to install, e.g. `"1.12.1"`.
+#'   Default `"latest"`, the latest stable release. Must be at least 1.10.
 #'
 #' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
@@ -261,6 +280,39 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 cs_install_julia <- function(force = FALSE, version = "latest") {
   julia_bin <- find_julia_bin()
   need_julia <- force || is.null(julia_bin)
+
+  # An existing Julia that is too old won't work; say how to replace it
+  # rather than installing packages into it.
+  if (!need_julia) {
+    v <- julia_version(julia_bin)
+    if (!is.null(v) && v < min_julia_version()) {
+      stop(
+        "Julia ", v, " (at ", julia_bin, ") is too old; circuitscaper ",
+        "requires Julia >= ", min_julia_version(), ".\n",
+        "To install a current Julia, run:\n",
+        "  cs_install_julia(force = TRUE)\n",
+        "or update your Julia installation (e.g., with juliaup).",
+        call. = FALSE
+      )
+    }
+  }
+
+  # Check before downloading anything that a supported Julia version was
+  # requested and that JuliaCall can install it.
+  if (need_julia && !version %in% c("latest", "lts")) {
+    v <- tryCatch(package_version(version), error = function(e) NULL)
+    if (is.null(v)) {
+      stop("`version` must be \"latest\", \"lts\", or a version number ",
+           "such as \"1.12.1\".", call. = FALSE)
+    }
+    if (v < min_julia_version()) {
+      stop("circuitscaper requires Julia >= ", min_julia_version(),
+           "; got version = \"", version, "\".", call. = FALSE)
+    }
+  }
+  if (need_julia && juliacall_install_is_outdated()) {
+    stop(juliacall_outdated_message(), call. = FALSE)
+  }
 
   # Prompt for confirmation in interactive sessions
   if (interactive()) {
@@ -304,6 +356,8 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
 
   # Step 2: Initialize Julia so we can install packages. JuliaCall locates
   # Julia itself, including one install_julia() just put outside the PATH.
+  # Check the version first, in case the install produced an unsupported one.
+  check_julia_version(find_julia_bin())
   message("Initializing Julia...")
   suppressMessages(JuliaCall::julia_setup(installJulia = FALSE))
 

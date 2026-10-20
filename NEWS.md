@@ -2,6 +2,18 @@
 
 ## Bug fixes
 
+* `cs_setup()` and `cs_install_julia()` now refuse Julia versions older than
+  1.10 with an explanation of how to upgrade. On older Julia, the package
+  manager falls back to old releases of Circuitscape.jl, Omniscape.jl, and
+  RCall.jl that fail in obscure ways (for example, "undefined symbol:
+  SET_SYMVALUE" on R 4.6). The minimum in `SystemRequirements` is now
+  Julia 1.10.
+* `cs_install_julia()` now detects the CRAN release of 'JuliaCall' (0.17.6),
+  which installs Julia 1.9 when asked for the latest version and can't
+  install Julia 1.10 or later, and stops before downloading with
+  instructions to install the development version of 'JuliaCall' or Julia
+  itself.
+
 * `cs_setup()` now finds Julia wherever `JuliaCall::julia_setup()` would,
   instead of only on the PATH. Previously, a Julia installed by
   `cs_install_julia()` (which `JuliaCall::install_julia()` places outside the
