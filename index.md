@@ -83,16 +83,6 @@ plot(result$normalized_current)
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md))
 - R packages: terra, JuliaCall
 
-Note:
-[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
-uses JuliaCall to download Julia, and the CRAN release of JuliaCall
-(0.17.6) can’t install current Julia versions. Until a newer release
-reaches CRAN, install JuliaCall from GitHub first with
-`remotes::install_github("JuliaInterop/JuliaCall")`, or install Julia
-yourself (e.g., from <https://julialang.org/install/>) and then run
-[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
-to add the Julia packages.
-
 ## Learn More
 
 - [Getting started

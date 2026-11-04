@@ -53,9 +53,10 @@ the recommended first step after installing the circuitscaper R package.</p>
 
 
 <dl><dt id="arg-force">force<a class="anchor" aria-label="anchor" href="#arg-force"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, reinstall Julia and packages even if they
-appear to be already present. Use this to replace a Julia installation
-that is too old. Default <code>FALSE</code>.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, download and install Julia even if a
+Julia installation is already present, and reinstall the Julia packages.
+Use this to replace a Julia installation that is too old. Default
+<code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-version">version<a class="anchor" aria-label="anchor" href="#arg-version"></a></dt>
@@ -71,11 +72,16 @@ Default <code>"latest"</code>, the latest stable release. Must be at least 1.10.
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>In interactive sessions, prompts for confirmation before downloading. In
 non-interactive sessions (e.g., CI), proceeds without prompting.</p>
-<p>Julia is installed with <code><a href="https://rdrr.io/pkg/JuliaCall/man/install_julia.html" class="external-link">JuliaCall::install_julia()</a></code>. The CRAN release of
-'JuliaCall' (0.17.6) cannot install current Julia versions, so if it is
-installed, <code>cs_install_julia()</code> stops before downloading and explains how
-to install the development version of 'JuliaCall' instead. Julia installed
-by other means (e.g., juliaup or the official installers) also works.</p>
+<p>If no suitable Julia is found (see <code><a href="cs_setup.html">cs_setup()</a></code> for where it looks), or if
+<code>force = TRUE</code>, the official Julia release for your platform is downloaded
+from julialang.org, checked against its published size and checksum, and
+unpacked into circuitscaper's user data directory
+(<code>tools::R_user_dir("circuitscaper", "data")</code>). That Julia is then used by
+<code><a href="cs_setup.html">cs_setup()</a></code> in later sessions. Julia installed by other means (e.g.,
+juliaup or the official installers) works too; in that case
+<code>cs_install_julia()</code> just adds the Julia packages.</p>
+<p>The Julia packages are installed into Julia's default package depot
+(usually <code>~/.julia</code>), as with any Julia installation.</p>
     </div>
 
     <div class="section level2">

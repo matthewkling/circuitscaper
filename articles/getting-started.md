@@ -42,11 +42,9 @@ cs_install_julia()
 ```
 
 [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
-uses JuliaCall to download Julia, and the CRAN release of JuliaCall
-(0.17.6) can’t install current Julia versions. Until a newer release
-reaches CRAN, install JuliaCall from GitHub first with
-`remotes::install_github("JuliaInterop/JuliaCall")`, or install Julia
-yourself (e.g., from <https://julialang.org/install/>).
+downloads the official Julia release for your platform from
+julialang.org into circuitscaper’s own data directory, so it doesn’t
+touch any other Julia you have installed.
 
 If you already have Julia installed,
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
