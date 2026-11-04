@@ -89,7 +89,9 @@ threads.}
 \item{solver}{Character. Solver to use: \code{"cg+amg"} (default) or \code{"cholmod"}.}
 
 \item{output_dir}{Optional character path. If provided, output files persist
-there. Default \code{NULL} uses a temporary directory.}
+there, in Omniscape's \verb{omniscape_output/} subdirectory, as ASCII grids
+(\code{.asc}). Default \code{NULL} uses a temporary directory. To save the results
+in another format, write the returned raster with \code{\link[terra:writeRaster]{terra::writeRaster()}}.}
 
 \item{verbose}{Logical. Print Omniscape output. Default \code{FALSE}.}
 }

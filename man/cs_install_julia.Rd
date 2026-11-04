@@ -8,9 +8,11 @@ cs_install_julia(force = FALSE, version = "latest")
 }
 \arguments{
 \item{force}{Logical. If \code{TRUE}, reinstall Julia and packages even if they
-appear to be already present. Default \code{FALSE}.}
+appear to be already present. Use this to replace a Julia installation
+that is too old. Default \code{FALSE}.}
 
-\item{version}{Character. Julia version to install. Default \code{"latest"}.}
+\item{version}{Character. Julia version to install, e.g. \code{"1.12.1"}.
+Default \code{"latest"}, the latest stable release. Must be at least 1.10.}
 }
 \value{
 Invisibly returns \code{TRUE} on success, \code{FALSE} if cancelled.
@@ -22,6 +24,12 @@ the recommended first step after installing the circuitscaper R package.
 \details{
 In interactive sessions, prompts for confirmation before downloading. In
 non-interactive sessions (e.g., CI), proceeds without prompting.
+
+Julia is installed with \code{\link[JuliaCall:install_julia]{JuliaCall::install_julia()}}. The CRAN release of
+'JuliaCall' (0.17.6) cannot install current Julia versions, so if it is
+installed, \code{cs_install_julia()} stops before downloading and explains how
+to install the development version of 'JuliaCall' instead. Julia installed
+by other means (e.g., juliaup or the official installers) also works.
 }
 \examples{
 \dontrun{
