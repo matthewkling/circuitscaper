@@ -163,7 +163,9 @@ threads.</p></dd>
 
 <dt id="arg-output-dir">output_dir<a class="anchor" aria-label="anchor" href="#arg-output-dir"></a></dt>
 <dd><p>Optional character path. If provided, output files persist
-there. Default <code>NULL</code> uses a temporary directory.</p></dd>
+there, in Omniscape's <code>omniscape_output/</code> subdirectory, as ASCII grids
+(<code>.asc</code>). Default <code>NULL</code> uses a temporary directory. To save the results
+in another format, write the returned raster with <code><a href="https://rspatial.github.io/terra/reference/writeRaster.html" class="external-link">terra::writeRaster()</a></code>.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>

@@ -4,6 +4,18 @@
 
 ### Bug fixes
 
+- When JuliaCall fails while connecting R and Julia,
+  [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+  and
+  [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
+  now explain the failure and list the common causes, instead of passing
+  on JuliaCall’s bare “Error happens when you try to execute command …
+  setup.jl”.
+
+- The shell and Julia commands circuitscaper runs to find and check
+  Julia (including at package attach) now time out instead of
+  potentially hanging, e.g. on a slow login shell profile.
+
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   and
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)

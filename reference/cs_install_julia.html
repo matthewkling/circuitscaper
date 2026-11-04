@@ -54,11 +54,13 @@ the recommended first step after installing the circuitscaper R package.</p>
 
 <dl><dt id="arg-force">force<a class="anchor" aria-label="anchor" href="#arg-force"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, reinstall Julia and packages even if they
-appear to be already present. Default <code>FALSE</code>.</p></dd>
+appear to be already present. Use this to replace a Julia installation
+that is too old. Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-version">version<a class="anchor" aria-label="anchor" href="#arg-version"></a></dt>
-<dd><p>Character. Julia version to install. Default <code>"latest"</code>.</p></dd>
+<dd><p>Character. Julia version to install, e.g. <code>"1.12.1"</code>.
+Default <code>"latest"</code>, the latest stable release. Must be at least 1.10.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -69,6 +71,11 @@ appear to be already present. Default <code>FALSE</code>.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>In interactive sessions, prompts for confirmation before downloading. In
 non-interactive sessions (e.g., CI), proceeds without prompting.</p>
+<p>Julia is installed with <code><a href="https://rdrr.io/pkg/JuliaCall/man/install_julia.html" class="external-link">JuliaCall::install_julia()</a></code>. The CRAN release of
+'JuliaCall' (0.17.6) cannot install current Julia versions, so if it is
+installed, <code>cs_install_julia()</code> stops before downloading and explains how
+to install the development version of 'JuliaCall' instead. Julia installed
+by other means (e.g., juliaup or the official installers) also works.</p>
     </div>
 
     <div class="section level2">

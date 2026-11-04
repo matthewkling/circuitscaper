@@ -127,8 +127,11 @@ os_run(
 
 - output_dir:
 
-  Optional character path. If provided, output files persist there.
-  Default `NULL` uses a temporary directory.
+  Optional character path. If provided, output files persist there, in
+  Omniscape's `omniscape_output/` subdirectory, as ASCII grids (`.asc`).
+  Default `NULL` uses a temporary directory. To save the results in
+  another format, write the returned raster with
+  [`terra::writeRaster()`](https://rspatial.github.io/terra/reference/writeRaster.html).
 
 - verbose:
 
