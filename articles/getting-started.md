@@ -27,7 +27,7 @@ documentation.
 
 ## Installation
 
-circuitscaper requires Julia (\>= 1.9) with the Circuitscape and
+circuitscaper requires Julia (\>= 1.10) with the Circuitscape and
 Omniscape packages. You can install everything from R:
 
 ``` r
@@ -40,6 +40,13 @@ library(circuitscaper)
 # First time only: install Julia and required packages
 cs_install_julia()
 ```
+
+[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
+uses JuliaCall to download Julia, and the CRAN release of JuliaCall
+(0.17.6) can’t install current Julia versions. Until a newer release
+reaches CRAN, install JuliaCall from GitHub first with
+`remotes::install_github("JuliaInterop/JuliaCall")`, or install Julia
+yourself (e.g., from <https://julialang.org/install/>).
 
 If you already have Julia installed,
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)

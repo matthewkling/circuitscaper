@@ -5,6 +5,21 @@
 ### Bug fixes
 
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+  and
+  [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
+  now refuse Julia versions older than 1.10 with an explanation of how
+  to upgrade. On older Julia, the package manager falls back to old
+  releases of Circuitscape.jl, Omniscape.jl, and RCall.jl that fail in
+  obscure ways (for example, “undefined symbol: SET_SYMVALUE” on R 4.6).
+  The minimum in `SystemRequirements` is now Julia 1.10.
+
+- [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
+  now detects the CRAN release of ‘JuliaCall’ (0.17.6), which installs
+  Julia 1.9 when asked for the latest version and can’t install Julia
+  1.10 or later, and stops before downloading with instructions to
+  install the development version of ‘JuliaCall’ or Julia itself.
+
+- [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   now finds Julia wherever
   [`JuliaCall::julia_setup()`](https://rdrr.io/pkg/JuliaCall/man/julia_setup.html)
   would, instead of only on the PATH. Previously, a Julia installed by
@@ -19,6 +34,7 @@
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md),
   [`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md),
   and the startup message use the same search.
+
 - `os_run(parallelize = TRUE)` now checks the running Julia session
   before calling Omniscape, and warns and runs serially if it cannot run
   in parallel: if Julia has only one thread, or if it was started with
@@ -29,12 +45,14 @@
   for example by calling
   [`JuliaCall::julia_setup()`](https://rdrr.io/pkg/JuliaCall/man/julia_setup.html)
   directly.
+
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   now records the number of threads Julia actually has, and warns when
   `threads` cannot take effect because Julia was already running
   (including when started outside circuitscaper). Previously it recorded
   the requested count, and `os_run(parallelize = TRUE)` could reset the
   record to 1 when it started Julia.
+
 - [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
   now has Omniscape write its outputs as ASCII grids rather than
   GeoTIFFs. Writing GeoTIFFs from Julia could crash R (seen on Ubuntu,
@@ -43,6 +61,7 @@
   one. Inputs were already passed as ASCII grids, so Julia now never
   touches libtiff. Files kept via `output_dir` are therefore `.asc`
   rather than `.tif`.
+
 - [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
   now stops with a clear error if the resistance or conductance surface
   contains zero or negative values, which Omniscape rejects without

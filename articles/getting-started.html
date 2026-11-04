@@ -96,7 +96,7 @@ documentation.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>circuitscaper requires Julia (&gt;= 1.9) with the Circuitscape and
+<p>circuitscaper requires Julia (&gt;= 1.10) with the Circuitscape and
 Omniscape packages. You can install everything from R:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install circuitscaper (from GitHub during development)</span></span>
@@ -106,6 +106,12 @@ Omniscape packages. You can install everything from R:</p>
 <span></span>
 <span><span class="co"># First time only: install Julia and required packages</span></span>
 <span><span class="fu"><a href="../reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code> uses JuliaCall to download Julia, and
+the CRAN release of JuliaCall (0.17.6) can’t install current Julia
+versions. Until a newer release reaches CRAN, install JuliaCall from
+GitHub first with
+<code>remotes::install_github("JuliaInterop/JuliaCall")</code>, or
+install Julia yourself (e.g., from <a href="https://julialang.org/install/" class="external-link uri">https://julialang.org/install/</a>).</p>
 <p>If you already have Julia installed, <code><a href="../reference/cs_setup.html">cs_setup()</a></code> will
 find it automatically, searching the same places as JuliaCall: the
 <code>JULIA_HOME</code> environment variable, a Julia installed by
