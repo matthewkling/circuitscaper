@@ -97,38 +97,34 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     Sys.setenv(JULIA_NUM_THREADS = paste0(threads, ",0"))
   }
 
-  # Initialize Julia (do NOT auto-install). Locating Julia is left to
-  # JuliaCall::julia_setup(), which checks the JULIA_HOME option and
-  # environment variable, the install record written by
-  # JuliaCall::install_julia() (and so by cs_install_julia()), the PATH, a
-  # login shell's PATH (for GUI sessions on macOS), and common Windows
-  # install locations. It signals "Julia is not found." if all of these fail,
-  # but only after printing shell warnings, so first rule out the clear-cut
-  # cases quietly. find_julia_bin() searches the same places without
-  # starting Julia.
-  if (is.null(julia_home) && is.null(find_julia_bin())) {
-    stop(julia_not_found_message(), call. = FALSE)
-  }
-  if (!is.null(julia_home) && !file.exists(file.path(julia_home, julia_exe()))) {
-    stop(julia_not_found_message(julia_home), call. = FALSE)
+  # Find Julia (do NOT auto-install). find_julia_bin() searches the JULIA_HOME
+  # option and environment variable, a Julia installed by cs_install_julia(),
+  # JuliaCall's install record, the PATH, a login shell's PATH (for GUI
+  # sessions on macOS), and common Windows install locations. The Julia found
+  # is passed to JuliaCall explicitly, so the Julia whose version is checked
+  # below is the one that starts.
+  if (is.null(julia_home)) {
+    julia_bin <- find_julia_bin()
+    if (is.null(julia_bin)) {
+      stop(julia_not_found_message(), call. = FALSE)
+    }
+  } else {
+    julia_bin <- file.path(julia_home, julia_exe())
+    if (!file.exists(julia_bin)) {
+      stop(julia_not_found_message(julia_home), call. = FALSE)
+    }
   }
 
   # Refuse Julia versions the Julia packages no longer support. Otherwise
   # Julia's package manager falls back to old releases that fail in obscure
   # ways (e.g., an RCall.jl that needs symbols R 4.6 no longer exports).
-  julia_bin <- if (is.null(julia_home)) {
-    find_julia_bin()
-  } else {
-    file.path(julia_home, julia_exe())
-  }
   check_julia_version(julia_bin)
+  julia_home_used <- dirname(julia_bin)
 
   message("Initializing Julia (one-time per session)...")
-  setup_args <- list(installJulia = FALSE, ...)
-  if (!is.null(julia_home)) {
-    setup_args$JULIA_HOME <- julia_home
-  }
+  setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home_used, ...)
   run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
+  check_running_julia_version()
 
   # Record the thread count Julia actually has, which can differ from the
   # request if Julia was started before cs_setup() ran.
@@ -245,15 +241,22 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 #' In interactive sessions, prompts for confirmation before downloading. In
 #' non-interactive sessions (e.g., CI), proceeds without prompting.
 #'
-#' Julia is installed with [JuliaCall::install_julia()]. The CRAN release of
-#' 'JuliaCall' (0.17.6) cannot install current Julia versions, so if it is
-#' installed, `cs_install_julia()` stops before downloading and explains how
-#' to install the development version of 'JuliaCall' instead. Julia installed
-#' by other means (e.g., juliaup or the official installers) also works.
+#' If no suitable Julia is found (see [cs_setup()] for where it looks), or if
+#' `force = TRUE`, the official Julia release for your platform is downloaded
+#' from julialang.org, checked against its published size and checksum, and
+#' unpacked into circuitscaper's user data directory
+#' (`tools::R_user_dir("circuitscaper", "data")`). That Julia is then used by
+#' [cs_setup()] in later sessions. Julia installed by other means (e.g.,
+#' juliaup or the official installers) works too; in that case
+#' `cs_install_julia()` just adds the Julia packages.
 #'
-#' @param force Logical. If `TRUE`, reinstall Julia and packages even if they
-#'   appear to be already present. Use this to replace a Julia installation
-#'   that is too old. Default `FALSE`.
+#' The Julia packages are installed into Julia's default package depot
+#' (usually `~/.julia`), as with any Julia installation.
+#'
+#' @param force Logical. If `TRUE`, download and install Julia even if a
+#'   Julia installation is already present, and reinstall the Julia packages.
+#'   Use this to replace a Julia installation that is too old. Default
+#'   `FALSE`.
 #' @param version Character. Julia version to install, e.g. `"1.12.1"`.
 #'   Default `"latest"`, the latest stable release. Must be at least 1.10.
 #'
@@ -285,21 +288,17 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
     }
   }
 
-  # Check before downloading anything that a supported Julia version was
-  # requested and that JuliaCall can install it.
-  if (need_julia && !version %in% c("latest", "lts")) {
+  # Check the requested version before downloading anything
+  if (need_julia && !identical(version, "latest")) {
     v <- tryCatch(package_version(version), error = function(e) NULL)
     if (is.null(v)) {
-      stop("`version` must be \"latest\", \"lts\", or a version number ",
-           "such as \"1.12.1\".", call. = FALSE)
+      stop("`version` must be \"latest\" or a version number such as ",
+           "\"1.12.1\".", call. = FALSE)
     }
     if (v < min_julia_version()) {
       stop("circuitscaper requires Julia >= ", min_julia_version(),
            "; got version = \"", version, "\".", call. = FALSE)
     }
-  }
-  if (need_julia && juliacall_install_is_outdated()) {
-    stop(juliacall_outdated_message(), call. = FALSE)
   }
 
   # Prompt for confirmation in interactive sessions
@@ -308,18 +307,17 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
       msg <- paste0(
         "circuitscaper requires Julia and two Julia packages.\n",
         "This will download and install:\n",
-        "
- Julia (~500 MB)\n",
-        "
- Circuitscape.jl and Omniscape.jl (~500 MB)\n",
+        "  - Julia ", if (identical(version, "latest")) "(latest release)"
+        else version, ", into ", julia_install_root(), "\n",
+        "  - Circuitscape.jl and Omniscape.jl, into Julia's package depot\n",
+        "Together these take about 1-2 GB of disk space.\n",
         "\nProceed?"
       )
     } else {
       msg <- paste0(
         "Julia found at: ", julia_bin, "\n",
-        "This will install/update the required Julia packages:\n",
-        "
- Circuitscape.jl and Omniscape.jl (~500 MB)\n",
+        "This will install or update the required Julia packages\n",
+        "(Circuitscape.jl and Omniscape.jl).\n",
         "\nProceed?"
       )
     }
@@ -332,22 +330,18 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
 
   # Step 1: Install Julia if needed
   if (need_julia) {
-    message("Installing Julia...")
-    if (version == "latest") {
-      JuliaCall::install_julia()
-    } else {
-      JuliaCall::install_julia(version = version)
-    }
+    julia_home <- install_julia_binary(version)
   } else {
-    message("Julia already installed at: ", julia_bin)
+    message("Using Julia at: ", julia_bin)
+    julia_home <- dirname(julia_bin)
   }
 
-  # Step 2: Initialize Julia so we can install packages. JuliaCall locates
-  # Julia itself, including one install_julia() just put outside the PATH.
-  # Check the version first, in case the install produced an unsupported one.
-  check_julia_version(find_julia_bin())
+  # Step 2: Start that Julia so we can install packages
+  check_julia_version(file.path(julia_home, julia_exe()))
   message("Initializing Julia...")
-  run_julia_setup(list(installJulia = FALSE), quiet = TRUE)
+  run_julia_setup(list(installJulia = FALSE, JULIA_HOME = julia_home),
+                  quiet = TRUE)
+  check_running_julia_version()
 
   # Step 3: Install Julia packages
   message("Installing Circuitscape.jl...")
@@ -359,7 +353,7 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
   message("Installation complete. Julia and all required packages are ready.")
 
   # Step 4: Complete session setup (loads packages, JIT warmup, etc.)
-  cs_setup(quiet = TRUE)
+  cs_setup(julia_home = julia_home, quiet = TRUE)
 
   invisible(TRUE)
 }
@@ -421,9 +415,8 @@ juliacall_setup_error_message <- function(msg) {
     "message (look for 'LoadError' or 'ERROR:'). Common causes:\n",
     "  * Julia older than ", min_julia_version(), ", which installs old ",
     "Julia packages that don't work with current R (e.g., 'undefined ",
-    "symbol: SET_SYMVALUE'). Restart R and run cs_install_julia(force = ",
-    "TRUE); if you have the CRAN release of 'JuliaCall', first run ",
-    "remotes::install_github(\"JuliaInterop/JuliaCall\").\n",
+    "symbol: SET_SYMVALUE'). Restart R and run ",
+    "cs_install_julia(force = TRUE).\n",
     "  * A clash between libraries R has loaded and Julia's own (e.g., ",
     "'GLIBCXX' or 'incorrect library version' errors). Start R outside any ",
     "conda environment; on Linux, also make sure R isn't picking up an ",
@@ -486,19 +479,19 @@ cs_julia_available <- function() {
 
 #' Find a Julia Binary Without Starting Julia
 #'
-#' Looks for the Julia executable in the same places, and in the same order,
-#' as JuliaCall's internal locator (which `JuliaCall::julia_setup()` uses but
-#' JuliaCall does not export): the `JULIA_HOME` option, the `JULIA_HOME`
-#' environment variable, the install record that `JuliaCall::install_julia()`
+#' Looks for the Julia executable, in order: the `JULIA_HOME` option, the
+#' `JULIA_HOME` environment variable, a Julia installed by
+#' [cs_install_julia()], the install record that `JuliaCall::install_julia()`
 #' writes to `<depot>/prefs/JuliaCall`, the PATH, a login shell's PATH on
 #' Unix-alikes (GUI sessions on macOS often lack the shell PATH), and
-#' `%LOCALAPPDATA%/Julia*` on Windows.
+#' `%LOCALAPPDATA%/Julia*` on Windows. Apart from circuitscaper's own install
+#' (which comes before JuliaCall's record, so that `cs_install_julia(force =
+#' TRUE)` replaces a stale Julia that JuliaCall installed), this mirrors
+#' JuliaCall's internal locator.
 #'
-#' Unlike JuliaCall's locator, this does not run Julia, so it is cheap enough
-#' for `.onAttach()` and for deciding whether [cs_install_julia()] needs to
-#' download Julia. [cs_setup()] uses it only to fail fast with a clean message
-#' when no Julia exists; the actual locating is left to
-#' `JuliaCall::julia_setup()`.
+#' It does not start Julia, so it is cheap enough for `.onAttach()`.
+#' [cs_setup()] passes the Julia it finds to `JuliaCall::julia_setup()`
+#' explicitly, so the two can't disagree.
 #'
 #' @param login_shell Logical. Also ask a login shell (`bash -l`) on
 #'   Unix-alikes. Default `TRUE`.
@@ -519,7 +512,11 @@ find_julia_bin <- function(login_shell = TRUE) {
   bin <- in_dir(Sys.getenv("JULIA_HOME"))
   if (!is.null(bin)) return(bin)
 
-  # 3. Install record written by JuliaCall::install_julia()
+  # 3. Julia installed by cs_install_julia()
+  bin <- installed_julia_bin()
+  if (!is.null(bin)) return(bin)
+
+  # 4. Install record written by JuliaCall::install_julia()
   depot <- Sys.getenv("JULIA_DEPOT_PATH")
   if (nzchar(depot)) {
     depot <- strsplit(depot, .Platform$path.sep, fixed = TRUE)[[1]][1]
@@ -534,11 +531,11 @@ find_julia_bin <- function(login_shell = TRUE) {
     if (!is.null(bin)) return(bin)
   }
 
-  # 4. PATH
+  # 5. PATH
   bin <- Sys.which("julia")
   if (nzchar(bin)) return(unname(bin))
 
-  # 5. Login shell PATH (Unix-alikes) or common install location (Windows)
+  # 6. Login shell PATH (Unix-alikes) or common install location (Windows)
   if (!windows && login_shell) {
     bin <- tryCatch(
       # timeout: a login shell runs the user's profile, which could be slow

@@ -16,11 +16,19 @@
   RCall.jl that fail in obscure ways (for example, "undefined symbol:
   SET_SYMVALUE" on R 4.6). The minimum in `SystemRequirements` is now
   Julia 1.10.
-* `cs_install_julia()` now detects the CRAN release of 'JuliaCall' (0.17.6),
-  which installs Julia 1.9 when asked for the latest version and can't
-  install Julia 1.10 or later, and stops before downloading with
-  instructions to install the development version of 'JuliaCall' or Julia
-  itself.
+* `cs_install_julia()` now downloads and installs Julia itself, from the
+  official release index at julialang.org, verifying each download against
+  its published size and (on R >= 4.5) SHA-256 checksum. Julia goes into
+  circuitscaper's user data directory (`tools::R_user_dir("circuitscaper")`)
+  and is found automatically by `cs_setup()`. Previously it used
+  `JuliaCall::install_julia()`, which in the current CRAN release of
+  'JuliaCall' (0.17.6) installs Julia 1.9 when asked for the latest version
+  and can't install Julia 1.10 or later, so a fresh install failed with
+  errors such as "undefined symbol: SET_SYMVALUE".
+* `cs_setup()` now passes the Julia it finds to 'JuliaCall' explicitly, so
+  the Julia whose version it checks is always the one that starts, and
+  stops with a clear message if an older Julia is already running in the
+  session.
 
 * `cs_setup()` now finds Julia wherever `JuliaCall::julia_setup()` would,
   instead of only on the PATH. Previously, a Julia installed by

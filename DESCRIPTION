@@ -21,9 +21,12 @@ Depends:
 Imports:
     terra,
     JuliaCall,
+    rjson,
+    tools,
     utils
 Suggests:
     testthat (>= 3.0.0),
+    withr,
     knitr,
     rmarkdown
 VignetteBuilder: knitr

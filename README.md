@@ -87,13 +87,6 @@ plot(result$normalized_current)
 - Julia \>= 1.10 (installed automatically via `cs_install_julia()`)
 - R packages: terra, JuliaCall
 
-Note: `cs_install_julia()` uses JuliaCall to download Julia, and the CRAN
-release of JuliaCall (0.17.6) can't install current Julia versions. Until a
-newer release reaches CRAN, install JuliaCall from GitHub first with
-`remotes::install_github("JuliaInterop/JuliaCall")`, or install Julia
-yourself (e.g., from <https://julialang.org/install/>) and then run
-`cs_install_julia()` to add the Julia packages.
-
 ## Learn More
 
 - [Getting started

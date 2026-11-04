@@ -34,8 +34,6 @@ test_that("check_julia_version stops on Julia 1.9 with the fix", {
   expect_error(check_julia_version(bin), "Julia 1.9.4 .* is too old")
   expect_error(check_julia_version(bin), "cs_install_julia(force = TRUE)",
                fixed = TRUE)
-  expect_error(check_julia_version(bin), "JuliaInterop/JuliaCall",
-               fixed = TRUE)
 })
 
 test_that("check_julia_version accepts supported and unknown versions", {
@@ -83,37 +81,8 @@ test_that("cs_install_julia rejects unsupported version requests", {
                "requires Julia >= 1.10")
   expect_error(cs_install_julia(force = TRUE, version = "newest"),
                "must be \"latest\"")
-})
-
-test_that("outdated JuliaCall is detected from julia_latest_version()", {
-  # Bodies of julia_latest_version() before and after JuliaCall's fix
-  cran <- function() {
-    versions <- list()
-    max(names(Filter(function(v) v$stable, versions)))
-  }
-  fixed <- function() {
-    versions <- list()
-    max(numeric_version(names(Filter(function(v) v$stable, versions))))
-  }
-  expect_true(juliacall_install_is_outdated(cran))
-  expect_false(juliacall_install_is_outdated(fixed))
-  expect_true(juliacall_install_is_outdated(fun = "not a function"))
-  expect_type(juliacall_install_is_outdated(), "logical")
-})
-
-test_that("outdated JuliaCall message gives both ways forward", {
-  msg <- juliacall_outdated_message()
-  expect_match(msg, "remotes::install_github(\"JuliaInterop/JuliaCall\")",
-               fixed = TRUE)
-  expect_match(msg, "julialang.org/install", fixed = TRUE)
-})
-
-test_that("JuliaCall releases after 0.17.6 are never treated as outdated", {
-  cran_body <- function() max(names(list()))
-  expect_false(juliacall_install_is_outdated(cran_body,
-                                             version = package_version("0.18.0")))
-  expect_true(juliacall_install_is_outdated(cran_body,
-                                            version = package_version("0.17.6")))
+  expect_error(cs_install_julia(force = TRUE, version = "lts"),
+               "must be \"latest\"")
 })
 
 test_that("JuliaCall's opaque setup failure is recognized and explained", {
@@ -127,6 +96,7 @@ test_that("JuliaCall's opaque setup failure is recognized and explained", {
   msg <- juliacall_setup_error_message(raw)
   expect_match(msg, "printed just above")
   expect_match(msg, "cs_install_julia(force = TRUE)", fixed = TRUE)
+  expect_no_match(msg, "install_github")
   expect_match(msg, "conda")
   expect_match(msg, "Restart R")
   expect_match(msg, raw, fixed = TRUE)

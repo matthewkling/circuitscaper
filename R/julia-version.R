@@ -60,64 +60,33 @@ check_julia_version <- function(julia_bin) {
     "Julia >= ", min_julia_version(), ".\n",
     "To install a current Julia, restart R and run:\n",
     "  cs_install_julia(force = TRUE)\n",
-    "or update your Julia installation (e.g., with juliaup).\n",
-    "If cs_install_julia() installed this Julia, your 'JuliaCall' is likely ",
-    "the CRAN release, which installs Julia 1.9 by mistake. Install the ",
-    "development version first:\n",
-    "  remotes::install_github(\"JuliaInterop/JuliaCall\")",
+    "or update your Julia installation (e.g., with juliaup). If you set ",
+    "JULIA_HOME, point it at the new Julia or unset it.",
     call. = FALSE
   )
 }
 
 
-#' Can the Installed JuliaCall Install Current Julia Versions?
+#' Stop if the Julia Running in This R Session Is Too Old
 #'
-#' JuliaCall 0.17.6, the CRAN release as of this writing, has two bugs in
-#' `install_julia()`: it finds the "latest" version by sorting version strings
-#' alphabetically (so "1.9.4" beats "1.12.1"), and it builds the download URL
-#' from the first three characters of the version (so "1.12.1" becomes
-#' "1.1"). Together these mean it can't install any Julia from 1.10 on. Both
-#' were fixed in a single commit on JuliaCall's GitHub, without a version
-#' bump, so the installed version number can't tell the releases apart.
-#' Instead, this checks whether `julia_latest_version()` contains the fix
-#' (comparing versions with `numeric_version()`). The function is looked up
-#' in JuliaCall's namespace rather than as an export, since it was only
-#' exported (in September 2025) months after the fix.
+#' Covers a Julia started earlier in the session (e.g., by a failed setup
+#' attempt or by `JuliaCall::julia_setup()` directly), which
+#' `JuliaCall::julia_setup()` reuses rather than replacing.
 #'
-#' @param fun The function to inspect, or `NULL` to look it up. Exposed for
-#'   testing.
-#' @param version Installed JuliaCall version. Exposed for testing.
-#' @return Logical. `TRUE` if the installed JuliaCall has the bugs.
+#' @return `NULL` invisibly. Called for its error.
 #' @noRd
-juliacall_install_is_outdated <- function(fun = NULL,
-                                          version = utils::packageVersion("JuliaCall")) {
-  # Any release after 0.17.6 postdates the fix; only inspect the code for
-  # 0.17.6 itself, which is both the buggy CRAN release and the fixed
-  # GitHub version. This keeps a future rewrite of julia_latest_version()
-  # from being mistaken for the bug.
-  if (version > "0.17.6") return(FALSE)
-  if (is.null(fun)) {
-    fun <- get0("julia_latest_version", envir = asNamespace("JuliaCall"),
-                mode = "function", inherits = FALSE)
-  }
-  if (!is.function(fun)) return(TRUE)
-  src <- paste(deparse(body(fun)), collapse = "\n")
-  !grepl("numeric_version", src, fixed = TRUE)
-}
-
-
-#' Message for an Outdated JuliaCall
-#' @noRd
-juliacall_outdated_message <- function() {
-  paste0(
-    "Your 'JuliaCall' (", utils::packageVersion("JuliaCall"), ") can't ",
-    "install current Julia versions: the CRAN release installs Julia 1.9, ",
-    "which circuitscaper's Julia packages no longer support. Either:\n",
-    "  * install the development version of 'JuliaCall', restart R, and run ",
-    "cs_install_julia() again:\n",
-    "      remotes::install_github(\"JuliaInterop/JuliaCall\")\n",
-    "  * or install Julia >= ", min_julia_version(), " yourself (e.g., from ",
-    "https://julialang.org/install/), then run cs_install_julia() to add ",
-    "the Julia packages."
+check_running_julia_version <- function() {
+  v <- tryCatch(
+    package_version(sub("[-+].*$", "",
+                        JuliaCall::julia_eval("string(VERSION)"))),
+    error = function(e) NULL
+  )
+  if (is.null(v) || v >= min_julia_version()) return(invisible(NULL))
+  stop(
+    "Julia ", v, " is running in this R session, but circuitscaper ",
+    "requires Julia >= ", min_julia_version(), ". A running Julia can't be ",
+    "replaced, so restart R, then run cs_install_julia(force = TRUE) if ",
+    "you don't yet have a newer Julia.",
+    call. = FALSE
   )
 }
