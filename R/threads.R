@@ -9,21 +9,27 @@ julia_nthreads <- function() {
 
 #' Thread Layout of the Running Julia Session
 #'
-#' @return List with `nthreads` (default pool size), `maxthreadid` (highest
-#'   thread id, which exceeds `nthreads` when Julia has interactive threads),
-#'   and `omniscape_version` (character, or `NA` if unavailable).
+#' Note that `Threads.maxthreadid()` is not a useful signal here: it also
+#' counts garbage-collector threads (by default one fewer than the default
+#' pool), so it exceeds `nthreads()` in any multithreaded session. GC threads
+#' never run tasks, so only the interactive pool can push worker thread ids
+#' past `nthreads()`.
+#'
+#' @return List with `nthreads` (default pool size), `ninteractive`
+#'   (interactive pool size), and `omniscape_version` (character, or `NA` if
+#'   unavailable).
 #' @noRd
 julia_thread_info <- function() {
   nthreads <- julia_nthreads()
-  maxthreadid <- tryCatch(
-    as.integer(JuliaCall::julia_eval("Threads.maxthreadid()")),
-    error = function(e) nthreads
+  ninteractive <- tryCatch(
+    as.integer(JuliaCall::julia_eval("Threads.nthreads(:interactive)")),
+    error = function(e) NA_integer_
   )
   omniscape_version <- tryCatch(
     as.character(JuliaCall::julia_eval("string(pkgversion(Omniscape))")),
     error = function(e) NA_character_
   )
-  list(nthreads = nthreads, maxthreadid = maxthreadid,
+  list(nthreads = nthreads, ninteractive = ninteractive,
        omniscape_version = omniscape_version)
 }
 
@@ -82,13 +88,14 @@ thread_mismatch_message <- function(actual, requested) {
 #' Pure function of the session's thread layout, so it can be tested without
 #' Julia.
 #'
-#' @param nthreads,maxthreadid,omniscape_version As from
-#'   `julia_thread_info()`.
+#' @param nthreads,ninteractive,omniscape_version As from
+#'   `julia_thread_info()`. An `NA` `ninteractive` (unknown) does not block a
+#'   parallel run.
 #' @param requested The `julia_threads` the user asked for.
 #' @return List with `parallelize` (logical) and `warning` (character or
 #'   `NULL`).
 #' @noRd
-parallel_decision <- function(nthreads, maxthreadid, omniscape_version,
+parallel_decision <- function(nthreads, ninteractive, omniscape_version,
                               requested) {
   if (nthreads < 2L) {
     return(list(
@@ -99,7 +106,7 @@ parallel_decision <- function(nthreads, maxthreadid, omniscape_version,
       )
     ))
   }
-  if (maxthreadid > nthreads &&
+  if (isTRUE(ninteractive > 0L) &&
       !omniscape_handles_interactive_threads(omniscape_version)) {
     return(list(
       parallelize = FALSE,

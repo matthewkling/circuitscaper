@@ -12,7 +12,7 @@ test_that("Omniscape version check handles releases, suffixes, and NA", {
 
 test_that("a single-threaded session runs serially with a fix hint", {
   # e.g. Julia started by JuliaCall::julia_setup() before cs_setup(threads=)
-  d <- parallel_decision(nthreads = 1L, maxthreadid = 2L,
+  d <- parallel_decision(nthreads = 1L, ninteractive = 1L,
                          omniscape_version = "0.6.2", requested = 15L)
   expect_false(d$parallelize)
   expect_match(d$warning, "running with 1 thread")
@@ -21,7 +21,7 @@ test_that("a single-threaded session runs serially with a fix hint", {
 })
 
 test_that("an interactive thread forces a serial run on old Omniscape", {
-  d <- parallel_decision(nthreads = 4L, maxthreadid = 5L,
+  d <- parallel_decision(nthreads = 4L, ninteractive = 1L,
                          omniscape_version = "0.6.2", requested = 4L)
   expect_false(d$parallelize)
   expect_match(d$warning, "interactive thread")
@@ -30,30 +30,45 @@ test_that("an interactive thread forces a serial run on old Omniscape", {
 })
 
 test_that("an interactive thread is fine on Omniscape 0.6.3+", {
-  d <- parallel_decision(nthreads = 4L, maxthreadid = 5L,
+  d <- parallel_decision(nthreads = 4L, ninteractive = 1L,
                          omniscape_version = "0.6.3", requested = 4L)
   expect_true(d$parallelize)
   expect_null(d$warning)
 })
 
 test_that("an unknown Omniscape version is treated as unsafe", {
-  d <- parallel_decision(nthreads = 4L, maxthreadid = 5L,
+  d <- parallel_decision(nthreads = 4L, ninteractive = 1L,
                          omniscape_version = NA_character_, requested = 4L)
   expect_false(d$parallelize)
 })
 
 test_that("fewer threads than requested still runs in parallel, with a note", {
-  d <- parallel_decision(nthreads = 4L, maxthreadid = 4L,
+  d <- parallel_decision(nthreads = 4L, ninteractive = 0L,
                          omniscape_version = "0.6.2", requested = 8L)
   expect_true(d$parallelize)
   expect_match(d$warning, "not the 8 requested")
 })
 
 test_that("a correctly configured session runs in parallel silently", {
-  d <- parallel_decision(nthreads = 8L, maxthreadid = 8L,
+  d <- parallel_decision(nthreads = 8L, ninteractive = 0L,
                          omniscape_version = "0.6.2", requested = 2L)
   expect_true(d$parallelize)
   expect_null(d$warning)
+})
+
+test_that("GC threads don't block parallel runs on old Omniscape", {
+  # e.g. JULIA_NUM_THREADS = "20,0": maxthreadid() is 39 (20 default + 19
+  # GC mark threads), but no interactive thread, so worker ids stay <= 20
+  d <- parallel_decision(nthreads = 20L, ninteractive = 0L,
+                         omniscape_version = "0.6.2", requested = 20L)
+  expect_true(d$parallelize)
+  expect_null(d$warning)
+})
+
+test_that("an unknown interactive pool size doesn't block a parallel run", {
+  d <- parallel_decision(nthreads = 4L, ninteractive = NA_integer_,
+                         omniscape_version = "0.6.2", requested = 4L)
+  expect_true(d$parallelize)
 })
 
 test_that("thread mismatch message explains the cause and the fix", {

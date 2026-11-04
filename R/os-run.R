@@ -144,7 +144,7 @@ os_run <- function(resistance,
   # how to fix it, rather than failing (or crashing inside Omniscape).
   if (parallelize) {
     info <- julia_thread_info()
-    decision <- parallel_decision(info$nthreads, info$maxthreadid,
+    decision <- parallel_decision(info$nthreads, info$ninteractive,
                                   info$omniscape_version, julia_threads)
     if (!is.null(decision$warning)) {
       warning(decision$warning, call. = FALSE)
