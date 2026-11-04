@@ -202,6 +202,27 @@ test_that("build_os_config creates valid INI", {
   expect_true(any(grepl("source_threshold = 0.5", content)))
   expect_true(any(grepl("calc_normalized_current = true", content)))
   expect_true(any(grepl("source_from_resistance = true", content)))
+  # Outputs as ASCII, so Julia never loads libtiff (see build_os_config())
+  expect_true("write_as_tif = false" %in% content)
+})
+
+test_that("parse_os_output reads Omniscape's ASCII outputs", {
+  skip_if_not_installed("terra")
+  dir <- tempfile("os_out_")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE))
+  r <- terra::rast(nrows = 4, ncols = 5, xmin = 0, xmax = 5, ymin = 0,
+                   ymax = 4, vals = 1:20)
+  for (f in c("cum_currmap", "flow_potential", "normalized_cum_currmap")) {
+    terra::writeRaster(r, file.path(dir, paste0(f, ".asc")))
+  }
+
+  out <- parse_os_output(dir, "EPSG:5070")
+  expect_identical(names(out),
+                   c("cumulative_current", "flow_potential",
+                     "normalized_current"))
+  expect_equal(as.vector(terra::values(out[[1]])), 1:20)
+  expect_true(terra::same.crs(out, "EPSG:5070"))
 })
 
 test_that("build_os_config handles source file", {

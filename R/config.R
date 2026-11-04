@@ -192,7 +192,14 @@ build_os_config <- function(resistance_file,
     calc_flow_potential = if (calc_flow_potential) "true" else "false",
     solver = solver,
     parallelize = if (parallelize) "true" else "false",
-    parallel_batch_size = 10L
+    parallel_batch_size = 10L,
+    # Write outputs as ASCII grids rather than Omniscape's default GeoTIFF.
+    # The outputs only carry results back to R, and GeoTIFF writing in Julia
+    # uses GDAL_jll's libtiff, which can clash with the libtiff R's terra has
+    # already loaded into the same process and crash R (seen on Ubuntu, in
+    # TIFFClose during GDALCreateCopy). With ASCII inputs and outputs, Julia
+    # never touches libtiff.
+    write_as_tif = "false"
   )
 
   # Source strength

@@ -22,6 +22,12 @@
   (including when started outside circuitscaper). Previously it recorded the
   requested count, and `os_run(parallelize = TRUE)` could reset the record
   to 1 when it started Julia.
+* `os_run()` now has Omniscape write its outputs as ASCII grids rather than
+  GeoTIFFs. Writing GeoTIFFs from Julia could crash R (seen on Ubuntu, in
+  `TIFFClose`), most likely because Julia's GDAL loads its own libtiff into
+  a process where R's terra has already loaded the system one. Inputs were
+  already passed as ASCII grids, so Julia now never touches libtiff. Files
+  kept via `output_dir` are therefore `.asc` rather than `.tif`.
 * `os_run()` now stops with a clear error if the resistance or conductance
   surface contains zero or negative values, which Omniscape rejects without
   writing outputs. Previously this surfaced as an obscure failure to read

@@ -54,7 +54,9 @@
 #'   threads.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
-#'   there. Default `NULL` uses a temporary directory.
+#'   there, in Omniscape's `omniscape_output/` subdirectory, as ASCII grids
+#'   (`.asc`). Default `NULL` uses a temporary directory. To save the results
+#'   in another format, write the returned raster with [terra::writeRaster()].
 #' @param verbose Logical. Print Omniscape output. Default `FALSE`.
 #'
 #' @return A [terra::SpatRaster] with the following layers (depending on
