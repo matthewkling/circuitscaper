@@ -56,11 +56,6 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      # JuliaCall loads libR from Julia; on Linux it must be on the library path
-      - name: Add libR to the library path (Linux)
-        if: runner.os == 'Linux'
-        run: echo "LD_LIBRARY_PATH=$(R RHOME)/lib:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
-
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::testthat, local::.
