@@ -128,19 +128,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   if (!is.null(julia_home)) {
     setup_args$JULIA_HOME <- julia_home
   }
-  tryCatch(
-    if (quiet) {
-      suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
-    } else {
-      do.call(JuliaCall::julia_setup, setup_args)
-    },
-    error = function(e) {
-      if (grepl("Julia is not found", conditionMessage(e), fixed = TRUE)) {
-        stop(julia_not_found_message(julia_home), call. = FALSE)
-      }
-      stop(e)
-    }
-  )
+  run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
 
   # Record the thread count Julia actually has, which can differ from the
   # request if Julia was started before cs_setup() ran.
@@ -359,7 +347,7 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
   # Check the version first, in case the install produced an unsupported one.
   check_julia_version(find_julia_bin())
   message("Initializing Julia...")
-  suppressMessages(JuliaCall::julia_setup(installJulia = FALSE))
+  run_julia_setup(list(installJulia = FALSE), quiet = TRUE)
 
   # Step 3: Install Julia packages
   message("Installing Circuitscape.jl...")
@@ -374,6 +362,78 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
   cs_setup(quiet = TRUE)
 
   invisible(TRUE)
+}
+
+
+#' Start Julia via JuliaCall, With Clearer Errors
+#'
+#' Calls `JuliaCall::julia_setup()` and rewrites its two common failures:
+#' "Julia is not found." becomes circuitscaper's not-found message, and a
+#' failure while JuliaCall loads its own Julia setup script (which JuliaCall
+#' reports only as "Error happens when you try to execute command ...
+#' setup.jl") gets an explanation and a list of common causes. In the latter
+#' case the underlying Julia error has usually been printed just above.
+#'
+#' @param setup_args List of arguments for `JuliaCall::julia_setup()`.
+#' @param quiet Logical. Suppress JuliaCall's messages.
+#' @param julia_home The `julia_home` the user gave, or `NULL`, for the
+#'   not-found message.
+#' @return Whatever `JuliaCall::julia_setup()` returns, invisibly.
+#' @noRd
+run_julia_setup <- function(setup_args, quiet = TRUE, julia_home = NULL) {
+  out <- tryCatch(
+    if (quiet) {
+      suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
+    } else {
+      do.call(JuliaCall::julia_setup, setup_args)
+    },
+    error = function(e) {
+      msg <- conditionMessage(e)
+      if (grepl("Julia is not found", msg, fixed = TRUE)) {
+        stop(julia_not_found_message(julia_home), call. = FALSE)
+      }
+      if (is_juliacall_setup_error(msg)) {
+        stop(juliacall_setup_error_message(msg), call. = FALSE)
+      }
+      stop(e)
+    }
+  )
+  invisible(out)
+}
+
+
+#' Is This JuliaCall's Opaque Setup-Script Failure?
+#' @param msg Character error message.
+#' @noRd
+is_juliacall_setup_error <- function(msg) {
+  grepl("setup.jl", msg, fixed = TRUE) ||
+    grepl("Error happens when you try to execute command", msg, fixed = TRUE)
+}
+
+
+#' Explain JuliaCall's Opaque Setup-Script Failure
+#' @param msg The original error message.
+#' @noRd
+juliacall_setup_error_message <- function(msg) {
+  paste0(
+    "Julia started, but JuliaCall could not finish connecting it to R. ",
+    "The underlying Julia error is usually printed just above this ",
+    "message (look for 'LoadError' or 'ERROR:'). Common causes:\n",
+    "  * Julia older than ", min_julia_version(), ", which installs old ",
+    "Julia packages that don't work with current R (e.g., 'undefined ",
+    "symbol: SET_SYMVALUE'). Restart R and run cs_install_julia(force = ",
+    "TRUE); if you have the CRAN release of 'JuliaCall', first run ",
+    "remotes::install_github(\"JuliaInterop/JuliaCall\").\n",
+    "  * A clash between libraries R has loaded and Julia's own (e.g., ",
+    "'GLIBCXX' or 'incorrect library version' errors). Start R outside any ",
+    "conda environment; on Linux, also make sure R isn't picking up an ",
+    "older system libstdc++.\n",
+    "  * A failed or partial Julia package installation. Restart R and run ",
+    "cs_install_julia() again.\n",
+    "Restart R before trying again: a Julia session that failed to start ",
+    "can't be restarted within the same R session.\n\n",
+    "Original error from JuliaCall:\n", msg
+  )
 }
 
 
@@ -415,7 +475,9 @@ cs_julia_available <- function() {
             out <- system2(
                   julia_bin,
                   c("--startup-file=no", "-e", '"using Circuitscape, Omniscape; println(true)"'),
-                  stdout = TRUE, stderr = FALSE
+                  stdout = TRUE, stderr = FALSE,
+                  # generous: the first load after an install precompiles
+                  timeout = 600
             )
             any(trimws(out) == "true")
       }, error = function(e) FALSE)
@@ -479,8 +541,10 @@ find_julia_bin <- function(login_shell = TRUE) {
   # 5. Login shell PATH (Unix-alikes) or common install location (Windows)
   if (!windows && login_shell) {
     bin <- tryCatch(
+      # timeout: a login shell runs the user's profile, which could be slow
+      # or wait for input; this runs on package attach.
       suppressWarnings(system2("bash", c("-l", "-c", shQuote("command -v julia")),
-                               stdout = TRUE, stderr = FALSE)),
+                               stdout = TRUE, stderr = FALSE, timeout = 10)),
       error = function(e) character(0)
     )
     bin <- trimws(bin[nzchar(trimws(bin))])

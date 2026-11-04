@@ -101,6 +101,43 @@ test_that("os_run runs end-to-end", {
   expect_true(terra::nlyr(result) >= 1)
 })
 
+test_that("os_run runs in parallel and matches the serial result", {
+  skip_if_no_julia()
+  skip_if_not_installed("terra")
+  # Needs Julia started with several threads, e.g. JULIA_NUM_THREADS="2,0"
+  # set before the test session (as the integration CI job does).
+  skip_if(.cs_env$julia_threads < 2L, "Julia is running with one thread")
+
+  res <- terra::rast(system.file("testdata/resistance.asc",
+                                 package = "circuitscaper"))
+
+  serial <- os_run(res, radius = 3, verbose = FALSE)
+  # No warning: the guard must not force a serial run in a correctly
+  # configured session (it once mistook GC threads for interactive ones).
+  expect_no_warning(
+    parallel <- os_run(res, radius = 3, parallelize = TRUE,
+                       julia_threads = .cs_env$julia_threads, verbose = FALSE)
+  )
+  expect_equal(terra::values(parallel), terra::values(serial),
+               tolerance = 1e-6)
+})
+
+test_that("os_run writes ASCII outputs to output_dir", {
+  skip_if_no_julia()
+  skip_if_not_installed("terra")
+
+  res <- terra::rast(system.file("testdata/resistance.asc",
+                                 package = "circuitscaper"))
+  out_dir <- tempfile("os_keep_")
+  on.exit(unlink(out_dir, recursive = TRUE), add = TRUE)
+
+  result <- os_run(res, radius = 3, output_dir = out_dir, verbose = FALSE)
+  files <- list.files(file.path(out_dir, "omniscape_output"))
+  expect_true("cum_currmap.asc" %in% files)
+  expect_false(any(grepl("\\.tif$", files)))
+  expect_identical(names(result)[1], "cumulative_current")
+})
+
 test_that("CRS is preserved through round-trip", {
   skip_if_no_julia()
   skip_if_not_installed("terra")

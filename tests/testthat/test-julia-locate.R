@@ -111,6 +111,9 @@ test_that("find_julia_bin() ignores a stale install record", {
 })
 
 test_that("cs_setup() fails cleanly when no Julia can be found", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   skip_if(.cs_env$julia_ready, "Julia is already running in this session")
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
@@ -125,6 +128,9 @@ test_that("cs_setup() fails cleanly when no Julia can be found", {
 })
 
 test_that("cs_setup() gives a specific error for a bad julia_home", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   skip_if(.cs_env$julia_ready, "Julia is already running in this session")
 
   expect_error(

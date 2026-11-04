@@ -49,6 +49,9 @@ test_that("check_julia_version accepts supported and unknown versions", {
 })
 
 test_that("cs_setup stops on an old Julia before starting it", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   skip_on_os("windows")
   skip_if(.cs_env$julia_ready, "Julia is already running in this session")
   old <- fake_julia_version("julia version 1.9.4")
@@ -57,6 +60,9 @@ test_that("cs_setup stops on an old Julia before starting it", {
 })
 
 test_that("cs_install_julia rejects an existing old Julia without force", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   skip_on_os("windows")
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
@@ -70,6 +76,9 @@ test_that("cs_install_julia rejects an existing old Julia without force", {
 })
 
 test_that("cs_install_julia rejects unsupported version requests", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   expect_error(cs_install_julia(force = TRUE, version = "1.9.4"),
                "requires Julia >= 1.10")
   expect_error(cs_install_julia(force = TRUE, version = "newest"),
@@ -97,4 +106,46 @@ test_that("outdated JuliaCall message gives both ways forward", {
   expect_match(msg, "remotes::install_github(\"JuliaInterop/JuliaCall\")",
                fixed = TRUE)
   expect_match(msg, "julialang.org/install", fixed = TRUE)
+})
+
+test_that("JuliaCall releases after 0.17.6 are never treated as outdated", {
+  cran_body <- function() max(names(list()))
+  expect_false(juliacall_install_is_outdated(cran_body,
+                                             version = package_version("0.18.0")))
+  expect_true(juliacall_install_is_outdated(cran_body,
+                                            version = package_version("0.17.6")))
+})
+
+test_that("JuliaCall's opaque setup failure is recognized and explained", {
+  raw <- paste0(
+    "Error happens when you try to execute command ENV[\"R_HOME\"] = ",
+    "\"/usr/lib/R\";Base.include(Main,\"/x/JuliaCall/julia/setup.jl\") in Julia."
+  )
+  expect_true(is_juliacall_setup_error(raw))
+  expect_false(is_juliacall_setup_error("Julia is not found."))
+
+  msg <- juliacall_setup_error_message(raw)
+  expect_match(msg, "printed just above")
+  expect_match(msg, "cs_install_julia(force = TRUE)", fixed = TRUE)
+  expect_match(msg, "conda")
+  expect_match(msg, "Restart R")
+  expect_match(msg, raw, fixed = TRUE)
+})
+
+test_that("run_julia_setup rewrites JuliaCall's errors", {
+  local_mocked_bindings(
+    julia_setup = function(...) stop(paste0(
+      "Error happens when you try to execute command ",
+      "Base.include(Main,\"setup.jl\") in Julia.")),
+    .package = "JuliaCall"
+  )
+  expect_error(run_julia_setup(list()), "could not finish connecting")
+
+  local_mocked_bindings(julia_setup = function(...) stop("Julia is not found."),
+                        .package = "JuliaCall")
+  expect_error(run_julia_setup(list()), "cs_install_julia()", fixed = TRUE)
+
+  local_mocked_bindings(julia_setup = function(...) stop("something else"),
+                        .package = "JuliaCall")
+  expect_error(run_julia_setup(list()), "^something else$")
 })

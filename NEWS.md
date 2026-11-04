@@ -2,6 +2,14 @@
 
 ## Bug fixes
 
+* When JuliaCall fails while connecting R and Julia, `cs_setup()` and
+  `cs_install_julia()` now explain the failure and list the common causes,
+  instead of passing on JuliaCall's bare "Error happens when you try to
+  execute command ... setup.jl".
+* The shell and Julia commands circuitscaper runs to find and check Julia
+  (including at package attach) now time out instead of potentially hanging,
+  e.g. on a slow login shell profile.
+
 * `cs_setup()` and `cs_install_julia()` now refuse Julia versions older than
   1.10 with an explanation of how to upgrade. On older Julia, the package
   manager falls back to old releases of Circuitscape.jl, Omniscape.jl, and

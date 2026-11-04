@@ -34,8 +34,10 @@ parse_julia_version <- function(output) {
 julia_version <- function(julia_bin) {
   if (is.null(julia_bin) || !nzchar(julia_bin)) return(NULL)
   out <- tryCatch(
+    # timeout: a juliaup launcher may update itself or fetch a channel
+    # first. On timeout the version is unknown, which doesn't block setup.
     suppressWarnings(system2(julia_bin, c("--startup-file=no", "--version"),
-                             stdout = TRUE, stderr = FALSE)),
+                             stdout = TRUE, stderr = FALSE, timeout = 60)),
     error = function(e) character(0)
   )
   parse_julia_version(out)
@@ -84,9 +86,16 @@ check_julia_version <- function(julia_bin) {
 #'
 #' @param fun The function to inspect, or `NULL` to look it up. Exposed for
 #'   testing.
+#' @param version Installed JuliaCall version. Exposed for testing.
 #' @return Logical. `TRUE` if the installed JuliaCall has the bugs.
 #' @noRd
-juliacall_install_is_outdated <- function(fun = NULL) {
+juliacall_install_is_outdated <- function(fun = NULL,
+                                          version = utils::packageVersion("JuliaCall")) {
+  # Any release after 0.17.6 postdates the fix; only inspect the code for
+  # 0.17.6 itself, which is both the buggy CRAN release and the fixed
+  # GitHub version. This keeps a future rewrite of julia_latest_version()
+  # from being mistaken for the bug.
+  if (version > "0.17.6") return(FALSE)
   if (is.null(fun)) {
     fun <- get0("julia_latest_version", envir = asNamespace("JuliaCall"),
                 mode = "function", inherits = FALSE)

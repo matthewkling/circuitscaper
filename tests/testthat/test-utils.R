@@ -134,6 +134,9 @@ test_that("validate_omniscape_values ignores NA and file paths", {
 })
 
 test_that("os_run stops before starting Julia on zero conductance", {
+  # Guards that must stop before Julia starts or anything downloads; if one
+  # regressed, this test would start or install Julia, so never on CRAN.
+  skip_on_cran()
   skip_if_not_installed("terra")
   r <- terra::rast(nrows = 5, ncols = 5, vals = c(0, rep(1, 24)))
   expect_error(os_run(r, radius = 2, resistance_is = "conductances"),

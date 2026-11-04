@@ -1,0 +1,79 @@
+# Runs the integration tests, which talk to Julia, against a real Julia
+# installation with Circuitscape.jl and Omniscape.jl. The regular
+# R-CMD-check workflow has no Julia, so it skips all of them.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+name: julia-integration.yaml
+
+permissions: read-all
+
+jobs:
+  julia-integration:
+    runs-on: ${{ matrix.config.os }}
+
+    name: ${{ matrix.config.os }} (R ${{ matrix.config.r }}, Julia ${{ matrix.config.julia }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest,  r: 'release', julia: '1'}
+          - {os: macos-latest,   r: 'release', julia: '1'}
+          - {os: windows-latest, r: 'release', julia: '1'}
+          # Oldest Julia circuitscaper supports
+          - {os: ubuntu-latest,  r: 'release', julia: '1.10'}
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      # Make integration tests fail, not skip, if Julia can't be set up
+      CIRCUITSCAPER_REQUIRE_JULIA: 'true'
+      # Start Julia with two default threads and no interactive thread, so
+      # the parallel os_run() test runs
+      JULIA_NUM_THREADS: '2,0'
+      NOT_CRAN: 'true'
+
+    defaults:
+      run:
+        # bash on every OS, including Windows (Git Bash), so quoting in the
+        # julia -e and Rscript -e commands below works the same everywhere
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.config.julia }}
+
+      - uses: julia-actions/cache@v3
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      # JuliaCall loads libR from Julia; on Linux it must be on the library path
+      - name: Add libR to the library path (Linux)
+        if: runner.os == 'Linux'
+        run: echo "LD_LIBRARY_PATH=$(R RHOME)/lib:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat, local::.
+          needs: check
+
+      - name: Install Circuitscape.jl and Omniscape.jl
+        run: julia -e 'using Pkg; Pkg.add(["Circuitscape", "Omniscape"]); Pkg.precompile()'
+
+      - name: Report versions
+        run: |
+          julia --version
+          julia -e 'using Pkg; Pkg.status()'
+          Rscript -e 'sessionInfo(); packageVersion("JuliaCall")'
+
+      - name: Run tests
+        run: Rscript -e 'testthat::test_local(".", reporter = "summary", stop_on_failure = TRUE)'
