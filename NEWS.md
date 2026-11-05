@@ -2,6 +2,16 @@
 
 ## Bug fixes
 
+* On Linux, setting up Julia could crash Julia's package manager
+  (a segfault while "Installing known registries", or "Package Suppressor
+  not found" afterwards). R puts its own library directories, including
+  system ones such as `/usr/lib/x86_64-linux-gnu`, on `LD_LIBRARY_PATH` for
+  every program it starts, and Julia then loaded the system's versions of
+  libraries it bundles. circuitscaper now installs JuliaCall's Julia
+  dependencies (RCall.jl, Suppressor.jl), and `cs_install_julia()` installs
+  Circuitscape.jl and Omniscape.jl, in a Julia child process without R's
+  library path, and starts 'JuliaCall' with `install = FALSE`.
+
 * When JuliaCall fails while connecting R and Julia, `cs_setup()` and
   `cs_install_julia()` now explain the failure and list the common causes,
   instead of passing on JuliaCall's bare "Error happens when you try to

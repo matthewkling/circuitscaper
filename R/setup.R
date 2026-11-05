@@ -122,7 +122,15 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   julia_home_used <- dirname(julia_bin)
 
   message("Initializing Julia (one-time per session)...")
-  setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home_used, ...)
+  # Make sure RCall.jl and Suppressor.jl, which JuliaCall needs, are
+  # installed, in a child Julia process with a clean library path, then tell
+  # JuliaCall not to install them itself (it would use R's library path,
+  # which crashes Julia's package manager on some Linux systems).
+  install_julia_dependencies(julia_bin, quiet = TRUE)
+  setup_args <- utils::modifyList(
+    list(installJulia = FALSE, JULIA_HOME = julia_home_used, install = FALSE),
+    list(...)
+  )
   run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
   check_running_julia_version()
 
@@ -336,23 +344,19 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
     julia_home <- dirname(julia_bin)
   }
 
-  # Step 2: Start that Julia so we can install packages
-  check_julia_version(file.path(julia_home, julia_exe()))
-  message("Initializing Julia...")
-  run_julia_setup(list(installJulia = FALSE, JULIA_HOME = julia_home),
-                  quiet = TRUE)
-  check_running_julia_version()
-
-  # Step 3: Install Julia packages
-  message("Installing Circuitscape.jl...")
-  JuliaCall::julia_install_package("Circuitscape")
-
-  message("Installing Omniscape.jl...")
-  JuliaCall::julia_install_package("Omniscape")
+  # Step 2: Install the Julia packages, in a child Julia process rather than
+  # in a Julia session inside R (see install_julia_dependencies())
+  julia_bin <- file.path(julia_home, julia_exe())
+  check_julia_version(julia_bin)
+  message("Installing Circuitscape.jl, Omniscape.jl, and JuliaCall's Julia ",
+          "packages (this can take several minutes)...")
+  install_julia_dependencies(julia_bin,
+                             packages = c("Circuitscape", "Omniscape"),
+                             update = force, quiet = FALSE)
 
   message("Installation complete. Julia and all required packages are ready.")
 
-  # Step 4: Complete session setup (loads packages, JIT warmup, etc.)
+  # Step 3: Complete session setup (starts Julia, loads packages, JIT warmup)
   cs_setup(julia_home = julia_home, quiet = TRUE)
 
   invisible(TRUE)
