@@ -51,7 +51,7 @@ pre-warm the session.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cs_setup</span><span class="op">(</span>julia_home <span class="op">=</span> <span class="cn">NULL</span>, threads <span class="op">=</span> <span class="fl">1L</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cs_setup</span><span class="op">(</span>julia_home <span class="op">=</span> <span class="cn">NULL</span>, threads <span class="op">=</span> <span class="fl">1L</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -60,11 +60,11 @@ pre-warm the session.</p>
 
 <dl><dt id="arg-julia-home">julia_home<a class="anchor" aria-label="anchor" href="#arg-julia-home"></a></dt>
 <dd><p>Character. Path to the Julia <code>bin/</code> directory. If
-<code>NULL</code> (default), Julia is located the same way as
-<code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code>: the <code>JULIA_HOME</code> option or environment
-variable, a Julia installed by <code><a href="cs_install_julia.html">cs_install_julia()</a></code> or
-<code><a href="https://rdrr.io/pkg/JuliaCall/man/install_julia.html" class="external-link">JuliaCall::install_julia()</a></code>, the system PATH (including a login
-shell's PATH on macOS and Linux), and common Windows install locations.</p></dd>
+<code>NULL</code> (default), Julia is looked for in: the <code>JULIA_HOME</code> option or
+environment variable, the <code>JULIA_BINDIR</code> environment variable, a Julia
+installed by <code><a href="cs_install_julia.html">cs_install_julia()</a></code> (or by <code><a href="https://rdrr.io/pkg/JuliaCall/man/install_julia.html" class="external-link">JuliaCall::install_julia()</a></code>),
+the system PATH (including a login shell's PATH on macOS and Linux), and
+common Windows install locations.</p></dd>
 
 
 <dt id="arg-threads">threads<a class="anchor" aria-label="anchor" href="#arg-threads"></a></dt>
@@ -79,10 +79,6 @@ regardless of this value.</p></dd>
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical. Suppress Julia startup messages. Default <code>TRUE</code>.</p></dd>
 
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments passed to <code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code>.</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -93,7 +89,8 @@ regardless of this value.</p></dd>
     <p><code>cs_setup()</code> does <strong>not</strong> install Julia or Julia packages. If Julia is not
 found or the required packages are missing, it throws an informative error
 directing you to <code><a href="cs_install_julia.html">cs_install_julia()</a></code>.</p>
-<p><code>cs_setup()</code> will:</p><ul><li><p>Verify that Julia is installed and accessible.</p></li>
+<p><code>cs_setup()</code> will:</p><ul><li><p>Verify that Julia is installed and accessible, and start it. Julia runs
+in its own process, connected to R by 'JuliaConnectoR'.</p></li>
 <li><p>Verify that the Circuitscape and Omniscape Julia packages are installed.</p></li>
 <li><p>Load both packages and warm up the JIT compiler.</p></li>
 </ul><p>Once Julia is initialized, it stays warm for the R session. Subsequent calls
@@ -107,9 +104,9 @@ mid-session. Multi-threading is used by <code><a href="os_run.html">os_run()</a>
 <code>cs_one_to_all</code>, etc.) do not benefit from multiple threads.</p>
 <p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">cs_setup</span>(<span class="at">threads =</span> <span class="dv">4</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">os_run</span>(resistance, <span class="at">radius =</span> <span class="dv">50</span>, <span class="at">parallelize =</span> <span class="cn">TRUE</span>)</span></code></pre><p></p></div>
-<p>Call <code>cs_setup(threads = )</code> before anything else starts Julia, including
-<code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code> or another package that uses JuliaCall. If you
-need to start Julia yourself, set the thread count first with
+<p>Call <code>cs_setup(threads = )</code> before anything else starts Julia, such as
+another package that uses 'JuliaConnectoR'. If you need to start Julia
+yourself, set the thread count first with
 <code>Sys.setenv(JULIA_NUM_THREADS = "4,0")</code>. The <code>,0</code> (no interactive
 threads) matters: Omniscape releases before 0.6.3 fail in parallel when
 Julia has an interactive thread, and <code><a href="os_run.html">os_run()</a></code> then falls back to a

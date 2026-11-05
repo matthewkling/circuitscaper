@@ -110,8 +110,8 @@ Omniscape packages. You can install everything from R:</p>
 for your platform from julialang.org into circuitscaper’s own data
 directory, so it doesn’t touch any other Julia you have installed.</p>
 <p>If you already have Julia installed, <code><a href="../reference/cs_setup.html">cs_setup()</a></code> will
-find it automatically, searching the same places as JuliaCall: the
-<code>JULIA_HOME</code> environment variable, a Julia installed by
+find it automatically, searching the <code>JULIA_HOME</code> and
+<code>JULIA_BINDIR</code> environment variables, a Julia installed by
 <code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code>, and your PATH. If Julia is somewhere
 else, you can point to it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
@@ -393,14 +393,13 @@ times. Julia’s thread count is fixed when Julia starts, so set it via
 <span>                 block_size <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>                 parallelize <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>This also means <code><a href="../reference/cs_setup.html">cs_setup()</a></code> must come before anything
-else that starts Julia, such as a direct call to
-<code><a href="https://rdrr.io/pkg/JuliaCall/man/julia_setup.html" class="external-link">JuliaCall::julia_setup()</a></code>. If you need to start Julia
-yourself, set the thread count first with
-<code>Sys.setenv(JULIA_NUM_THREADS = "4,0")</code>. The <code>,0</code>
-keeps Julia from adding an “interactive” thread, which makes parallel
-runs fail in Omniscape releases before 0.6.3. If the running Julia
-session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code> warns and runs
-serially.</p>
+else that starts Julia, such as another package that uses
+‘JuliaConnectoR’. If you need to start Julia yourself, set the thread
+count first with <code>Sys.setenv(JULIA_NUM_THREADS = "4,0")</code>. The
+<code>,0</code> keeps Julia from adding an “interactive” thread, which
+makes parallel runs fail in Omniscape releases before 0.6.3. If the
+running Julia session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code> warns
+and runs serially.</p>
 </div>
 </div>
 <div class="section level2">
