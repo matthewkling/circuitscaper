@@ -84,38 +84,3 @@ test_that("cs_install_julia rejects unsupported version requests", {
   expect_error(cs_install_julia(force = TRUE, version = "lts"),
                "must be \"latest\"")
 })
-
-test_that("JuliaCall's opaque setup failure is recognized and explained", {
-  raw <- paste0(
-    "Error happens when you try to execute command ENV[\"R_HOME\"] = ",
-    "\"/usr/lib/R\";Base.include(Main,\"/x/JuliaCall/julia/setup.jl\") in Julia."
-  )
-  expect_true(is_juliacall_setup_error(raw))
-  expect_false(is_juliacall_setup_error("Julia is not found."))
-
-  msg <- juliacall_setup_error_message(raw)
-  expect_match(msg, "printed just above")
-  expect_match(msg, "cs_install_julia(force = TRUE)", fixed = TRUE)
-  expect_no_match(msg, "install_github")
-  expect_match(msg, "conda")
-  expect_match(msg, "Restart R")
-  expect_match(msg, raw, fixed = TRUE)
-})
-
-test_that("run_julia_setup rewrites JuliaCall's errors", {
-  local_mocked_bindings(
-    julia_setup = function(...) stop(paste0(
-      "Error happens when you try to execute command ",
-      "Base.include(Main,\"setup.jl\") in Julia.")),
-    .package = "JuliaCall"
-  )
-  expect_error(run_julia_setup(list()), "could not finish connecting")
-
-  local_mocked_bindings(julia_setup = function(...) stop("Julia is not found."),
-                        .package = "JuliaCall")
-  expect_error(run_julia_setup(list()), "cs_install_julia()", fixed = TRUE)
-
-  local_mocked_bindings(julia_setup = function(...) stop("something else"),
-                        .package = "JuliaCall")
-  expect_error(run_julia_setup(list()), "^something else$")
-})

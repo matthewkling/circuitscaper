@@ -57,9 +57,9 @@ from julialang.org into circuitscaper's own data directory, so it doesn't
 touch any other Julia you have installed.
 
 If you already have Julia installed, `cs_setup()` will find it automatically,
-searching the same places as JuliaCall: the `JULIA_HOME` environment
-variable, a Julia installed by `cs_install_julia()`, and your PATH. If Julia
-is somewhere else, you can point to it:
+searching the `JULIA_HOME` and `JULIA_BINDIR` environment variables, a Julia
+installed by `cs_install_julia()`, and your PATH. If Julia is somewhere else,
+you can point to it:
 
 ```{r setup, eval = FALSE}
 cs_setup(julia_home = "/path/to/julia/bin")
@@ -338,7 +338,7 @@ result <- os_run(resistance, radius = 20,
 ```
 
 This also means `cs_setup()` must come before anything else that starts
-Julia, such as a direct call to `JuliaCall::julia_setup()`. If you need to
+Julia, such as another package that uses 'JuliaConnectoR'. If you need to
 start Julia yourself, set the thread count first with
 `Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` keeps Julia from adding an
 "interactive" thread, which makes parallel runs fail in Omniscape releases

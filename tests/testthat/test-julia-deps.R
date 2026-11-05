@@ -1,4 +1,5 @@
-# Tests for running Julia child processes to install packages. A fake julia
+# Tests for running Julia child processes to install packages, and for
+# the helpers that talk to the running Julia. A fake julia
 # (a shell script) records its arguments and environment, so these run
 # without Julia.
 
@@ -26,7 +27,7 @@ test_that("Julia child processes run without R's LD_LIBRARY_PATH on Linux", {
   fake <- fake_recording_julia()
   withr::local_envvar(LD_LIBRARY_PATH = "/opt/R/lib:/usr/lib/x86_64-linux-gnu")
 
-  install_julia_dependencies(fake$bin)
+  install_julia_packages(fake$bin, "Circuitscape")
   calls <- readLines(fake$log)
   expect_true("LD_LIBRARY_PATH=<unset>" %in% calls)
   expect_false(any(grepl("x86_64-linux-gnu", calls)))
@@ -35,125 +36,81 @@ test_that("Julia child processes run without R's LD_LIBRARY_PATH on Linux", {
                    "/opt/R/lib:/usr/lib/x86_64-linux-gnu")
 })
 
-test_that("JuliaCall's dependency script runs with this R's R_HOME", {
+test_that("packages are added (and updated on request) in a script", {
   skip_on_os("windows")
   fake <- fake_recording_julia()
-  install_julia_dependencies(fake$bin)
-  args_line <- grep("^ARGS=", readLines(fake$log), value = TRUE)
-  expect_length(args_line, 1)
-  expect_match(args_line, "install_dependency.jl", fixed = TRUE)
-  expect_match(args_line, R.home(), fixed = TRUE)
-})
-
-test_that("extra packages are added (and updated on request) in a script", {
-  skip_on_os("windows")
-  fake <- fake_recording_julia()
-  install_julia_dependencies(fake$bin, packages = c("Circuitscape", "Omniscape"),
-                             update = TRUE)
+  install_julia_packages(fake$bin, c("Circuitscape", "Omniscape"),
+                         update = TRUE)
   calls <- readLines(fake$log)
-  expect_length(grep("^ARGS=", calls), 2)
+  expect_length(grep("^ARGS=", calls), 1)
   expect_true('Pkg.add(["Circuitscape", "Omniscape"])' %in% calls)
   expect_true('Pkg.update(["Circuitscape", "Omniscape"])' %in% calls)
+  expect_true("Pkg.precompile()" %in% calls)
 
   fake2 <- fake_recording_julia()
-  install_julia_dependencies(fake2$bin, packages = "Circuitscape")
+  install_julia_packages(fake2$bin, "Circuitscape")
   expect_false(any(grepl("Pkg.update", readLines(fake2$log))))
+})
+
+test_that("the package list includes what JuliaConnectoR needs", {
+  expect_setequal(julia_packages(), c("Circuitscape", "Omniscape", "Tables"))
 })
 
 test_that("a failing Julia child process stops with its output", {
   skip_on_os("windows")
   fake <- fake_recording_julia(status = 139L)
-  expect_error(install_julia_dependencies(fake$bin),
+  expect_error(install_julia_packages(fake$bin, "Circuitscape"),
                "exit status 139, a crash")
-  expect_error(install_julia_dependencies(fake$bin), "some julia output",
-               fixed = TRUE)
+  expect_error(install_julia_packages(fake$bin, "Circuitscape"),
+               "some julia output", fixed = TRUE)
 })
 
-test_that("cs_setup tells JuliaCall not to install dependencies itself", {
+test_that("jl_string() quotes and escapes for Julia", {
+  expect_identical(jl_string("/a/b.jl"), '"/a/b.jl"')
+  expect_identical(jl_string("C:\\Users\\x"), '"C:\\\\Users\\\\x"')
+  expect_identical(jl_string('say "hi" $x'), '"say \\"hi\\" \\$x"')
+})
+
+test_that("cs_setup starts the Julia it found via JuliaConnectoR", {
   skip_on_os("windows")
   skip_on_cran()
   skip_if(.cs_env$julia_ready, "Julia is already running in this session")
   fake <- fake_recording_julia()
   # A fake julia that passes the version check
-  writeLines(c("#!/bin/sh", "echo 'julia version 1.12.1'"),
-             file.path(dirname(fake$bin), "julia"))
+  writeLines(c("#!/bin/sh", "echo 'julia version 1.12.1'"), fake$bin)
+  withr::local_envvar(JULIA_BINDIR = NA)
   seen <- NULL
-  local_mocked_bindings(
-    install_julia_dependencies = function(...) invisible(TRUE)
-  )
-  local_mocked_bindings(
-    julia_setup = function(...) { seen <<- list(...); stop("stop here") },
-    .package = "JuliaCall"
-  )
-  expect_error(suppressMessages(cs_setup(julia_home = dirname(fake$bin))),
-               "stop here")
-  expect_false(seen$install)
-  expect_false(seen$installJulia)
-})
-
-# A fake Julia install with Julia's layout: bin/julia and lib/julia/libunwind
-fake_julia_layout <- function(env = parent.frame()) {
-  root <- withr::local_tempfile(pattern = "julialayout_", .local_envir = env)
-  dir.create(file.path(root, "bin"), recursive = TRUE)
-  dir.create(file.path(root, "lib", "julia"), recursive = TRUE)
-  file.create(file.path(root, "bin", "julia"))
-  for (f in c("libunwind.so", "libunwind.so.8", "libunwind.so.8.2.0")) {
-    file.create(file.path(root, "lib", "julia", f))
-  }
-  root
-}
-
-test_that("Julia's libunwind is preloaded into R on Linux", {
-  skip_on_os(c("windows", "mac", "solaris"))
-  root <- fake_julia_layout()
-  loaded <- character(0)
-  local_mocked_bindings(load_shared_library = function(path) {
-    loaded <<- c(loaded, path)
+  local_mocked_bindings(jl_eval = function(expr) {
+    seen <<- c(seen, expr)
+    stop("stop here")
   })
-  old <- .cs_env$libunwind
-  on.exit(.cs_env$libunwind <- old, add = TRUE)
-  .cs_env$libunwind <- NULL
-
-  lib <- preload_julia_libunwind(file.path(root, "bin", "julia"))
-  expect_identical(lib, normalizePath(file.path(root, "lib", "julia",
-                                                "libunwind.so")))
-  expect_identical(loaded, lib)
-
-  # Only once per session
-  preload_julia_libunwind(file.path(root, "bin", "julia"))
-  expect_length(loaded, 1)
+  expect_error(suppressMessages(cs_setup(julia_home = dirname(fake$bin))),
+               "could not be started")
+  expect_identical(Sys.getenv("JULIA_BINDIR"), dirname(fake$bin))
+  expect_length(seen, 1)
 })
 
-test_that("a failed preload warns rather than stopping setup", {
+test_that("a missing Julia package is reported, not loaded", {
+  local_mocked_bindings(jl_eval = function(expr) FALSE)
+  expect_false(jl_package_installed("Circuitscape"))
+  local_mocked_bindings(jl_eval = function(expr) {
+    expect_match(expr, 'Base.find_package("Omniscape")', fixed = TRUE)
+    TRUE
+  })
+  expect_true(jl_package_installed("Omniscape"))
+})
+
+test_that("local_clean_library_path() restores LD_LIBRARY_PATH on exit", {
   skip_on_os(c("windows", "mac", "solaris"))
-  root <- fake_julia_layout()
-  local_mocked_bindings(load_shared_library = function(path) stop("nope"))
-  old <- .cs_env$libunwind
-  on.exit(.cs_env$libunwind <- old, add = TRUE)
-  .cs_env$libunwind <- NULL
-  expect_warning(preload_julia_libunwind(file.path(root, "bin", "julia")),
-                 "Could not preload Julia's libunwind")
-  expect_null(.cs_env$libunwind)
-})
+  withr::local_envvar(LD_LIBRARY_PATH = "/opt/R/lib")
+  inner <- function() {
+    local_clean_library_path()
+    Sys.getenv("LD_LIBRARY_PATH", unset = "<unset>")
+  }
+  expect_identical(inner(), "<unset>")
+  expect_identical(Sys.getenv("LD_LIBRARY_PATH"), "/opt/R/lib")
 
-test_that("nothing is preloaded off Linux or without a libunwind", {
-  root <- withr::local_tempfile(pattern = "nolib_")
-  dir.create(file.path(root, "bin"), recursive = TRUE)
-  dir.create(file.path(root, "lib", "julia"), recursive = TRUE)
-  file.create(file.path(root, "bin", "julia"))
-  local_mocked_bindings(load_shared_library = function(path) stop("called"))
-  expect_null(preload_julia_libunwind(file.path(root, "bin", "julia")))
-})
-
-test_that("with_ld_preload sets LD_PRELOAD only while evaluating", {
-  withr::local_envvar(LD_PRELOAD = NA)
-  seen <- with_ld_preload("/x/libunwind.so", Sys.getenv("LD_PRELOAD"))
-  expect_identical(seen, "/x/libunwind.so")
-  expect_identical(Sys.getenv("LD_PRELOAD", unset = "<unset>"), "<unset>")
-
-  withr::local_envvar(LD_PRELOAD = "/other.so")
-  seen <- with_ld_preload("/x/libunwind.so", Sys.getenv("LD_PRELOAD"))
-  expect_identical(seen, "/x/libunwind.so /other.so")
-  expect_identical(Sys.getenv("LD_PRELOAD"), "/other.so")
-  expect_identical(with_ld_preload(NULL, 42), 42)
+  withr::local_envvar(LD_LIBRARY_PATH = NA)
+  inner()
+  expect_identical(Sys.getenv("LD_LIBRARY_PATH", unset = "<unset>"), "<unset>")
 })

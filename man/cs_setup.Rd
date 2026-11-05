@@ -4,15 +4,15 @@
 \alias{cs_setup}
 \title{Set Up Julia and Load Circuitscape/Omniscape}
 \usage{
-cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE, ...)
+cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE)
 }
 \arguments{
 \item{julia_home}{Character. Path to the Julia \verb{bin/} directory. If
-\code{NULL} (default), Julia is located the same way as
-\code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}}: the \code{JULIA_HOME} option or environment
-variable, a Julia installed by \code{\link[=cs_install_julia]{cs_install_julia()}} or
-\code{\link[JuliaCall:install_julia]{JuliaCall::install_julia()}}, the system PATH (including a login
-shell's PATH on macOS and Linux), and common Windows install locations.}
+\code{NULL} (default), Julia is looked for in: the \code{JULIA_HOME} option or
+environment variable, the \code{JULIA_BINDIR} environment variable, a Julia
+installed by \code{\link[=cs_install_julia]{cs_install_julia()}} (or by \code{JuliaCall::install_julia()}),
+the system PATH (including a login shell's PATH on macOS and Linux), and
+common Windows install locations.}
 
 \item{threads}{Integer. Number of Julia threads to start. Default \code{1L}.
 Takes effect only if Julia is not yet running in this R session — once
@@ -22,8 +22,6 @@ R, and a warning is issued. This setting controls parallelism for
 regardless of this value.}
 
 \item{quiet}{Logical. Suppress Julia startup messages. Default \code{TRUE}.}
-
-\item{...}{Additional arguments passed to \code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}}.}
 }
 \value{
 Invisibly returns \code{TRUE} on success.
@@ -41,7 +39,8 @@ directing you to \code{\link[=cs_install_julia]{cs_install_julia()}}.
 
 \code{cs_setup()} will:
 \itemize{
-\item Verify that Julia is installed and accessible.
+\item Verify that Julia is installed and accessible, and start it. Julia runs
+in its own process, connected to R by 'JuliaConnectoR'.
 \item Verify that the Circuitscape and Omniscape Julia packages are installed.
 \item Load both packages and warm up the JIT compiler.
 }
@@ -59,9 +58,9 @@ mid-session. Multi-threading is used by \code{\link[=os_run]{os_run()}} when
 os_run(resistance, radius = 50, parallelize = TRUE)
 }\if{html}{\out{</div>}}
 
-Call \code{cs_setup(threads = )} before anything else starts Julia, including
-\code{\link[JuliaCall:julia_setup]{JuliaCall::julia_setup()}} or another package that uses JuliaCall. If you
-need to start Julia yourself, set the thread count first with
+Call \code{cs_setup(threads = )} before anything else starts Julia, such as
+another package that uses 'JuliaConnectoR'. If you need to start Julia
+yourself, set the thread count first with
 \code{Sys.setenv(JULIA_NUM_THREADS = "4,0")}. The \verb{,0} (no interactive
 threads) matters: Omniscape releases before 0.6.3 fail in parallel when
 Julia has an interactive thread, and \code{\link[=os_run]{os_run()}} then falls back to a

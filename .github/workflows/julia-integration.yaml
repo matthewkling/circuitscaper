@@ -62,40 +62,19 @@ jobs:
           needs: check
 
       - name: Install Circuitscape.jl and Omniscape.jl
-        run: julia -e 'using Pkg; Pkg.add(["Circuitscape", "Omniscape"]); Pkg.precompile()'
+        run: julia -e 'using Pkg; Pkg.add(["Circuitscape", "Omniscape", "Tables"]); Pkg.precompile()'
 
       - name: Report versions
         run: |
           julia --version
           julia -e 'using Pkg; Pkg.status()'
-          Rscript -e 'sessionInfo(); packageVersion("JuliaCall")'
+          Rscript -e 'sessionInfo(); packageVersion("JuliaConnectoR")'
 
       - name: Run tests
         run: Rscript -e 'testthat::test_local(".", reporter = "summary", stop_on_failure = TRUE)'
 
-      # JuliaCall installs RCall.jl and Suppressor.jl by running
-      # install_dependency.jl in a Julia subprocess of R, and discards its
-      # output. If that crashed, rerun it visibly (so Julia's backtrace
-      # shows), first as JuliaCall runs it, inheriting the LD_LIBRARY_PATH R
-      # sets for its child processes, then with LD_LIBRARY_PATH unset.
-      - name: Diagnose JuliaCall's dependency install (Linux, on failure)
-        if: failure() && runner.os == 'Linux'
-        run: |
-          Rscript -e '
-            script <- system.file("julia/install_dependency.jl", package = "JuliaCall")
-            julia <- circuitscaper:::find_julia_bin(login_shell = FALSE)
-            cat("julia:", julia, "\nR_HOME:", R.home(), "\n")
-            cat("LD_LIBRARY_PATH inside R:", Sys.getenv("LD_LIBRARY_PATH"), "\n\n")
-            cat("== install_dependency.jl as JuliaCall runs it ==\n")
-            print(system2(julia, c("--startup-file=no", script, R.home())))
-            cat("\n== same, with LD_LIBRARY_PATH unset ==\n")
-            Sys.unsetenv("LD_LIBRARY_PATH")
-            print(system2(julia, c("--startup-file=no", script, R.home())))
-          '
-          echo "LD_LIBRARY_PATH outside R: ${LD_LIBRARY_PATH:-<unset>}"
-          cat "$(R RHOME)/etc/ldpaths"
 
-  # The new-user path: no Julia set up beforehand, CRAN JuliaCall, and
+  # The new-user path: no Julia set up beforehand, and
   # cs_install_julia() downloading Julia itself. force = TRUE so it installs
   # its own Julia even where the runner image already has one on the PATH.
   fresh-install:
@@ -132,30 +111,9 @@ jobs:
 
       - name: Install Julia and packages with cs_install_julia()
         run: |
-          Rscript -e 'packageVersion("JuliaCall")'
+          Rscript -e 'packageVersion("JuliaConnectoR")'
           Rscript -e 'circuitscaper::cs_install_julia(force = TRUE)'
 
       - name: Run tests in a new session
         run: Rscript -e 'testthat::test_local(".", reporter = "summary", stop_on_failure = TRUE)'
 
-      # JuliaCall installs RCall.jl and Suppressor.jl by running
-      # install_dependency.jl in a Julia subprocess of R, and discards its
-      # output. If that crashed, rerun it visibly (so Julia's backtrace
-      # shows), first as JuliaCall runs it, inheriting the LD_LIBRARY_PATH R
-      # sets for its child processes, then with LD_LIBRARY_PATH unset.
-      - name: Diagnose JuliaCall's dependency install (Linux, on failure)
-        if: failure() && runner.os == 'Linux'
-        run: |
-          Rscript -e '
-            script <- system.file("julia/install_dependency.jl", package = "JuliaCall")
-            julia <- circuitscaper:::find_julia_bin(login_shell = FALSE)
-            cat("julia:", julia, "\nR_HOME:", R.home(), "\n")
-            cat("LD_LIBRARY_PATH inside R:", Sys.getenv("LD_LIBRARY_PATH"), "\n\n")
-            cat("== install_dependency.jl as JuliaCall runs it ==\n")
-            print(system2(julia, c("--startup-file=no", script, R.home())))
-            cat("\n== same, with LD_LIBRARY_PATH unset ==\n")
-            Sys.unsetenv("LD_LIBRARY_PATH")
-            print(system2(julia, c("--startup-file=no", script, R.home())))
-          '
-          echo "LD_LIBRARY_PATH outside R: ${LD_LIBRARY_PATH:-<unset>}"
-          cat "$(R RHOME)/etc/ldpaths"

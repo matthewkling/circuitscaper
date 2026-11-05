@@ -77,15 +77,15 @@ plot(result$normalized_current)
 | **`cs_advanced()`** | Advanced mode with custom sources and grounds | `Circuitscape.compute()` |
 | **`os_run()`** | Omniscape moving-window connectivity | `Omniscape.run_omniscape()` |
 | **`os_condition()`** | Define conditions for conditional Omniscape connectivity | ??? |
-| **`cs_setup()`** | Initialize Julia session (called automatically) | `JuliaCall::julia_setup()`, `JuliaCall::julia_library()` |
-| **`cs_install_julia()`** | Install Julia and required packages | `JuliaCall::install_julia()`, `JuliaCall::julia_install_package()` |
+| **`cs_setup()`** | Initialize Julia session (called automatically) | `JuliaConnectoR::juliaEval()` |
+| **`cs_install_julia()`** | Install Julia and required packages | Julia's official release index; `Pkg.add()` |
 | **`cs_julia_available()`** | Check whether Julia, Circuitscape.jl, and Omniscape.jl are installed | `julia -e "using Circuitscape"` via `system2()` |
 
 ## Requirements
 
 - R \>= 4.0
 - Julia \>= 1.10 (installed automatically via `cs_install_julia()`)
-- R packages: terra, JuliaCall
+- R packages: terra, JuliaConnectoR
 
 ## Learn More
 
