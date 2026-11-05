@@ -169,14 +169,12 @@ write_source_strengths <- function(strengths, path) {
 #' Runs a Julia function call, optionally suppressing output. On error, the
 #' Julia exception is captured via `sprint(showerror, e)` so that the actual
 #' error type and message are available in R rather than the generic
-#' "Error happens in Julia" from JuliaCall.
+#' wrapped error that the R-Julia bridge would report.
 #'
 #' The key design choice is to **not rethrow** from Julia. Instead, the error
-#' is stored in a global variable and `nothing` is returned. This keeps
-#' JuliaCall in a clean state so we can read the error details afterward.
-#' If `rethrow()` were used, JuliaCall would intercept it and produce the
-#' generic "Error happens in Julia" message, and subsequent `julia_eval()`
-#' calls to read the error variable would fail.
+#' is stored in a global variable and `nothing` is returned, and the error
+#' details are read back afterward. The expression's own value is discarded
+#' (also `nothing`), so large results aren't translated and sent to R.
 #'
 #' @param julia_expr Character. The Julia function call to evaluate
 #'   (e.g., `'Circuitscape.compute("path")'`).
@@ -186,7 +184,7 @@ write_source_strengths <- function(strengths, path) {
 #' @noRd
 run_julia <- function(julia_expr, verbose = FALSE) {
   # Clear any previous error state
-  JuliaCall::julia_eval("global _circuitscaper_last_err = nothing")
+  jl_eval("global _circuitscaper_last_err = nothing")
 
   # Wrap in Julia try-catch that captures the error WITHOUT rethrowing.
   # On error, sprint(showerror, e) converts the exception to a readable
@@ -199,28 +197,28 @@ run_julia <- function(julia_expr, verbose = FALSE) {
   )
 
   wrapped <- if (verbose) {
-    paste0('try; ', julia_expr, '; ', catch_block)
+    paste0('try; ', julia_expr, '; nothing; ', catch_block)
   } else {
     paste0(
       'try; redirect_stdout(devnull) do; redirect_stderr(devnull) do; ',
       julia_expr,
-      '; end; end; ', catch_block
+      '; end; end; nothing; ', catch_block
     )
   }
 
   # Execute — should not throw since errors are caught in Julia.
   # Safety-net tryCatch in case something truly unexpected happens.
   tryCatch(
-    JuliaCall::julia_eval(wrapped),
+    jl_eval(wrapped),
     error = function(e) {
-      # Unexpected JuliaCall-level failure. Try to read the error variable
+      # Unexpected bridge-level failure. Try to read the error variable
       # anyway; if the catch block ran, the detail will be there.
     }
   )
 
   # Check whether the Julia expression errored
   julia_err <- tryCatch(
-    JuliaCall::julia_eval("_circuitscaper_last_err"),
+    jl_eval("_circuitscaper_last_err"),
     error = function(e2) NULL
   )
 
@@ -332,7 +330,7 @@ supported_ini_keys <- function(tool = c("Circuitscape", "Omniscape")) {
     Omniscape = "collect(String, Omniscape.SUPPORTED_ARGS)"
   )
   keys <- tryCatch(
-    as.character(unlist(JuliaCall::julia_eval(expr))),
+    as.character(unlist(jl_eval(expr))),
     error = function(e) NULL
   )
   if (length(keys) == 0) return(NULL)

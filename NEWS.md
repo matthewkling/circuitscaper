@@ -2,19 +2,25 @@
 
 ## Bug fixes
 
-* When JuliaCall fails while connecting R and Julia, `cs_setup()` and
-  `cs_install_julia()` now explain the failure and list the common causes,
-  instead of passing on JuliaCall's bare "Error happens when you try to
-  execute command ... setup.jl".
+* circuitscaper now runs Julia in its own process, connected to R by
+  'JuliaConnectoR', instead of inside R's process via 'JuliaCall'. With
+  Julia inside R, the libraries R had loaded clashed with the ones Julia
+  bundles, and setup failed on Linux: on Ubuntu 24.04, Julia's GDAL could not
+  load because terra had already loaded the system libtiff ("version
+  `LIBTIFF_4.6.1' not found"), and Julia could also crash on the system
+  libunwind. 'JuliaConnectoR' also starts Julia without R's
+  `LD_LIBRARY_PATH`, which crashed Julia's package manager. Julia packages
+  are likewise installed in a separate Julia process with a clean library
+  path. RCall.jl is no longer needed, and the `...` argument of `cs_setup()`
+  (passed to `JuliaCall::julia_setup()`) is gone.
 * The shell and Julia commands circuitscaper runs to find and check Julia
   (including at package attach) now time out instead of potentially hanging,
   e.g. on a slow login shell profile.
 
 * `cs_setup()` and `cs_install_julia()` now refuse Julia versions older than
   1.10 with an explanation of how to upgrade. On older Julia, the package
-  manager falls back to old releases of Circuitscape.jl, Omniscape.jl, and
-  RCall.jl that fail in obscure ways (for example, "undefined symbol:
-  SET_SYMVALUE" on R 4.6). The minimum in `SystemRequirements` is now
+  manager falls back to old releases of Circuitscape.jl and Omniscape.jl
+  that fail in obscure ways. The minimum in `SystemRequirements` is now
   Julia 1.10.
 * `cs_install_julia()` now downloads and installs Julia itself, from the
   official release index at julialang.org, verifying each download against
@@ -25,8 +31,8 @@
   'JuliaCall' (0.17.6) installs Julia 1.9 when asked for the latest version
   and can't install Julia 1.10 or later, so a fresh install failed with
   errors such as "undefined symbol: SET_SYMVALUE".
-* `cs_setup()` now passes the Julia it finds to 'JuliaCall' explicitly, so
-  the Julia whose version it checks is always the one that starts, and
+* `cs_setup()` now starts the Julia it finds explicitly, so the Julia whose
+  version it checks is always the one that starts, and
   stops with a clear message if an older Julia is already running in the
   session.
 
@@ -44,7 +50,7 @@
   interactive thread (e.g. `JULIA_NUM_THREADS = "4"` rather than `"4,0"`),
   which makes Omniscape releases before 0.6.3 fail with a BoundsError. This
   can happen when Julia is started outside `cs_setup()`, for example by
-  calling `JuliaCall::julia_setup()` directly.
+  another package.
 * `cs_setup()` now records the number of threads Julia actually has, and
   warns when `threads` cannot take effect because Julia was already running
   (including when started outside circuitscaper). Previously it recorded the

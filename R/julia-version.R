@@ -1,10 +1,8 @@
 #' Minimum Supported Julia Version
 #'
-#' Current releases of Circuitscape.jl, Omniscape.jl, and RCall.jl (which
-#' JuliaCall uses) all require Julia 1.10. On older Julia, the package
-#' manager silently falls back to old releases, which fail in obscure ways:
-#' for example, RCall.jl releases from before 2025 call `SET_SYMVALUE`, which
-#' R 4.6 no longer exports.
+#' Current releases of Circuitscape.jl and Omniscape.jl require Julia 1.10.
+#' On older Julia, the package manager silently falls back to old releases,
+#' which fail in obscure ways.
 #'
 #' @return A `package_version`.
 #' @noRd
@@ -67,18 +65,18 @@ check_julia_version <- function(julia_bin) {
 }
 
 
-#' Stop if the Julia Running in This R Session Is Too Old
+#' Stop if the Julia Connected to This R Session Is Too Old
 #'
-#' Covers a Julia started earlier in the session (e.g., by a failed setup
-#' attempt or by `JuliaCall::julia_setup()` directly), which
-#' `JuliaCall::julia_setup()` reuses rather than replacing.
+#' Covers a Julia started earlier in the session (e.g., by another package
+#' that uses 'JuliaConnectoR'), which 'JuliaConnectoR' reuses rather than
+#' replacing.
 #'
 #' @return `NULL` invisibly. Called for its error.
 #' @noRd
 check_running_julia_version <- function() {
   v <- tryCatch(
     package_version(sub("[-+].*$", "",
-                        JuliaCall::julia_eval("string(VERSION)"))),
+                        jl_eval("string(VERSION)"))),
     error = function(e) NULL
   )
   if (is.null(v) || v >= min_julia_version()) return(invisible(NULL))

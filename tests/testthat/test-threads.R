@@ -11,7 +11,7 @@ test_that("Omniscape version check handles releases, suffixes, and NA", {
 })
 
 test_that("a single-threaded session runs serially with a fix hint", {
-  # e.g. Julia started by JuliaCall::julia_setup() before cs_setup(threads=)
+  # e.g. Julia started by another package before cs_setup(threads=)
   d <- parallel_decision(nthreads = 1L, ninteractive = 1L,
                          omniscape_version = "0.6.2", requested = 15L)
   expect_false(d$parallelize)
@@ -75,6 +75,6 @@ test_that("thread mismatch message explains the cause and the fix", {
   msg <- thread_mismatch_message(1L, 15L)
   expect_match(msg, "threads = 15 has no effect", fixed = TRUE)
   expect_match(msg, "fixed when Julia starts")
-  expect_match(msg, "JuliaCall::julia_setup()", fixed = TRUE)
+  expect_match(msg, "already running")
   expect_match(msg, "JULIA_NUM_THREADS = \"15,0\"", fixed = TRUE)
 })

@@ -3,7 +3,7 @@
 #' @return Integer. The size of Julia's default thread pool.
 #' @noRd
 julia_nthreads <- function() {
-  as.integer(JuliaCall::julia_eval("Threads.nthreads()"))
+  as.integer(jl_eval("Threads.nthreads()"))
 }
 
 
@@ -22,11 +22,11 @@ julia_nthreads <- function() {
 julia_thread_info <- function() {
   nthreads <- julia_nthreads()
   ninteractive <- tryCatch(
-    as.integer(JuliaCall::julia_eval("Threads.nthreads(:interactive)")),
+    as.integer(jl_eval("Threads.nthreads(:interactive)")),
     error = function(e) NA_integer_
   )
   omniscape_version <- tryCatch(
-    as.character(JuliaCall::julia_eval("string(pkgversion(Omniscape))")),
+    as.character(jl_eval("string(pkgversion(Omniscape))")),
     error = function(e) NA_character_
   )
   list(nthreads = nthreads, ninteractive = ninteractive,
@@ -62,7 +62,7 @@ thread_fix_hint <- function(n) {
   paste0(
     "To run in parallel, restart R and call cs_setup(threads = ", n, ") ",
     "before anything else starts Julia. If you start Julia yourself (for ",
-    "example with JuliaCall::julia_setup()), first run ",
+    "example with JuliaConnectoR), first run ",
     "Sys.setenv(JULIA_NUM_THREADS = \"", n, ",0\")."
   )
 }
@@ -77,8 +77,8 @@ thread_mismatch_message <- function(actual, requested) {
     "Julia is running with ", actual, " thread(s), so threads = ", requested,
     " has no effect. Julia's thread count is fixed when Julia starts, and ",
     "Julia was already running when this was requested (started, for ",
-    "example, by JuliaCall::julia_setup() or an earlier circuitscaper ",
-    "call). ", thread_fix_hint(requested)
+    "example, by another package that uses JuliaConnectoR, or an earlier ",
+    "circuitscaper call). ", thread_fix_hint(requested)
   )
 }
 

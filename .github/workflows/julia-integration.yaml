@@ -62,18 +62,19 @@ jobs:
           needs: check
 
       - name: Install Circuitscape.jl and Omniscape.jl
-        run: julia -e 'using Pkg; Pkg.add(["Circuitscape", "Omniscape"]); Pkg.precompile()'
+        run: julia -e 'using Pkg; Pkg.add(["Circuitscape", "Omniscape", "Tables"]); Pkg.precompile()'
 
       - name: Report versions
         run: |
           julia --version
           julia -e 'using Pkg; Pkg.status()'
-          Rscript -e 'sessionInfo(); packageVersion("JuliaCall")'
+          Rscript -e 'sessionInfo(); packageVersion("JuliaConnectoR")'
 
       - name: Run tests
         run: Rscript -e 'testthat::test_local(".", reporter = "summary", stop_on_failure = TRUE)'
 
-  # The new-user path: no Julia set up beforehand, CRAN JuliaCall, and
+
+  # The new-user path: no Julia set up beforehand, and
   # cs_install_julia() downloading Julia itself. force = TRUE so it installs
   # its own Julia even where the runner image already has one on the PATH.
   fresh-install:
@@ -110,8 +111,9 @@ jobs:
 
       - name: Install Julia and packages with cs_install_julia()
         run: |
-          Rscript -e 'packageVersion("JuliaCall")'
+          Rscript -e 'packageVersion("JuliaConnectoR")'
           Rscript -e 'circuitscaper::cs_install_julia(force = TRUE)'
 
       - name: Run tests in a new session
         run: Rscript -e 'testthat::test_local(".", reporter = "summary", stop_on_failure = TRUE)'
+

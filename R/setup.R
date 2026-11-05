@@ -10,11 +10,11 @@
 #' directing you to [cs_install_julia()].
 #'
 #' @param julia_home Character. Path to the Julia `bin/` directory. If
-#'   `NULL` (default), Julia is located the same way as
-#'   [JuliaCall::julia_setup()]: the `JULIA_HOME` option or environment
-#'   variable, a Julia installed by [cs_install_julia()] or
-#'   [JuliaCall::install_julia()], the system PATH (including a login
-#'   shell's PATH on macOS and Linux), and common Windows install locations.
+#'   `NULL` (default), Julia is looked for in: the `JULIA_HOME` option or
+#'   environment variable, the `JULIA_BINDIR` environment variable, a Julia
+#'   installed by [cs_install_julia()] (or by `JuliaCall::install_julia()`),
+#'   the system PATH (including a login shell's PATH on macOS and Linux), and
+#'   common Windows install locations.
 #' @param threads Integer. Number of Julia threads to start. Default `1L`.
 #'   Takes effect only if Julia is not yet running in this R session — once
 #'   Julia is running, the thread count cannot be changed without restarting
@@ -22,13 +22,13 @@
 #'   [os_run()] only; Circuitscape functions (`cs_*`) run single-threaded
 #'   regardless of this value.
 #' @param quiet Logical. Suppress Julia startup messages. Default `TRUE`.
-#' @param ... Additional arguments passed to [JuliaCall::julia_setup()].
 #'
 #' @return Invisibly returns `TRUE` on success.
 #'
 #' @details
 #' `cs_setup()` will:
-#' * Verify that Julia is installed and accessible.
+#' * Verify that Julia is installed and accessible, and start it. Julia runs
+#'   in its own process, connected to R by 'JuliaConnectoR'.
 #' * Verify that the Circuitscape and Omniscape Julia packages are installed.
 #' * Load both packages and warm up the JIT compiler.
 #'
@@ -46,9 +46,9 @@
 #' os_run(resistance, radius = 50, parallelize = TRUE)
 #' ```
 #'
-#' Call `cs_setup(threads = )` before anything else starts Julia, including
-#' [JuliaCall::julia_setup()] or another package that uses JuliaCall. If you
-#' need to start Julia yourself, set the thread count first with
+#' Call `cs_setup(threads = )` before anything else starts Julia, such as
+#' another package that uses 'JuliaConnectoR'. If you need to start Julia
+#' yourself, set the thread count first with
 #' `Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` (no interactive
 #' threads) matters: Omniscape releases before 0.6.3 fail in parallel when
 #' Julia has an interactive thread, and [os_run()] then falls back to a
@@ -75,7 +75,7 @@
 #' cs_setup(julia_home = "/usr/local/julia/bin")
 #'
 #' @export
-cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
+cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   threads <- as.integer(threads)
   if (.cs_env$julia_ready) {
     if (threads > .cs_env$julia_threads) {
@@ -86,8 +86,8 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   }
 
   # Set thread count before Julia initializes. This only takes effect if
-  # Julia is not already running in this R session (e.g., started by
-  # JuliaCall::julia_setup() directly); the actual count is checked below.
+  # Julia is not already running (e.g., started by another package that uses
+  # JuliaConnectoR); the actual count is checked below.
   if (threads > 1L) {
     # Use "N,0" format: N default threads, 0 interactive threads. Since
     # Julia 1.12 the interactive pool takes thread id 1, so with an
@@ -101,8 +101,8 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
   # option and environment variable, a Julia installed by cs_install_julia(),
   # JuliaCall's install record, the PATH, a login shell's PATH (for GUI
   # sessions on macOS), and common Windows install locations. The Julia found
-  # is passed to JuliaCall explicitly, so the Julia whose version is checked
-  # below is the one that starts.
+  # is passed to JuliaConnectoR explicitly, so the Julia whose version is
+  # checked below is the one that starts.
   if (is.null(julia_home)) {
     julia_bin <- find_julia_bin()
     if (is.null(julia_bin)) {
@@ -117,13 +117,11 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 
   # Refuse Julia versions the Julia packages no longer support. Otherwise
   # Julia's package manager falls back to old releases that fail in obscure
-  # ways (e.g., an RCall.jl that needs symbols R 4.6 no longer exports).
+  # ways.
   check_julia_version(julia_bin)
-  julia_home_used <- dirname(julia_bin)
 
   message("Initializing Julia (one-time per session)...")
-  setup_args <- list(installJulia = FALSE, JULIA_HOME = julia_home_used, ...)
-  run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
+  start_julia(julia_bin, quiet = quiet, julia_home = julia_home)
   check_running_julia_version()
 
   # Record the thread count Julia actually has, which can differ from the
@@ -136,11 +134,8 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 
   # --- Check that required Julia packages are installed ---
   missing_pkgs <- character(0)
-  if (identical(JuliaCall::julia_installed_package("Circuitscape"), "nothing")) {
-    missing_pkgs <- c(missing_pkgs, "Circuitscape")
-  }
-  if (identical(JuliaCall::julia_installed_package("Omniscape"), "nothing")) {
-    missing_pkgs <- c(missing_pkgs, "Omniscape")
+  for (pkg in c("Circuitscape", "Omniscape")) {
+    if (!jl_package_installed(pkg)) missing_pkgs <- c(missing_pkgs, pkg)
   }
   if (length(missing_pkgs) > 0) {
     stop(
@@ -153,16 +148,16 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
 
   # Load packages
   message("Loading Circuitscape and Omniscape...")
-  JuliaCall::julia_library("Circuitscape")
+  jl_eval("using Circuitscape")
   .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Circuitscape")
 
-  JuliaCall::julia_library("Omniscape")
+  jl_eval("using Omniscape")
   .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Omniscape")
 
   # Apply compatibility patches for newer Julia versions
   patch_file <- system.file("julia", "patches.jl", package = "circuitscaper")
   if (nchar(patch_file) > 0 && file.exists(patch_file)) {
-    JuliaCall::julia_source(patch_file)
+    jl_eval(paste0("include(", jl_string(patch_file), "); nothing"))
   }
 
   # Warm up Julia's JIT compiler by running a tiny Circuitscape problem.
@@ -221,7 +216,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     end
   '
   tryCatch(
-    JuliaCall::julia_eval(warmup_jl),
+    jl_eval(paste0(warmup_jl, "; nothing")),
     error = function(e) {
       if (!quiet) warning("JIT warmup failed (non-fatal): ", conditionMessage(e))
     }
@@ -336,97 +331,21 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
     julia_home <- dirname(julia_bin)
   }
 
-  # Step 2: Start that Julia so we can install packages
-  check_julia_version(file.path(julia_home, julia_exe()))
-  message("Initializing Julia...")
-  run_julia_setup(list(installJulia = FALSE, JULIA_HOME = julia_home),
-                  quiet = TRUE)
-  check_running_julia_version()
-
-  # Step 3: Install Julia packages
-  message("Installing Circuitscape.jl...")
-  JuliaCall::julia_install_package("Circuitscape")
-
-  message("Installing Omniscape.jl...")
-  JuliaCall::julia_install_package("Omniscape")
+  # Step 2: Install the Julia packages, in a child Julia process rather than
+  # in a Julia session inside R (see install_julia_dependencies())
+  julia_bin <- file.path(julia_home, julia_exe())
+  check_julia_version(julia_bin)
+  message("Installing Circuitscape.jl and Omniscape.jl (this can take ",
+          "several minutes)...")
+  install_julia_packages(julia_bin, julia_packages(), update = force,
+                         quiet = FALSE)
 
   message("Installation complete. Julia and all required packages are ready.")
 
-  # Step 4: Complete session setup (loads packages, JIT warmup, etc.)
+  # Step 3: Complete session setup (starts Julia, loads packages, JIT warmup)
   cs_setup(julia_home = julia_home, quiet = TRUE)
 
   invisible(TRUE)
-}
-
-
-#' Start Julia via JuliaCall, With Clearer Errors
-#'
-#' Calls `JuliaCall::julia_setup()` and rewrites its two common failures:
-#' "Julia is not found." becomes circuitscaper's not-found message, and a
-#' failure while JuliaCall loads its own Julia setup script (which JuliaCall
-#' reports only as "Error happens when you try to execute command ...
-#' setup.jl") gets an explanation and a list of common causes. In the latter
-#' case the underlying Julia error has usually been printed just above.
-#'
-#' @param setup_args List of arguments for `JuliaCall::julia_setup()`.
-#' @param quiet Logical. Suppress JuliaCall's messages.
-#' @param julia_home The `julia_home` the user gave, or `NULL`, for the
-#'   not-found message.
-#' @return Whatever `JuliaCall::julia_setup()` returns, invisibly.
-#' @noRd
-run_julia_setup <- function(setup_args, quiet = TRUE, julia_home = NULL) {
-  out <- tryCatch(
-    if (quiet) {
-      suppressMessages(do.call(JuliaCall::julia_setup, setup_args))
-    } else {
-      do.call(JuliaCall::julia_setup, setup_args)
-    },
-    error = function(e) {
-      msg <- conditionMessage(e)
-      if (grepl("Julia is not found", msg, fixed = TRUE)) {
-        stop(julia_not_found_message(julia_home), call. = FALSE)
-      }
-      if (is_juliacall_setup_error(msg)) {
-        stop(juliacall_setup_error_message(msg), call. = FALSE)
-      }
-      stop(e)
-    }
-  )
-  invisible(out)
-}
-
-
-#' Is This JuliaCall's Opaque Setup-Script Failure?
-#' @param msg Character error message.
-#' @noRd
-is_juliacall_setup_error <- function(msg) {
-  grepl("setup.jl", msg, fixed = TRUE) ||
-    grepl("Error happens when you try to execute command", msg, fixed = TRUE)
-}
-
-
-#' Explain JuliaCall's Opaque Setup-Script Failure
-#' @param msg The original error message.
-#' @noRd
-juliacall_setup_error_message <- function(msg) {
-  paste0(
-    "Julia started, but JuliaCall could not finish connecting it to R. ",
-    "The underlying Julia error is usually printed just above this ",
-    "message (look for 'LoadError' or 'ERROR:'). Common causes:\n",
-    "  * Julia older than ", min_julia_version(), ", which installs old ",
-    "Julia packages that don't work with current R (e.g., 'undefined ",
-    "symbol: SET_SYMVALUE'). Restart R and run ",
-    "cs_install_julia(force = TRUE).\n",
-    "  * A clash between libraries R has loaded and Julia's own (e.g., ",
-    "'GLIBCXX' or 'incorrect library version' errors). Start R outside any ",
-    "conda environment; on Linux, also make sure R isn't picking up an ",
-    "older system libstdc++.\n",
-    "  * A failed or partial Julia package installation. Restart R and run ",
-    "cs_install_julia() again.\n",
-    "Restart R before trying again: a Julia session that failed to start ",
-    "can't be restarted within the same R session.\n\n",
-    "Original error from JuliaCall:\n", msg
-  )
 }
 
 
@@ -464,6 +383,7 @@ ensure_julia <- function() {
 cs_julia_available <- function() {
       julia_bin <- find_julia_bin()
       if (is.null(julia_bin)) return(FALSE)
+      local_clean_library_path()
       tryCatch({
             out <- system2(
                   julia_bin,
@@ -480,7 +400,8 @@ cs_julia_available <- function() {
 #' Find a Julia Binary Without Starting Julia
 #'
 #' Looks for the Julia executable, in order: the `JULIA_HOME` option, the
-#' `JULIA_HOME` environment variable, a Julia installed by
+#' `JULIA_HOME` environment variable, the `JULIA_BINDIR` environment variable
+#' (which 'JuliaConnectoR' uses), a Julia installed by
 #' [cs_install_julia()], the install record that `JuliaCall::install_julia()`
 #' writes to `<depot>/prefs/JuliaCall`, the PATH, a login shell's PATH on
 #' Unix-alikes (GUI sessions on macOS often lack the shell PATH), and
@@ -490,8 +411,8 @@ cs_julia_available <- function() {
 #' JuliaCall's internal locator.
 #'
 #' It does not start Julia, so it is cheap enough for `.onAttach()`.
-#' [cs_setup()] passes the Julia it finds to `JuliaCall::julia_setup()`
-#' explicitly, so the two can't disagree.
+#' [cs_setup()] passes the Julia it finds to 'JuliaConnectoR' explicitly, so
+#' the two can't disagree.
 #'
 #' @param login_shell Logical. Also ask a login shell (`bash -l`) on
 #'   Unix-alikes. Default `TRUE`.
@@ -506,10 +427,12 @@ find_julia_bin <- function(login_shell = TRUE) {
     if (file.exists(bin)) normalizePath(bin, mustWork = FALSE) else NULL
   }
 
-  # 1-2. JULIA_HOME option, then environment variable
+  # 1-2. JULIA_HOME option, then environment variables
   bin <- in_dir(getOption("JULIA_HOME"))
   if (!is.null(bin)) return(bin)
   bin <- in_dir(Sys.getenv("JULIA_HOME"))
+  if (!is.null(bin)) return(bin)
+  bin <- in_dir(Sys.getenv("JULIA_BINDIR"))
   if (!is.null(bin)) return(bin)
 
   # 3. Julia installed by cs_install_julia()
