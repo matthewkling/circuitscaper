@@ -103,3 +103,91 @@ check_julia_script <- function(res, ...) {
     call. = FALSE
   )
 }
+
+
+#' Julia's Real bin/ Directory
+#'
+#' `julia_bin` may be a launcher (e.g., juliaup's) rather than the Julia
+#' executable itself. If the directory has Julia's usual layout (a sibling
+#' `lib/julia`), use it; otherwise ask Julia.
+#'
+#' @param julia_bin Path to a Julia executable or launcher.
+#' @return Character path, or `NULL` if it can't be determined.
+#' @noRd
+julia_real_bindir <- function(julia_bin) {
+  bindir <- dirname(julia_bin)
+  if (dir.exists(file.path(bindir, "..", "lib", "julia"))) {
+    return(normalizePath(bindir, mustWork = FALSE))
+  }
+  script <- tempfile(fileext = ".jl")
+  on.exit(unlink(script), add = TRUE)
+  writeLines("print(Sys.BINDIR)", script)
+  res <- run_julia_script(julia_bin, script, quiet = TRUE)
+  out <- res$output[nzchar(res$output)]
+  if (!identical(res$status, 0L) || length(out) == 0) return(NULL)
+  out[length(out)]
+}
+
+
+#' Load Julia's Own libunwind Into R, on Linux
+#'
+#' R starts with its library directories on `LD_LIBRARY_PATH` (including,
+#' on Ubuntu, `/usr/lib/x86_64-linux-gnu`), so when JuliaCall starts Julia
+#' inside R, Julia picks up the system libunwind instead of the one it
+#' bundles. Ubuntu's libunwind 1.6.2 crashes Julia (R segfaults as Julia
+#' starts; see JuliaInterop/JuliaCall#238). Loading Julia's libunwind first
+#' means it is already present, by name, when Julia needs it. The
+#' development version of JuliaCall does the same; the CRAN release doesn't.
+#'
+#' @param julia_bin Path to the Julia executable or launcher.
+#' @return Path to the libunwind loaded, invisibly, or `NULL` if not on
+#'   Linux or not found.
+#' @noRd
+preload_julia_libunwind <- function(julia_bin) {
+  if (Sys.info()[["sysname"]] != "Linux") return(invisible(NULL))
+  bindir <- julia_real_bindir(julia_bin)
+  if (is.null(bindir)) return(invisible(NULL))
+  libs <- sort(Sys.glob(file.path(bindir, "..", "lib", "julia",
+                                  "libunwind.so*")))
+  if (length(libs) == 0) return(invisible(NULL))
+  lib <- normalizePath(libs[1], mustWork = FALSE)
+  if (!identical(.cs_env$libunwind, lib)) {
+    ok <- tryCatch({
+      load_shared_library(lib)
+      TRUE
+    }, error = function(e) {
+      warning("Could not preload Julia's libunwind (", lib, "): ",
+              conditionMessage(e), call. = FALSE)
+      FALSE
+    })
+    if (ok) .cs_env$libunwind <- lib
+  }
+  invisible(lib)
+}
+
+
+#' dyn.load() Wrapper, Separate So Tests Can Replace It
+#' @noRd
+load_shared_library <- function(path) {
+  dyn.load(path, local = FALSE, now = TRUE)
+}
+
+
+#' Evaluate an Expression With LD_PRELOAD Set, on Linux
+#'
+#' For the Julia child processes JuliaCall itself launches while it starts
+#' Julia (e.g., to find Julia's version and library), which inherit R's
+#' library path.
+#'
+#' @param lib Library to preload, or `NULL` to just evaluate `expr`.
+#' @param expr Expression to evaluate.
+#' @noRd
+with_ld_preload <- function(lib, expr) {
+  if (is.null(lib)) return(expr)
+  old <- Sys.getenv("LD_PRELOAD", unset = NA)
+  Sys.setenv(LD_PRELOAD = paste(c(lib, if (!is.na(old) && nzchar(old)) old),
+                                collapse = " "))
+  on.exit(if (is.na(old)) Sys.unsetenv("LD_PRELOAD") else
+    Sys.setenv(LD_PRELOAD = old), add = TRUE)
+  expr
+}

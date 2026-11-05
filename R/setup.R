@@ -131,7 +131,13 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE, ...) {
     list(installJulia = FALSE, JULIA_HOME = julia_home_used, install = FALSE),
     list(...)
   )
-  run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
+  # On Linux, make Julia use its own libunwind rather than the system's,
+  # both inside R and in the Julia child processes JuliaCall launches.
+  libunwind <- preload_julia_libunwind(julia_bin)
+  with_ld_preload(
+    libunwind,
+    run_julia_setup(setup_args, quiet = quiet, julia_home = julia_home)
+  )
   check_running_julia_version()
 
   # Record the thread count Julia actually has, which can differ from the

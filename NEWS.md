@@ -10,7 +10,10 @@
   libraries it bundles. circuitscaper now installs JuliaCall's Julia
   dependencies (RCall.jl, Suppressor.jl), and `cs_install_julia()` installs
   Circuitscape.jl and Omniscape.jl, in a Julia child process without R's
-  library path, and starts 'JuliaCall' with `install = FALSE`.
+  library path, and starts 'JuliaCall' with `install = FALSE`. When Julia
+  starts inside R, circuitscaper first loads Julia's own libunwind, since
+  Ubuntu's libunwind 1.6.2 crashes Julia (R segfaulted as Julia started), as
+  the development version of 'JuliaCall' also does.
 
 * When JuliaCall fails while connecting R and Julia, `cs_setup()` and
   `cs_install_julia()` now explain the failure and list the common causes,

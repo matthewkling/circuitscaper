@@ -5,6 +5,7 @@
   .cs_env$julia_ready <- FALSE
   .cs_env$loaded_packages <- character(0)
   .cs_env$julia_threads <- 1L
+  .cs_env$libunwind <- NULL
 }
 
 .onAttach <- function(libname, pkgname) {

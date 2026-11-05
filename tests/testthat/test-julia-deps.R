@@ -90,3 +90,70 @@ test_that("cs_setup tells JuliaCall not to install dependencies itself", {
   expect_false(seen$install)
   expect_false(seen$installJulia)
 })
+
+# A fake Julia install with Julia's layout: bin/julia and lib/julia/libunwind
+fake_julia_layout <- function(env = parent.frame()) {
+  root <- withr::local_tempfile(pattern = "julialayout_", .local_envir = env)
+  dir.create(file.path(root, "bin"), recursive = TRUE)
+  dir.create(file.path(root, "lib", "julia"), recursive = TRUE)
+  file.create(file.path(root, "bin", "julia"))
+  for (f in c("libunwind.so", "libunwind.so.8", "libunwind.so.8.2.0")) {
+    file.create(file.path(root, "lib", "julia", f))
+  }
+  root
+}
+
+test_that("Julia's libunwind is preloaded into R on Linux", {
+  skip_on_os(c("windows", "mac", "solaris"))
+  root <- fake_julia_layout()
+  loaded <- character(0)
+  local_mocked_bindings(load_shared_library = function(path) {
+    loaded <<- c(loaded, path)
+  })
+  old <- .cs_env$libunwind
+  on.exit(.cs_env$libunwind <- old, add = TRUE)
+  .cs_env$libunwind <- NULL
+
+  lib <- preload_julia_libunwind(file.path(root, "bin", "julia"))
+  expect_identical(lib, normalizePath(file.path(root, "lib", "julia",
+                                                "libunwind.so")))
+  expect_identical(loaded, lib)
+
+  # Only once per session
+  preload_julia_libunwind(file.path(root, "bin", "julia"))
+  expect_length(loaded, 1)
+})
+
+test_that("a failed preload warns rather than stopping setup", {
+  skip_on_os(c("windows", "mac", "solaris"))
+  root <- fake_julia_layout()
+  local_mocked_bindings(load_shared_library = function(path) stop("nope"))
+  old <- .cs_env$libunwind
+  on.exit(.cs_env$libunwind <- old, add = TRUE)
+  .cs_env$libunwind <- NULL
+  expect_warning(preload_julia_libunwind(file.path(root, "bin", "julia")),
+                 "Could not preload Julia's libunwind")
+  expect_null(.cs_env$libunwind)
+})
+
+test_that("nothing is preloaded off Linux or without a libunwind", {
+  root <- withr::local_tempfile(pattern = "nolib_")
+  dir.create(file.path(root, "bin"), recursive = TRUE)
+  dir.create(file.path(root, "lib", "julia"), recursive = TRUE)
+  file.create(file.path(root, "bin", "julia"))
+  local_mocked_bindings(load_shared_library = function(path) stop("called"))
+  expect_null(preload_julia_libunwind(file.path(root, "bin", "julia")))
+})
+
+test_that("with_ld_preload sets LD_PRELOAD only while evaluating", {
+  withr::local_envvar(LD_PRELOAD = NA)
+  seen <- with_ld_preload("/x/libunwind.so", Sys.getenv("LD_PRELOAD"))
+  expect_identical(seen, "/x/libunwind.so")
+  expect_identical(Sys.getenv("LD_PRELOAD", unset = "<unset>"), "<unset>")
+
+  withr::local_envvar(LD_PRELOAD = "/other.so")
+  seen <- with_ld_preload("/x/libunwind.so", Sys.getenv("LD_PRELOAD"))
+  expect_identical(seen, "/x/libunwind.so /other.so")
+  expect_identical(Sys.getenv("LD_PRELOAD"), "/other.so")
+  expect_identical(with_ld_preload(NULL, 42), 42)
+})
