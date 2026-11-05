@@ -42,6 +42,17 @@ test_that("find_julia_bin() honors the JULIA_HOME environment variable", {
   expect_identical(find_julia_bin(login_shell = FALSE), expected_bin(bin_dir))
 })
 
+test_that("find_julia_bin() honors JULIA_BINDIR (JuliaConnectoR's variable)", {
+  bin_dir <- fake_julia()
+  old_opt <- options(JULIA_HOME = NULL)
+  on.exit(options(old_opt), add = TRUE)
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA,
+                         JULIA_BINDIR = bin_dir)
+  on.exit(restore(), add = TRUE)
+
+  expect_identical(find_julia_bin(login_shell = FALSE), expected_bin(bin_dir))
+})
+
 test_that("find_julia_bin() honors the JULIA_HOME option before the env var", {
   opt_dir <- fake_julia()
   env_dir <- fake_julia()
@@ -63,7 +74,7 @@ test_that("find_julia_bin() finds a Julia recorded by JuliaCall::install_julia()
 
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
-  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_DEPOT_PATH = depot,
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_BINDIR = NA, JULIA_DEPOT_PATH = depot,
                 PATH = tempfile("empty_path_"))
   on.exit(restore(), add = TRUE)
 
@@ -78,7 +89,7 @@ test_that("find_julia_bin() uses the first entry of a multi-entry depot path", {
 
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
-  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA,
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_BINDIR = NA,
                 JULIA_DEPOT_PATH = paste0(depot, .Platform$path.sep),
                 PATH = tempfile("empty_path_"))
   on.exit(restore(), add = TRUE)
@@ -90,7 +101,7 @@ test_that("find_julia_bin() returns NULL when nothing is found", {
   skip_on_os("windows") # LOCALAPPDATA may hold a real install
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
-  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_DEPOT_PATH = tempfile("depot_"),
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_BINDIR = NA, JULIA_DEPOT_PATH = tempfile("depot_"),
                 PATH = tempfile("empty_path_"))
   on.exit(restore(), add = TRUE)
 
@@ -106,7 +117,7 @@ test_that("find_julia_bin() ignores a stale install record", {
 
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
-  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_DEPOT_PATH = depot,
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_BINDIR = NA, JULIA_DEPOT_PATH = depot,
                 PATH = tempfile("empty_path_"))
   on.exit(restore(), add = TRUE)
 
@@ -120,7 +131,7 @@ test_that("cs_setup() fails cleanly when no Julia can be found", {
   skip_if(.cs_env$julia_ready, "Julia is already running in this session")
   old_opt <- options(JULIA_HOME = NULL)
   on.exit(options(old_opt), add = TRUE)
-  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_DEPOT_PATH = tempfile("depot_"),
+  restore <- set_envvars(R_USER_DATA_DIR = tempfile("userdata_"), JULIA_HOME = NA, JULIA_BINDIR = NA, JULIA_DEPOT_PATH = tempfile("depot_"),
                          PATH = tempfile("empty_path_"))
   on.exit(restore(), add = TRUE)
   skip_if(!is.null(find_julia_bin()), "a Julia install is still reachable")
