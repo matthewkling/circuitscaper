@@ -30,7 +30,7 @@ jl_string <- function(x) {
 
 #' Start Julia
 #'
-#' Points 'JuliaConnectoR' at the Julia that [find_julia_bin()] found (via
+#' Points 'JuliaConnectoR' at the Julia that `find_julia_bin()` found (via
 #' `JULIA_BINDIR`, which 'JuliaConnectoR' reads when it starts Julia) and
 #' starts it. 'JuliaConnectoR' starts Julia lazily, on the first evaluation;
 #' if Julia is already running (e.g., another package started it), this

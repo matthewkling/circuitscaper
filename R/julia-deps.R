@@ -35,7 +35,7 @@ run_julia_script <- function(julia_bin, script, script_args = character(),
 
 #' Unset LD_LIBRARY_PATH Until the Calling Function Returns, on Linux
 #'
-#' See [run_julia_script()] for why.
+#' See `run_julia_script()` for why.
 #'
 #' @param envir The calling function's environment.
 #' @noRd
@@ -61,7 +61,7 @@ julia_packages <- function() c("Circuitscape", "Omniscape", "Tables")
 #' Install Julia Packages
 #'
 #' Adds (and optionally updates) Julia packages in a child Julia process
-#' with a clean library path (see [run_julia_script()]).
+#' with a clean library path (see `run_julia_script()`).
 #'
 #' @param julia_bin Path to the Julia executable.
 #' @param packages Character. Julia packages to add.
@@ -87,7 +87,7 @@ install_julia_packages <- function(julia_bin, packages, update = FALSE,
 
 
 #' Stop if a Julia Child Process Failed
-#' @param res As from [run_julia_script()].
+#' @param res As from `run_julia_script()`.
 #' @param ... Pasted together to describe the step.
 #' @noRd
 check_julia_script <- function(res, ...) {

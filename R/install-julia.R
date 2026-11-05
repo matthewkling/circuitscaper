@@ -25,7 +25,7 @@ julia_install_root <- function() {
 #' Julia Installed by cs_install_julia(), If Any
 #'
 #' @return Path to the Julia executable of the newest version under
-#'   [julia_install_root()], or `NULL`.
+#'   `julia_install_root()`, or `NULL`.
 #' @noRd
 installed_julia_bin <- function() {
   root <- julia_install_root()
@@ -74,7 +74,7 @@ julia_platform <- function() {
 #'   numbers) of entries with `stable` and `files`.
 #' @param version `"latest"` for the newest stable release, or a version
 #'   number such as `"1.12.1"`.
-#' @param os,arch As from [julia_platform()].
+#' @param os,arch As from `julia_platform()`.
 #' @return The file entry (a list with `url`, `sha256`, `size`, `version`,
 #'   ...) for a portable archive: `.tar.gz` on Linux (glibc builds only, not
 #'   musl) and macOS (not the `.dmg`), `.zip` on Windows.
