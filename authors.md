@@ -7,16 +7,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/v0.2.0/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/main/DESCRIPTION)
 
 Kling M (2026). *circuitscaper: 'Circuitscape' and 'Omniscape'
-Connectivity Analysis via 'Julia'*. R package version 0.2.0,
+Connectivity Analysis via 'Julia'*. R package version 0.2.0.9000,
 <https://github.com/matthewkling/circuitscaper>.
 
     @Manual{,
       title = {circuitscaper: 'Circuitscape' and 'Omniscape' Connectivity Analysis via 'Julia'},
       author = {Matthew Kling},
       year = {2026},
-      note = {R package version 0.2.0},
+      note = {R package version 0.2.0.9000},
       url = {https://github.com/matthewkling/circuitscaper},
     }
