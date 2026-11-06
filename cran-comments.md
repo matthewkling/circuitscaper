@@ -2,9 +2,6 @@
 
 0 errors | 0 warnings | 0 notes
 
-<!-- Confirm the results and environments below after the local and
-win-builder checks. -->
-
 ## Test environments
 
 * macOS (local), R release
@@ -17,9 +14,9 @@ win-builder checks. -->
 
 ## Changes in this version
 
-The package now connects to Julia through 'JuliaConnectoR' instead of
-'JuliaCall', which fixes setup failures that users reported on all three
-platforms. See NEWS.md.
+This release fixes an important bug causing setup failures that users on 
+all three platforms. The package now connects to Julia through 
+'JuliaConnectoR' instead of 'JuliaCall'. See NEWS.md.
 
 ## System requirement note
 
