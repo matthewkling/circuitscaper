@@ -17,7 +17,7 @@ test_that("a single-threaded session runs serially with a fix hint", {
   expect_false(d$parallelize)
   expect_match(d$warning, "running with 1 thread")
   expect_match(d$warning, "cs_setup(threads = 15)", fixed = TRUE)
-  expect_match(d$warning, "JULIA_NUM_THREADS = \"15,0\"", fixed = TRUE)
+  expect_match(d$warning, "restarts Julia with 15 threads")
 })
 
 test_that("an interactive thread forces a serial run on old Omniscape", {
@@ -26,7 +26,7 @@ test_that("an interactive thread forces a serial run on old Omniscape", {
   expect_false(d$parallelize)
   expect_match(d$warning, "interactive thread")
   expect_match(d$warning, "BoundsError")
-  expect_match(d$warning, "JULIA_NUM_THREADS = \"4,0\"", fixed = TRUE)
+  expect_match(d$warning, "cs_setup(threads = 4)", fixed = TRUE)
 })
 
 test_that("an interactive thread is fine on Omniscape 0.6.3+", {
@@ -71,10 +71,22 @@ test_that("an unknown interactive pool size doesn't block a parallel run", {
   expect_true(d$parallelize)
 })
 
-test_that("thread mismatch message explains the cause and the fix", {
+test_that("thread mismatch message points at what else sets threads", {
   msg <- thread_mismatch_message(1L, 15L)
-  expect_match(msg, "threads = 15 has no effect", fixed = TRUE)
-  expect_match(msg, "fixed when Julia starts")
-  expect_match(msg, "already running")
+  expect_match(msg, "started with 1 thread(s) rather than the 15", fixed = TRUE)
   expect_match(msg, "JULIA_NUM_THREADS = \"15,0\"", fixed = TRUE)
+  expect_match(msg, "JULIACONNECTOR_JULIAOPTS")
+})
+
+test_that("Julia is restarted only when it can't honor a thread request", {
+  expect_true(julia_needs_restart(4L, nthreads = 1L, ninteractive = 0L))
+  expect_true(julia_needs_restart(4L, nthreads = 2L, ninteractive = 0L))
+  # An interactive thread breaks parallel runs of Omniscape < 0.6.3
+  expect_true(julia_needs_restart(4L, nthreads = 4L, ninteractive = 1L))
+  expect_false(julia_needs_restart(4L, nthreads = 4L, ninteractive = 0L))
+  # Fewer threads than Julia has, or one thread, never restarts
+  expect_false(julia_needs_restart(2L, nthreads = 4L, ninteractive = 0L))
+  expect_false(julia_needs_restart(1L, nthreads = 4L, ninteractive = 1L))
+  # Unknown interactive count doesn't force a restart
+  expect_false(julia_needs_restart(4L, nthreads = 4L, ninteractive = NA))
 })
