@@ -7,7 +7,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/matthewkling/circuitscaper/blob/v0.2.0/DESCRIPTION)
 
 Kling M (2026). *circuitscaper: 'Circuitscape' and 'Omniscape'
 Connectivity Analysis via 'Julia'*. R package version 0.2.0,
