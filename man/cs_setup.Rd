@@ -74,7 +74,7 @@ with a warning if it finds one.
 }
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
