@@ -15,10 +15,9 @@
 #'   installed by [cs_install_julia()] (or by `JuliaCall::install_julia()`),
 #'   the system PATH (including a login shell's PATH on macOS and Linux), and
 #'   common Windows install locations.
-#' @param threads Integer. Number of Julia threads to start. Default `1L`.
-#'   Takes effect only if Julia is not yet running in this R session — once
-#'   Julia is running, the thread count cannot be changed without restarting
-#'   R, and a warning is issued. This setting controls parallelism for
+#' @param threads Integer. Number of Julia threads. Default `1L`. If Julia
+#'   is already running with fewer threads, it is restarted with `threads`
+#'   threads (see Threading, below). This setting controls parallelism for
 #'   [os_run()] only; Circuitscape functions (`cs_*`) run single-threaded
 #'   regardless of this value.
 #' @param quiet Logical. Suppress Julia startup messages. Default `TRUE`.
@@ -33,26 +32,33 @@
 #' * Load both packages and warm up the JIT compiler.
 #'
 #' Once Julia is initialized, it stays warm for the R session. Subsequent calls
-#' to `cs_setup()` return immediately.
+#' to `cs_setup()` return immediately. If the Julia process has stopped in
+#' the meantime (for example, it crashed or ran out of memory, or was stopped
+#' with `JuliaConnectoR::stopJulia()`), the next `cs_setup()` call, or the
+#' next `cs_*()` or `os_*()` call, starts and sets up Julia again.
 #'
 #' ## Threading
-#' Julia's thread count is fixed when Julia starts and cannot be changed
-#' mid-session. Multi-threading is used by [os_run()] when
-#' `parallelize = TRUE`. Circuitscape functions (`cs_pairwise`,
-#' `cs_one_to_all`, etc.) do not benefit from multiple threads.
+#' Multi-threading is used by [os_run()] when `parallelize = TRUE`.
+#' Circuitscape functions (`cs_pairwise`, `cs_one_to_all`, etc.) do not
+#' benefit from multiple threads.
 #'
 #' ```
 #' cs_setup(threads = 4)
 #' os_run(resistance, radius = 50, parallelize = TRUE)
 #' ```
 #'
-#' Call `cs_setup(threads = )` before anything else starts Julia, such as
-#' another package that uses 'JuliaConnectoR'. If you need to start Julia
-#' yourself, set the thread count first with
-#' `Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` (no interactive
-#' threads) matters: Omniscape releases before 0.6.3 fail in parallel when
-#' Julia has an interactive thread, and [os_run()] then falls back to a
-#' serial run with a warning.
+#' Julia's thread count is fixed when Julia starts, so if Julia is already
+#' running with fewer threads, `cs_setup(threads = )` restarts it. This
+#' takes as long as the first setup, since Circuitscape and Omniscape are
+#' loaded and warmed up again, and it discards anything else in this R
+#' session's Julia (e.g., objects created through 'JuliaConnectoR' by other
+#' code). Asking for fewer threads than Julia has doesn't restart it.
+#'
+#' Julia is started with `JULIA_NUM_THREADS` set to `"N,0"`: N threads and no
+#' interactive threads. Omniscape releases before 0.6.3 fail in parallel
+#' when Julia has an interactive thread, so `cs_setup(threads = )` also
+#' restarts a Julia that has one, and [os_run()] falls back to a serial run
+#' with a warning if it finds one.
 #'
 #' @references
 #' McRae, B.H. (2006). Isolation by resistance. \emph{Evolution}, 60(8),
@@ -78,16 +84,32 @@
 cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   threads <- as.integer(threads)
   if (.cs_env$julia_ready) {
-    if (threads > .cs_env$julia_threads) {
-      warning(thread_mismatch_message(.cs_env$julia_threads, threads),
-              call. = FALSE)
+    state <- julia_session_state()
+    if (!identical(state, "ready")) {
+      # The Julia set up earlier is gone (it crashed, or was stopped); set up
+      # again. A broken connection must be closed before Julia can restart.
+      forget_julia(stop = identical(state, "broken"))
+    } else if (julia_needs_restart(threads, .cs_env$julia_threads,
+                                   .cs_env$julia_interactive)) {
+      message("Restarting Julia with ", threads, " threads...")
+      forget_julia(stop = TRUE)
+    } else {
+      return(invisible(TRUE))
     }
-    return(invisible(TRUE))
   }
+  init_julia(julia_home = julia_home, threads = threads, quiet = quiet)
+}
 
-  # Set thread count before Julia initializes. This only takes effect if
-  # Julia is not already running (e.g., started by another package that uses
-  # JuliaConnectoR); the actual count is checked below.
+
+#' Start Julia and Load Circuitscape and Omniscape
+#'
+#' The body of [cs_setup()] when Julia isn't set up yet.
+#' @param julia_home,threads,quiet As for [cs_setup()].
+#' @noRd
+init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
+  # Request threads before Julia starts. If Julia is already running (e.g.,
+  # started by another package that uses JuliaConnectoR) with too few
+  # threads, it is restarted below.
   if (threads > 1L) {
     # Use "N,0" format: N default threads, 0 interactive threads. Since
     # Julia 1.12 the interactive pool takes thread id 1, so with an
@@ -98,20 +120,23 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   }
 
   # Find Julia (do NOT auto-install). find_julia_bin() searches the JULIA_HOME
-  # option and environment variable, a Julia installed by cs_install_julia(),
-  # JuliaCall's install record, the PATH, a login shell's PATH (for GUI
-  # sessions on macOS), and common Windows install locations. The Julia found
-  # is passed to JuliaConnectoR explicitly, so the Julia whose version is
-  # checked below is the one that starts.
-  if (is.null(julia_home)) {
-    julia_bin <- find_julia_bin()
-    if (is.null(julia_bin)) {
-      stop(julia_not_found_message(), call. = FALSE)
-    }
-  } else {
+  # option and environment variable, JULIA_BINDIR, a Julia installed by
+  # cs_install_julia(), JuliaCall's install record, the PATH, a login shell's
+  # PATH (for GUI sessions on macOS), and common Windows install locations.
+  # When restarting, reuse the Julia found before. The Julia found is passed
+  # to JuliaConnectoR explicitly, so the Julia whose version is checked below
+  # is the one that starts.
+  if (!is.null(julia_home)) {
     julia_bin <- file.path(julia_home, julia_exe())
     if (!file.exists(julia_bin)) {
       stop(julia_not_found_message(julia_home), call. = FALSE)
+    }
+  } else if (!is.null(.cs_env$julia_bin) && file.exists(.cs_env$julia_bin)) {
+    julia_bin <- .cs_env$julia_bin
+  } else {
+    julia_bin <- find_julia_bin()
+    if (is.null(julia_bin)) {
+      stop(julia_not_found_message(), call. = FALSE)
     }
   }
 
@@ -124,13 +149,25 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   start_julia(julia_bin, quiet = quiet, julia_home = julia_home)
   check_running_julia_version()
 
-  # Record the thread count Julia actually has, which can differ from the
-  # request if Julia was started before cs_setup() ran.
-  .cs_env$julia_threads <- julia_nthreads()
-  if (threads > .cs_env$julia_threads) {
-    warning(thread_mismatch_message(.cs_env$julia_threads, threads),
-            call. = FALSE)
+  # Julia may already have been running with a thread layout that can't
+  # honor the request; if so, restart it (once) with JULIA_NUM_THREADS set.
+  nthreads <- julia_nthreads()
+  ninteractive <- julia_ninteractive()
+  if (julia_needs_restart(threads, nthreads, ninteractive)) {
+    message("Restarting Julia with ", threads, " threads (it was already ",
+            "running with ", nthreads, ")...")
+    jl_stop()
+    start_julia(julia_bin, quiet = quiet, julia_home = julia_home)
+    check_running_julia_version()
+    nthreads <- julia_nthreads()
+    ninteractive <- julia_ninteractive()
+    if (julia_needs_restart(threads, nthreads, ninteractive)) {
+      warning(thread_mismatch_message(nthreads, threads), call. = FALSE)
+    }
   }
+  .cs_env$julia_bin <- julia_bin
+  .cs_env$julia_threads <- nthreads
+  .cs_env$julia_interactive <- if (is.na(ninteractive)) 0L else ninteractive
 
   # --- Check that required Julia packages are installed ---
   missing_pkgs <- character(0)
@@ -222,6 +259,7 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
     }
   )
 
+  mark_julia_ready()
   message("Ready.")
   .cs_env$julia_ready <- TRUE
   invisible(TRUE)
@@ -351,16 +389,16 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
 
 #' Ensure Julia is Ready
 #'
-#' Internal helper that calls [cs_setup()] if Julia hasn't been initialized
-#' yet. If Julia or required packages are not installed, an informative error
-#' is thrown directing the user to [cs_install_julia()].
+#' Internal helper that calls [cs_setup()], which sets up Julia if it isn't
+#' set up yet (or is no longer running). If Julia or required packages are
+#' not installed, an informative error is thrown directing the user to
+#' [cs_install_julia()].
 #'
 #' @return `TRUE` invisibly.
 #' @noRd
 ensure_julia <- function() {
-  if (!.cs_env$julia_ready) {
-    cs_setup()
-  }
+  # When Julia is set up, cs_setup() only checks that it's still running.
+  cs_setup()
   invisible(TRUE)
 }
 

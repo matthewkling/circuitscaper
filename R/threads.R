@@ -7,6 +7,36 @@ julia_nthreads <- function() {
 }
 
 
+#' Number of Interactive Julia Threads in the Running Session
+#' @return Integer, or `NA` if unavailable.
+#' @noRd
+julia_ninteractive <- function() {
+  tryCatch(
+    as.integer(jl_eval("Threads.nthreads(:interactive)")),
+    error = function(e) NA_integer_
+  )
+}
+
+
+#' Does Julia Need a Restart to Honor a Thread Request?
+#'
+#' Julia's thread layout is fixed when Julia starts, so [cs_setup()]
+#' restarts Julia when the running one can't give `threads = requested`:
+#' it has fewer threads, or it has an interactive thread (see
+#' `omniscape_handles_interactive_threads()`). A request for one thread
+#' never restarts Julia.
+#'
+#' @param requested Requested thread count.
+#' @param nthreads,ninteractive As from `julia_nthreads()` and
+#'   `julia_ninteractive()`.
+#' @return Logical.
+#' @noRd
+julia_needs_restart <- function(requested, nthreads, ninteractive) {
+  requested > 1L &&
+    (requested > nthreads || isTRUE(ninteractive > 0L))
+}
+
+
 #' Thread Layout of the Running Julia Session
 #'
 #' Note that `Threads.maxthreadid()` is not a useful signal here: it also
@@ -21,10 +51,7 @@ julia_nthreads <- function() {
 #' @noRd
 julia_thread_info <- function() {
   nthreads <- julia_nthreads()
-  ninteractive <- tryCatch(
-    as.integer(jl_eval("Threads.nthreads(:interactive)")),
-    error = function(e) NA_integer_
-  )
+  ninteractive <- julia_ninteractive()
   omniscape_version <- tryCatch(
     as.character(jl_eval("string(pkgversion(Omniscape))")),
     error = function(e) NA_character_
@@ -60,25 +87,28 @@ omniscape_handles_interactive_threads <- function(version) {
 thread_fix_hint <- function(n) {
   n <- max(as.integer(n), 2L)
   paste0(
-    "To run in parallel, restart R and call cs_setup(threads = ", n, ") ",
-    "before anything else starts Julia. If you start Julia yourself (for ",
-    "example with JuliaConnectoR), first run ",
-    "Sys.setenv(JULIA_NUM_THREADS = \"", n, ",0\")."
+    "To run in parallel, call cs_setup(threads = ", n, "), which restarts ",
+    "Julia with ", n, " threads."
   )
 }
 
 
-#' Warning Text for a Thread Request Julia Can No Longer Honor
+#' Warning Text for a Thread Request Julia Didn't Honor
+#'
+#' For when Julia still has the wrong thread layout after [cs_setup()]
+#' restarted it with `JULIA_NUM_THREADS` set, i.e. something else sets
+#' Julia's thread count.
+#'
 #' @param actual Threads Julia is running with.
 #' @param requested Threads requested.
 #' @noRd
 thread_mismatch_message <- function(actual, requested) {
   paste0(
-    "Julia is running with ", actual, " thread(s), so threads = ", requested,
-    " has no effect. Julia's thread count is fixed when Julia starts, and ",
-    "Julia was already running when this was requested (started, for ",
-    "example, by another package that uses JuliaConnectoR, or an earlier ",
-    "circuitscaper call). ", thread_fix_hint(requested)
+    "Julia started with ", actual, " thread(s) rather than the ", requested,
+    " requested with threads = ", requested, " (JULIA_NUM_THREADS = \"",
+    requested, ",0\"). Something else is setting Julia's thread count, ",
+    "such as a --threads option in the JULIACONNECTOR_JULIAOPTS ",
+    "environment variable."
   )
 }
 
@@ -125,8 +155,8 @@ parallel_decision <- function(nthreads, ninteractive, omniscape_version,
       parallelize = TRUE,
       warning = paste0(
         "Julia is running with ", nthreads, " threads, not the ", requested,
-        " requested; using ", nthreads, ". Julia's thread count is fixed ",
-        "when Julia starts."
+        " requested; using ", nthreads, ". To use more, call ",
+        "cs_setup(threads = ", requested, "), which restarts Julia."
       )
     ))
   }

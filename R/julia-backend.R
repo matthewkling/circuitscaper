@@ -61,6 +61,66 @@ start_julia <- function(julia_bin, quiet = TRUE, julia_home = NULL) {
 }
 
 
+#' Stop Julia
+#'
+#' Ends the Julia process 'JuliaConnectoR' started. The next evaluation
+#' starts a new one.
+#' @noRd
+jl_stop <- function() {
+  tryCatch(JuliaConnectoR::stopJulia(), error = function(e) NULL)
+  invisible()
+}
+
+
+#' Mark the Running Julia as Set Up by circuitscaper
+#'
+#' Defines a marker in Julia's `Main` module, which [cs_setup()] checks to
+#' tell whether the Julia it set up is still the one running.
+#' @noRd
+mark_julia_ready <- function() {
+  jl_eval("global circuitscaper_ready__ = true; nothing")
+  invisible()
+}
+
+
+#' Is the Julia circuitscaper Set Up Still Running?
+#'
+#' circuitscaper records when it has set up Julia, but the Julia process can
+#' go away afterwards: it can crash (e.g., run out of memory), or be stopped
+#' with `JuliaConnectoR::stopJulia()`. 'JuliaConnectoR' then starts a new,
+#' bare Julia on the next evaluation (or, if the old connection is broken,
+#' fails), so the record alone can't be trusted.
+#'
+#' @return `"ready"` (the Julia circuitscaper set up), `"fresh"` (a Julia
+#'   without circuitscaper's setup), or `"broken"` (no working connection).
+#' @noRd
+julia_session_state <- function() {
+  tryCatch(
+    if (isTRUE(suppressMessages(
+      jl_eval("isdefined(Main, :circuitscaper_ready__)")))) {
+      "ready"
+    } else {
+      "fresh"
+    },
+    error = function(e) "broken"
+  )
+}
+
+
+#' Forget circuitscaper's Julia Setup
+#'
+#' @param stop Logical. Also stop the Julia process.
+#' @noRd
+forget_julia <- function(stop = TRUE) {
+  if (stop) jl_stop()
+  .cs_env$julia_ready <- FALSE
+  .cs_env$loaded_packages <- character(0)
+  .cs_env$julia_threads <- 1L
+  .cs_env$julia_interactive <- 0L
+  invisible()
+}
+
+
 #' Is a Julia Package Installed?
 #' @param pkg Character package name.
 #' @return Logical.
