@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">circuitscaper</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,9 +36,15 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="circuitscaper-development-version">circuitscaper (development version)<a class="anchor" aria-label="anchor" href="#circuitscaper-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="circuitscaper-020">circuitscaper 0.2.0<a class="anchor" aria-label="anchor" href="#circuitscaper-020"></a></h2>
 <div class="section level3">
-<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<h3 id="new-features-0-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-2-0"></a></h3>
+<ul><li>
+<code>cs_setup(threads = )</code> now restarts Julia when it is already running with fewer threads (or with an interactive thread, which breaks parallel runs of Omniscape &lt; 0.6.3), instead of warning that R must be restarted.</li>
+<li>If the Julia process stops during a session (for example, it crashes or runs out of memory, or is stopped with <code><a href="https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html" class="external-link">JuliaConnectoR::stopJulia()</a></code>), the next circuitscaper call starts and sets up Julia again, instead of failing with connection errors until R is restarted.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-2-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-0"></a></h3>
 <ul><li><p>circuitscaper now runs Julia in its own process, connected to R by ‘JuliaConnectoR’, instead of inside R’s process via ‘JuliaCall’. With Julia inside R, the libraries R had loaded clashed with the ones Julia bundles, and setup failed on Linux: on Ubuntu 24.04, Julia’s GDAL could not load because terra had already loaded the system libtiff (“version <code>LIBTIFF_4.6.1' not found"), and Julia could also crash on the system libunwind. 'JuliaConnectoR' also starts Julia without R's</code>LD_LIBRARY_PATH<code>, which crashed Julia's package manager. Julia packages are likewise installed in a separate Julia process with a clean library path. RCall.jl is no longer needed, and the</code>…<code>argument of</code>cs_setup()<code>(passed to</code>JuliaCall::julia_setup()`) is gone.</p></li>
 <li><p>The shell and Julia commands circuitscaper runs to find and check Julia (including at package attach) now time out instead of potentially hanging, e.g. on a slow login shell profile.</p></li>
 <li><p><code><a href="../reference/cs_setup.html">cs_setup()</a></code> and <code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code> now refuse Julia versions older than 1.10 with an explanation of how to upgrade. On older Julia, the package manager falls back to old releases of Circuitscape.jl and Omniscape.jl that fail in obscure ways. The minimum in <code>SystemRequirements</code> is now Julia 1.10.</p></li>

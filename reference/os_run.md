@@ -106,20 +106,21 @@ os_run(
 
 - parallelize:
 
-  Logical. Use Julia multithreading. Default `FALSE`. Julia's thread
-  count is fixed when Julia starts, so call
-  [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-  with the `threads` argument at the start of your session, before
-  anything else starts Julia. If the running Julia session cannot run
-  Omniscape in parallel (it has only one thread, or it was started with
-  an interactive thread, which Omniscape releases before 0.6.3 do not
+  Logical. Use Julia multithreading. Default `FALSE`. Set the number of
+  threads with
+  [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)'s
+  `threads` argument, which restarts Julia if it is already running with
+  fewer threads. If the running Julia session cannot run Omniscape in
+  parallel (it has only one thread, or it was started with an
+  interactive thread, which Omniscape releases before 0.6.3 do not
   support), `os_run()` warns and runs serially.
 
 - julia_threads:
 
   Integer. Number of Julia threads to start if `parallelize = TRUE` and
   Julia is not yet running. Default `2`. Has no effect once Julia is
-  running; Omniscape then uses all of Julia's threads.
+  running (`os_run()` doesn't restart Julia); Omniscape then uses all of
+  Julia's threads.
 
 - solver:
 

@@ -1,6 +1,18 @@
 # Changelog
 
-## circuitscaper (development version)
+## circuitscaper 0.2.0
+
+### New features
+
+- `cs_setup(threads = )` now restarts Julia when it is already running
+  with fewer threads (or with an interactive thread, which breaks
+  parallel runs of Omniscape \< 0.6.3), instead of warning that R must
+  be restarted.
+- If the Julia process stops during a session (for example, it crashes
+  or runs out of memory, or is stopped with
+  [`JuliaConnectoR::stopJulia()`](https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html)),
+  the next circuitscaper call starts and sets up Julia again, instead of
+  failing with connection errors until R is restarted.
 
 ### Bug fixes
 

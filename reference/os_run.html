@@ -9,7 +9,7 @@ connectivity using a moving window approach based on circuit theory."><meta prop
 
     <a class="navbar-brand me-2" href="../index.html">circuitscaper</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -142,19 +142,19 @@ still accepted here.</p></dd>
 
 <dt id="arg-parallelize">parallelize<a class="anchor" aria-label="anchor" href="#arg-parallelize"></a></dt>
 <dd><p>Logical. Use Julia multithreading. Default <code>FALSE</code>.
-Julia's thread count is fixed when Julia starts, so call <code><a href="cs_setup.html">cs_setup()</a></code>
-with the <code>threads</code> argument at the start of your session, before
-anything else starts Julia. If the running Julia session cannot run
-Omniscape in parallel (it has only one thread, or it was started with an
-interactive thread, which Omniscape releases before 0.6.3 do not
-support), <code>os_run()</code> warns and runs serially.</p></dd>
+Set the number of threads with <code><a href="cs_setup.html">cs_setup()</a></code>'s <code>threads</code> argument, which
+restarts Julia if it is already running with fewer threads. If the
+running Julia session cannot run Omniscape in parallel (it has only one
+thread, or it was started with an interactive thread, which Omniscape
+releases before 0.6.3 do not support), <code>os_run()</code> warns and runs
+serially.</p></dd>
 
 
 <dt id="arg-julia-threads">julia_threads<a class="anchor" aria-label="anchor" href="#arg-julia-threads"></a></dt>
 <dd><p>Integer. Number of Julia threads to start if
 <code>parallelize = TRUE</code> and Julia is not yet running. Default <code>2</code>. Has no
-effect once Julia is running; Omniscape then uses all of Julia's
-threads.</p></dd>
+effect once Julia is running (<code>os_run()</code> doesn't restart Julia);
+Omniscape then uses all of Julia's threads.</p></dd>
 
 
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>

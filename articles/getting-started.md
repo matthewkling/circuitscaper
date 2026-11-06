@@ -338,13 +338,12 @@ for details.
 ### Parallel processing
 
 For large landscapes, enable Julia multithreading to reduce compute
-times. Julia’s thread count is fixed when Julia starts, so set it via
-[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-before any other circuitscaper calls:
+times. Set the number of threads with
+[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md),
+ideally at the start of your session:
 
 ``` r
 
-# Set thread count at the start of your session
 cs_setup(threads = 4)
 
 result <- os_run(resistance, radius = 20,
@@ -352,16 +351,13 @@ result <- os_run(resistance, radius = 20,
                  parallelize = TRUE)
 ```
 
-This also means
-[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-must come before anything else that starts Julia, such as another
-package that uses ‘JuliaConnectoR’. If you need to start Julia yourself,
-set the thread count first with `Sys.setenv(JULIA_NUM_THREADS = "4,0")`.
-The `,0` keeps Julia from adding an “interactive” thread, which makes
-parallel runs fail in Omniscape releases before 0.6.3. If the running
-Julia session can’t run in parallel,
+Julia’s thread count is fixed when Julia starts, so if Julia is already
+running with fewer threads, `cs_setup(threads = 4)` restarts it. That
+takes about as long as the first setup, since Circuitscape and Omniscape
+are loaded and warmed up again. If the running Julia session can’t run
+in parallel,
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
-warns and runs serially.
+warns, says how to fix it, and runs serially.
 
 ## Performance
 

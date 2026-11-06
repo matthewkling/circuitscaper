@@ -27,10 +27,9 @@ cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE)
 
 - threads:
 
-  Integer. Number of Julia threads to start. Default `1L`. Takes effect
-  only if Julia is not yet running in this R session — once Julia is
-  running, the thread count cannot be changed without restarting R, and
-  a warning is issued. This setting controls parallelism for
+  Integer. Number of Julia threads. Default `1L`. If Julia is already
+  running with fewer threads, it is restarted with `threads` threads
+  (see Threading, below). This setting controls parallelism for
   [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
   only; Circuitscape functions (`cs_*`) run single-threaded regardless
   of this value.
@@ -61,12 +60,16 @@ error directing you to
 - Load both packages and warm up the JIT compiler.
 
 Once Julia is initialized, it stays warm for the R session. Subsequent
-calls to `cs_setup()` return immediately.
+calls to `cs_setup()` return immediately. If the Julia process has
+stopped in the meantime (for example, it crashed or ran out of memory,
+or was stopped with
+[`JuliaConnectoR::stopJulia()`](https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html)),
+the next `cs_setup()` call, or the next `cs_*()` or `os_*()` call,
+starts and sets up Julia again.
 
 ### Threading
 
-Julia's thread count is fixed when Julia starts and cannot be changed
-mid-session. Multi-threading is used by
+Multi-threading is used by
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
 when `parallelize = TRUE`. Circuitscape functions (`cs_pairwise`,
 `cs_one_to_all`, etc.) do not benefit from multiple threads.
@@ -74,14 +77,19 @@ when `parallelize = TRUE`. Circuitscape functions (`cs_pairwise`,
     cs_setup(threads = 4)
     os_run(resistance, radius = 50, parallelize = TRUE)
 
-Call `cs_setup(threads = )` before anything else starts Julia, such as
-another package that uses 'JuliaConnectoR'. If you need to start Julia
-yourself, set the thread count first with
-`Sys.setenv(JULIA_NUM_THREADS = "4,0")`. The `,0` (no interactive
-threads) matters: Omniscape releases before 0.6.3 fail in parallel when
-Julia has an interactive thread, and
+Julia's thread count is fixed when Julia starts, so if Julia is already
+running with fewer threads, `cs_setup(threads = )` restarts it. This
+takes as long as the first setup, since Circuitscape and Omniscape are
+loaded and warmed up again, and it discards anything else in this R
+session's Julia (e.g., objects created through 'JuliaConnectoR' by other
+code). Asking for fewer threads than Julia has doesn't restart it.
+
+Julia is started with `JULIA_NUM_THREADS` set to `"N,0"`: N threads and
+no interactive threads. Omniscape releases before 0.6.3 fail in parallel
+when Julia has an interactive thread, so `cs_setup(threads = )` also
+restarts a Julia that has one, and
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
-then falls back to a serial run with a warning.
+falls back to a serial run with a warning if it finds one.
 
 ## References
 
