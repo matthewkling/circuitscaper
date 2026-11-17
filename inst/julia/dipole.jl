@@ -196,7 +196,11 @@ function node_sums(gr::Graph, x::AbstractMatrix{Float64})
     out
 end
 
-default_batch(n::Int) = clamp(64_000_000 ÷ max(n, 1), 2, 32)
+# Columns per solve. Each column costs a few n-vectors (~0.4 GB at 18M
+# nodes), small next to the factor (~14 GB there), while narrow batches
+# leave the multithreaded solve underused: at 18M nodes, 16 columns solved
+# 32 draws in 85 s against 238 s with 3, for 3 GiB more peak memory.
+default_batch(n::Int) = clamp(300_000_000 ÷ max(n, 1), 8, 32)
 
 # Accumulate the given injections (nodes x draws), `batch` columns at a time
 function accumulate_given(circ::Circuit, B::AbstractMatrix{<:Real}; batch::Int = 8, f = abs2)
