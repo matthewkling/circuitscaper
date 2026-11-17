@@ -1,0 +1,488 @@
+# Dipole methods: many balanced injections solved against one factored
+# circuit and combined by superposition. Loaded into Main by circuitscaper's
+# R code; depends only on Julia's standard libraries. See dev/dipole/SPEC.md.
+module CircuitscaperDipole
+
+using SparseArrays, LinearAlgebra, Random
+using Base.Threads: @threads
+
+# Identifies this Julia process, so R can tell whether a circuit it holds
+# was built in the Julia that is running now
+const SESSION = string(rand(RandomDevice(), UInt64); base = 16)
+
+# Per-node conductance to ground. Its only job is to make the matrix
+# positive definite: at 1e-8 it drained measurable current from
+# low-conductance cells; 1e-12 matches Circuitscape.
+const GROUND_FLOOR = 1e-12
+
+
+# Graph ------------------------------------------------------------------------
+
+# Topology of the raster circuit: nodes are the valid cells, numbered down
+# the columns of the nr x nc (top row first) matrix; links are 8-neighbour.
+struct Graph
+    nr::Int
+    nc::Int
+    id::Matrix{Int}          # node number of each cell, 0 for invalid cells
+    node_r::Vector{Int}
+    node_c::Vector{Int}
+    a::Vector{Int}           # link endpoints
+    b::Vector{Int}
+    diagonal::BitVector
+    comp::Vector{Int}        # connected component of each node
+    ncomp::Int
+end
+
+nnodes(gr::Graph) = length(gr.node_r)
+nlinks(gr::Graph) = length(gr.a)
+
+function Graph(valid::AbstractMatrix{Bool})
+    nr, nc = size(valid)
+    id = zeros(Int, nr, nc)
+    node_r = Int[]
+    node_c = Int[]
+    k = 0
+    for c in 1:nc, r in 1:nr
+        if valid[r, c]
+            k += 1
+            id[r, c] = k
+            push!(node_r, r)
+            push!(node_c, c)
+        end
+    end
+    # Same link order as the prototype: by direction, then down the columns
+    a = Int[]
+    b = Int[]
+    diagonal = Bool[]
+    for (dr, dc) in ((0, 1), (1, 0), (1, 1), (1, -1))
+        for c in max(1, 1 - dc):min(nc, nc - dc), r in 1:(nr - dr)
+            u = id[r, c]
+            v = id[r + dr, c + dc]
+            if u > 0 && v > 0
+                push!(a, u)
+                push!(b, v)
+                push!(diagonal, dr != 0 && dc != 0)
+            end
+        end
+    end
+    comp, ncomp = components(k, a, b)
+    Graph(nr, nc, id, node_r, node_c, a, b, BitVector(diagonal), comp, ncomp)
+end
+
+# Connected components by union-find, labelled in order of first node
+function components(n::Int, a::Vector{Int}, b::Vector{Int})
+    parent = collect(1:n)
+    function root(x)
+        while parent[x] != x
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        end
+        x
+    end
+    for e in eachindex(a)
+        ra = root(a[e])
+        rb = root(b[e])
+        ra != rb && (parent[max(ra, rb)] = min(ra, rb))
+    end
+    comp = zeros(Int, n)
+    label = zeros(Int, n)
+    m = 0
+    for i in 1:n
+        r = root(i)
+        if label[r] == 0
+            m += 1
+            label[r] = m
+        end
+        comp[i] = label[r]
+    end
+    comp, m
+end
+
+
+# Circuit ----------------------------------------------------------------------
+
+# A graph with link conductances and the Cholesky factor of its Laplacian
+# plus the ground floor
+struct Circuit
+    graph::Graph
+    g::Vector{Float64}
+    fac::SparseArrays.CHOLMOD.Factor{Float64}
+end
+
+# Circuitscape's averaged conductances: (c_u + c_v) / 2, diagonals / sqrt(2)
+function link_conductances(gr::Graph, cond::AbstractMatrix{<:Real})
+    g = Vector{Float64}(undef, nlinks(gr))
+    for e in eachindex(g)
+        i = gr.a[e]
+        j = gr.b[e]
+        x = (cond[gr.node_r[i], gr.node_c[i]] + cond[gr.node_r[j], gr.node_c[j]]) / 2
+        g[e] = gr.diagonal[e] ? x / sqrt(2) : x
+    end
+    g
+end
+
+function laplacian(gr::Graph, g::Vector{Float64}; floor::Float64 = GROUND_FLOOR)
+    n = nnodes(gr)
+    d = zeros(n)
+    for e in eachindex(g)
+        d[gr.a[e]] += g[e]
+        d[gr.b[e]] += g[e]
+    end
+    d .+= floor
+    sparse(vcat(gr.a, gr.b, 1:n), vcat(gr.b, gr.a, 1:n), vcat(-g, -g, d), n, n)
+end
+
+function Circuit(gr::Graph, cond::AbstractMatrix{<:Real})
+    g = link_conductances(gr, cond)
+    fac = cholesky(Symmetric(laplacian(gr, g)))
+    Circuit(gr, g, fac)
+end
+
+# Uniform circuit for flow potential: conductance 1 on the same cells
+uniform_circuit(gr::Graph) = Circuit(gr, ones(gr.nr, gr.nc))
+
+
+# Accumulation -----------------------------------------------------------------
+
+# Running sums over draws of a per-link quantity f(I_e), split by draw
+# parity: column 1 holds odd draws, column 2 even draws
+struct LinkSums
+    s::Matrix{Float64}
+    n::Vector{Int}
+end
+LinkSums(nl::Int) = LinkSums(zeros(nl, 2), [0, 0])
+
+parity(draw::Integer) = isodd(draw) ? 1 : 2
+
+# Solve the columns of B (draws first_draw, first_draw + 1, ...) and add
+# f of each link current to the sums. Each link's sum runs over the draws in
+# order, so results don't depend on the number of threads.
+function accumulate!(acc::LinkSums, circ::Circuit, B::Matrix{Float64}, first_draw::Int;
+                     f::F = abs2) where {F}
+    k = size(B, 2)
+    Vt = permutedims(circ.fac \ B)     # draws x nodes: a node's values are contiguous
+    par = [parity(first_draw + j - 1) for j in 1:k]
+    a, b, g, s = circ.graph.a, circ.graph.b, circ.g, acc.s
+    @threads for e in eachindex(a)
+        ia = a[e]
+        ib = b[e]
+        ge = g[e]
+        s1 = 0.0
+        s2 = 0.0
+        @inbounds for j in 1:k
+            x = f(ge * (Vt[j, ia] - Vt[j, ib]))
+            if par[j] == 1
+                s1 += x
+            else
+                s2 += x
+            end
+        end
+        s[e, 1] += s1
+        s[e, 2] += s2
+    end
+    for p in par
+        acc.n[p] += 1
+    end
+    acc
+end
+
+# Per-node sums over incident links, of each column of x (links x k)
+function node_sums(gr::Graph, x::AbstractMatrix{Float64})
+    out = zeros(nnodes(gr), size(x, 2))
+    for p in axes(x, 2), e in axes(x, 1)
+        out[gr.a[e], p] += x[e, p]
+        out[gr.b[e], p] += x[e, p]
+    end
+    out
+end
+
+default_batch(n::Int) = clamp(64_000_000 ÷ max(n, 1), 2, 32)
+
+# Accumulate the given injections (nodes x draws), `batch` columns at a time
+function accumulate_given(circ::Circuit, B::AbstractMatrix{<:Real}; batch::Int = 8, f = abs2)
+    acc = LinkSums(nlinks(circ.graph))
+    for s0 in 1:batch:size(B, 2)
+        cols = s0:min(size(B, 2), s0 + batch - 1)
+        accumulate!(acc, circ, Matrix{Float64}(B[:, cols]), s0; f = f)
+    end
+    acc
+end
+
+
+# Kernel -----------------------------------------------------------------------
+
+# A set of cell offsets (dr, dc) around a source cell. For each row offset
+# dr = dr0 + d - 1 the column offsets are one run, -hw[d, kr] .. hw[d, kr]
+# (none if hw < 0). The kernel may vary by the source cell's grid row:
+# kr = rowmap[row]. Offsets are proposed uniformly from 1:kmax, the size of
+# the largest row kernel, and proposals beyond a row's own count rejected,
+# so every pair within the kernel is proposed with the same probability.
+struct Kernel
+    dr0::Int
+    hw::Matrix{Int}          # row offsets x kernel rows
+    rowmap::Vector{Int}      # grid row -> kernel row
+    cum::Matrix{Int}         # cumulative offset counts, same layout as hw
+    kmax::Int
+end
+
+function Kernel(dr0::Integer, hw::AbstractMatrix{<:Real}, rowmap::AbstractVector{<:Real})
+    hw = Matrix{Int}(round.(Int, hw))
+    cum = cumsum(max.(2 .* hw .+ 1, 0), dims = 1)
+    Kernel(Int(dr0), hw, Vector{Int}(round.(Int, rowmap)), cum, maximum(cum[end, :]))
+end
+
+# A disk of `radius` pixels: dr^2 + dc^2 <= radius^2
+function pixel_kernel(radius::Real, nr::Int)
+    R = floor(Int, radius)
+    hw = [isqrt_floor(radius^2 - dr^2) for dr in -R:R]
+    Kernel(-R, reshape(hw, :, 1), ones(Int, nr))
+end
+
+# Largest h with h^2 <= x, without trusting sqrt's rounding
+function isqrt_floor(x::Real)
+    x < 0 && return -1
+    h = floor(Int, sqrt(x))
+    while (h + 1)^2 <= x
+        h += 1
+    end
+    while h^2 > x
+        h -= 1
+    end
+    h
+end
+
+
+# Sampling ---------------------------------------------------------------------
+
+# Dipole endpoints (i, j) drawn with probability proportional to
+# w1_i * w2_j * k_ij over ordered pairs with i != j in the same component.
+# i is drawn in proportion to w1; j either in proportion to w2 (no kernel)
+# or as a kernel offset from i, accepted with probability w2_j / max(w2).
+struct Sampler
+    graph::Graph
+    w1::Vector{Float64}
+    w2::Vector{Float64}
+    src::Vector{Int}
+    cum1::Vector{Float64}
+    dst::Vector{Int}
+    cum2::Vector{Float64}
+    w2max::Float64
+    kernel::Union{Nothing, Kernel}
+end
+
+function Sampler(gr::Graph, w1::AbstractVector{<:Real}, w2::AbstractVector{<:Real},
+                 kernel::Union{Nothing, Kernel})
+    w1 = Vector{Float64}(w1)
+    w2 = Vector{Float64}(w2)
+    src = findall(>(0), w1)
+    dst = findall(>(0), w2)
+    Sampler(gr, w1, w2, src, cumsum(w1[src]), dst, cumsum(w2[dst]),
+            isempty(dst) ? 0.0 : maximum(w2[dst]), kernel)
+end
+
+pick(rng, nodes, cum) = nodes[min(searchsortedfirst(cum, rand(rng) * cum[end]), length(nodes))]
+
+function draw_pair(rng::AbstractRNG, s::Sampler)
+    gr = s.graph
+    K = s.kernel
+    while true
+        i = pick(rng, s.src, s.cum1)
+        if K === nothing
+            j = pick(rng, s.dst, s.cum2)
+        else
+            kr = K.rowmap[gr.node_r[i]]
+            u = rand(rng, 1:K.kmax)
+            cum = view(K.cum, :, kr)
+            u > cum[end] && continue
+            d = searchsortedfirst(cum, u)
+            prev = d > 1 ? cum[d - 1] : 0
+            r = gr.node_r[i] + K.dr0 + d - 1
+            c = gr.node_c[i] + (u - prev - 1) - K.hw[d, kr]
+            (1 <= r <= gr.nr && 1 <= c <= gr.nc) || continue
+            j = gr.id[r, c]
+            j == 0 && continue
+            rand(rng) * s.w2max < s.w2[j] || continue
+        end
+        (j == i || gr.comp[j] != gr.comp[i]) && continue
+        return i, j
+    end
+end
+
+# Each draw is its own random stream, seeded by (seed, draw), so a draw's
+# injection doesn't depend on batching or threads
+draw_rng(seed::Integer, draw::Integer) = Xoshiro(UInt64[seed, draw])
+
+# Fill B's columns with draws `draws`: m random-sign unit dipoles each
+function injections!(B::Matrix{Float64}, s::Sampler, seed::Integer, draws::AbstractVector{<:Integer}, m::Integer)
+    fill!(B, 0.0)
+    @threads for k in eachindex(draws)
+        rng = draw_rng(seed, draws[k])
+        for _ in 1:m
+            i, j = draw_pair(rng, s)
+            sg = rand(rng, Bool) ? 1.0 : -1.0
+            @inbounds B[i, k] += sg
+            @inbounds B[j, k] -= sg
+        end
+    end
+    B
+end
+
+# S: the sum of w1_i * w2_j * k_ij over exactly the ordered pairs the
+# sampler can produce (i != j, same component)
+function pair_sum(s::Sampler)
+    gr = s.graph
+    self = sum(s.w1[i] * s.w2[i] for i in eachindex(s.w1); init = 0.0)
+    total = 0.0
+    if s.kernel === nothing
+        W1 = zeros(gr.ncomp)
+        W2 = zeros(gr.ncomp)
+        for i in eachindex(s.w1)
+            W1[gr.comp[i]] += s.w1[i]
+            W2[gr.comp[i]] += s.w2[i]
+        end
+        total = sum(W1 .* W2)
+    else
+        members = [Int[] for _ in 1:gr.ncomp]
+        for i in eachindex(gr.comp)
+            push!(members[gr.comp[i]], i)
+        end
+        for nodes in members
+            total += kernel_pair_sum(s, nodes)
+        end
+    end
+    max(total - self, 0.0)
+end
+
+# One component's sum over i of w1_i * (sum of w2 over i's kernel), from
+# per-row prefix sums of w2 over the component's bounding box
+function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
+    gr = s.graph
+    K = s.kernel
+    any(i -> s.w1[i] > 0, nodes) && any(i -> s.w2[i] > 0, nodes) || return 0.0
+    r0, r1 = extrema(gr.node_r[i] for i in nodes)
+    c0, c1 = extrema(gr.node_c[i] for i in nodes)
+    P = zeros(c1 - c0 + 2, r1 - r0 + 1)     # P[k + 1, r]: sum of w2 over columns c0 .. c0 + k - 1
+    for j in nodes
+        P[gr.node_c[j] - c0 + 2, gr.node_r[j] - r0 + 1] = s.w2[j]
+    end
+    cumsum!(P, P, dims = 1)
+    total = 0.0
+    for i in nodes
+        s.w1[i] > 0 || continue
+        ri = gr.node_r[i]
+        ci = gr.node_c[i]
+        kr = K.rowmap[ri]
+        acc = 0.0
+        for d in axes(K.hw, 1)
+            h = K.hw[d, kr]
+            h < 0 && continue
+            r = ri + K.dr0 + d - 1
+            r0 <= r <= r1 || continue
+            lo = max(ci - h, c0)
+            hi = min(ci + h, c1)
+            lo > hi && continue
+            acc += P[hi - c0 + 2, r - r0 + 1] - P[lo - c0 + 1, r - r0 + 1]
+        end
+        total += s.w1[i] * acc
+    end
+    total
+end
+
+# Random-sign dipoles from `s`, solved against each circuit. Returns one
+# LinkSums per circuit; all circuits see the same injections.
+function run_dipoles(circs::Vector{Circuit}, s::Sampler, seed::Integer, n_draws::Integer,
+                     m::Integer; batch::Int = default_batch(nnodes(s.graph)), f = abs2)
+    n = nnodes(s.graph)
+    accs = [LinkSums(nlinks(c.graph)) for c in circs]
+    for s0 in 1:batch:n_draws
+        draws = s0:min(n_draws, s0 + batch - 1)
+        B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m)
+        for (c, acc) in zip(circs, accs)
+            accumulate!(acc, c, B, s0; f = f)
+        end
+    end
+    accs
+end
+
+
+# Registry: circuits held for R ----------------------------------------------
+
+# R holds integer handles; the circuits live here until R frees them
+const CIRCUITS = Dict{Int, Circuit}()
+const NEXT_ID = Ref(0)
+
+function register!(c::Circuit)
+    NEXT_ID[] += 1
+    CIRCUITS[NEXT_ID[]] = c
+    NEXT_ID[]
+end
+
+circuit(id::Real) = CIRCUITS[Int(id)]
+
+function free!(ids)
+    for id in ids
+        delete!(CIRCUITS, Int(id))
+    end
+    nothing
+end
+
+# Build the circuit on the valid cells of `cond` (and its uniform twin).
+# Returns handles and sizes.
+function prepare(cond::AbstractMatrix{<:Real}, valid::AbstractMatrix{Bool}, uniform::Bool)
+    gr = Graph(valid)
+    nnodes(gr) > 0 || error("the conductance surface has no valid cells")
+    id = register!(Circuit(gr, cond))
+    uid = uniform ? register!(uniform_circuit(gr)) : 0
+    (id = id, uniform_id = uid, n_nodes = nnodes(gr), n_links = nlinks(gr), n_components = gr.ncomp)
+end
+
+prepare_uniform(id::Real) = register!(uniform_circuit(circuit(id).graph))
+
+# Kernel from R's description (see Kernel); an empty hw means no distance limit
+make_kernel(dr0::Real, hw, rowmap) =
+    isempty(hw) ? nothing : Kernel(Int(dr0), reshape(asvec(hw), size(hw, 1), :), asvec(rowmap))
+
+# 'JuliaConnectoR' passes R vectors of length 1 as scalars
+asvec(x::AbstractArray) = vec(x)
+asvec(x::Real) = [x]
+
+sampler(id::Real, w1, w2, dr0, hw, rowmap) =
+    Sampler(circuit(id).graph, asvec(w1), asvec(w2), make_kernel(dr0, hw, rowmap))
+
+# Random-sign dipoles drawn from (w1, w2, kernel), solved against the given
+# circuits (all on the same graph). Returns S and, per circuit, the per-node
+# sums of the per-link sums (nodes x 2: odd draws, even draws).
+function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws::Real,
+                        n_dipoles::Real, batch::Real)
+    circs = [circuit(id) for id in asvec(ids)]
+    s = sampler(first(asvec(ids)), w1, w2, dr0, hw, rowmap)
+    S = pair_sum(s)
+    S > 0 || error("no pairs of source cells can be drawn: check source strengths and radius")
+    b = batch > 0 ? Int(batch) : default_batch(nnodes(s.graph))
+    accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b)
+    (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)])
+end
+
+# Parity hook: accumulate a given injection matrix (nodes x draws). Returns
+# per-link sums (links x 2) and per-node sums (nodes x 2), columns odd and
+# even draws.
+function accumulate_injections(id::Real, B::AbstractMatrix{<:Real}, batch::Real)
+    c = circuit(id)
+    acc = accumulate_given(c, B; batch = Int(batch))
+    (links = acc.s, cells = node_sums(c.graph, acc.s), n = acc.n)
+end
+
+# Pair sum S for (w1, w2, kernel), as random_dipoles computes it
+pair_sum(id::Real, w1, w2, dr0, hw, rowmap) = pair_sum(sampler(id, w1, w2, dr0, hw, rowmap))
+
+# The injection matrix random_dipoles would use, for tests
+function injection_matrix(id::Real, w1, w2, dr0, hw, rowmap, seed::Real, n_draws::Real, n_dipoles::Real)
+    s = sampler(id, w1, w2, dr0, hw, rowmap)
+    injections!(Matrix{Float64}(undef, nnodes(s.graph), Int(n_draws)), s, Int(seed),
+                1:Int(n_draws), Int(n_dipoles))
+end
+
+# Graph details, for tests
+graph_info(id::Real) = (g = circuit(id).g, a = circuit(id).graph.a, b = circuit(id).graph.b,
+                        comp = circuit(id).graph.comp)
+end # module
