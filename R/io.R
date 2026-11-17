@@ -59,10 +59,16 @@ get_input_crs <- function(x) {
 #' @param dir Character. Output directory.
 #' @param prefix Character. Output file prefix used by Circuitscape.
 #' @param input_crs Character. CRS to assign to output rasters.
+#' @param cumulative_only Logical. Drop per-solve current maps
+#'   (`<prefix>_curmap_<N>`). Circuitscape.jl before 6.2 wrote them in
+#'   one-to-all and all-to-one modes even with `write_cum_cur_map_only`, so
+#'   they are dropped here to return the same layers whatever its version.
+#'   Cumulative, maximum and voltage maps are kept.
 #'
 #' @return SpatRaster with named layers.
 #' @noRd
-parse_cs_output <- function(dir, prefix, input_crs = "") {
+parse_cs_output <- function(dir, prefix, input_crs = "",
+                            cumulative_only = FALSE) {
   # Look for output raster files
   pattern <- paste0("^", prefix, ".*\\.(asc|tif)$")
   files <- list.files(dir, pattern = pattern, full.names = TRUE)
@@ -71,6 +77,10 @@ parse_cs_output <- function(dir, prefix, input_crs = "") {
   raster_files <- files[!grepl("_resistances", files)]
   raster_files <- raster_files[!grepl("\\.ini$", raster_files)]
   raster_files <- raster_files[!grepl("\\.out$", raster_files)]
+  if (cumulative_only) {
+    per_solve <- startsWith(basename(raster_files), paste0(prefix, "_curmap_"))
+    raster_files <- raster_files[!per_solve]
+  }
 
   if (length(raster_files) == 0) {
     stop("No output raster files found in: ", dir, call. = FALSE)

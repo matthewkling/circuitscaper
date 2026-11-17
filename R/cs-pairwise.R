@@ -250,7 +250,8 @@ run_cs_mode <- function(mode,
   run_julia(julia_expr, verbose = verbose)
 
   # Parse outputs
-  current_map <- parse_cs_output(work_dir, prefix, input_crs)
+  current_map <- parse_cs_output(work_dir, prefix, input_crs,
+                                 cumulative_only = cumulative_only)
 
   if (mode == "pairwise") {
     resistance_matrix <- read_resistance_matrix(work_dir, prefix)

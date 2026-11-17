@@ -50,7 +50,11 @@ test_that("cs_one_to_all runs end-to-end", {
   result <- cs_one_to_all(res, locs, verbose = FALSE)
 
   expect_s4_class(result, "SpatRaster")
-  expect_true(terra::nlyr(result) >= 2)
+  expect_equal(names(result), "cumulative_current")
+
+  result_all <- cs_one_to_all(res, locs, cumulative_only = FALSE, verbose = FALSE)
+  expect_true(terra::nlyr(result_all) >= 2)
+  expect_true("cumulative_current" %in% names(result_all))
 })
 
 test_that("cs_all_to_one runs end-to-end", {
@@ -65,7 +69,11 @@ test_that("cs_all_to_one runs end-to-end", {
   result <- cs_all_to_one(res, locs, verbose = FALSE)
 
   expect_s4_class(result, "SpatRaster")
-  expect_true(terra::nlyr(result) >= 2)
+  expect_equal(names(result), "cumulative_current")
+
+  result_all <- cs_all_to_one(res, locs, cumulative_only = FALSE, verbose = FALSE)
+  expect_true(terra::nlyr(result_all) >= 2)
+  expect_true("cumulative_current" %in% names(result_all))
 })
 
 test_that("cs_advanced runs end-to-end", {

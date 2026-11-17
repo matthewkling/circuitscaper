@@ -60,3 +60,22 @@ test_that("get_input_crs returns empty string for no CRS", {
   crs_val <- get_input_crs(r)
   expect_equal(crs_val, "")
 })
+
+
+test_that("parse_cs_output drops per-solve current maps when cumulative_only", {
+  skip_if_not_installed("terra")
+  dir <- tempfile()
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE))
+  r <- terra::rast(nrows = 2, ncols = 2, vals = 1:4)
+  for (f in c("cum_curmap", "curmap_1", "curmap_2", "voltmap_1")) {
+    terra::writeRaster(r, file.path(dir, paste0("cs_", f, ".asc")))
+  }
+
+  all <- parse_cs_output(dir, "cs")
+  expect_equal(names(all), c("cumulative_current", "current_1", "current_2",
+                             "voltage_1"))
+
+  cum <- parse_cs_output(dir, "cs", cumulative_only = TRUE)
+  expect_equal(names(cum), c("cumulative_current", "voltage_1"))
+})

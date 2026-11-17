@@ -90,7 +90,7 @@ A \link[terra:SpatRaster]{terra::SpatRaster} with the following layers:
 \item{cumulative_current}{Current flow summed across all iterations.}
 \item{current_\emph{N}}{Per-node current map for focal node \emph{N}, where
 \emph{N} is the integer node ID from the \code{locations} raster. One layer
-per focal node.}
+per focal node, included only when \code{cumulative_only = FALSE}.}
 }
 }
 \description{

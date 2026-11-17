@@ -77,7 +77,8 @@ install_julia_packages <- function(julia_bin, packages, update = FALSE,
   writeLines(c(
     "using Pkg",
     paste0("Pkg.add(", pkg_vector, ")"),
-    if (update) paste0("Pkg.update(", pkg_vector, ")"),
+    if (update) paste0("Pkg.update(", pkg_vector,
+                       "; preserve = Pkg.PRESERVE_DIRECT)"),
     "Pkg.precompile()"
   ), pkg_script)
   res <- run_julia_script(julia_bin, pkg_script, quiet = quiet)

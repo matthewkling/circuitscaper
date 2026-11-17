@@ -44,7 +44,8 @@ test_that("packages are added (and updated on request) in a script", {
   calls <- readLines(fake$log)
   expect_length(grep("^ARGS=", calls), 1)
   expect_true('Pkg.add(["Circuitscape", "Omniscape"])' %in% calls)
-  expect_true('Pkg.update(["Circuitscape", "Omniscape"])' %in% calls)
+  expect_true(paste0('Pkg.update(["Circuitscape", "Omniscape"]; ',
+                     'preserve = Pkg.PRESERVE_DIRECT)') %in% calls)
   expect_true("Pkg.precompile()" %in% calls)
 
   fake2 <- fake_recording_julia()

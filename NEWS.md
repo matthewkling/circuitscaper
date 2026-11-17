@@ -1,5 +1,18 @@
 # circuitscaper (development version)
 
+## Bug fixes
+
+* `cs_install_julia(force = TRUE)` now updates Circuitscape.jl and
+  Omniscape.jl even when a new release needs newer versions of their own
+  dependencies. It previously held those dependencies fixed, so, for
+  example, it stayed on Circuitscape.jl 6.1 instead of installing 6.2,
+  which needs a newer GZip.jl.
+
+* `cs_one_to_all()` and `cs_all_to_one()` return per-node current layers
+  only with `cumulative_only = FALSE`, as documented. Circuitscape.jl
+  before 6.2 wrote these maps regardless, so with older versions both
+  functions also returned them by default.
+
 # circuitscaper 0.2.0
 
 ## New features
