@@ -12,7 +12,7 @@
 #' handles were garbage-collected.
 #' @noRd
 dp_julia <- function() {
-  ensure_julia()
+  ensure_julia(circuitscape = FALSE)
   if (!isTRUE(jl_eval("isdefined(Main, :CircuitscaperDipole)"))) {
     f <- system.file("julia", "dipole.jl", package = "circuitscaper")
     jl_eval(paste0("include(", jl_string(f), "); nothing"))

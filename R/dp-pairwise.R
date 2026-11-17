@@ -49,7 +49,7 @@
 #'
 #' @seealso [cs_pairwise()], [dp_omni()], [dp_circuit()]
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
 #' set.seed(1)

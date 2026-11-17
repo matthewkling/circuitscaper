@@ -33,7 +33,7 @@
 #'
 #' @seealso [dp_omni()]
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
 #' circuit <- dp_circuit(resistance)

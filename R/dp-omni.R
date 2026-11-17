@@ -104,7 +104,7 @@
 #'
 #' @seealso [dp_circuit()], [dp_pairwise()], [dp_pathways()], [os_run()]
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
 #' result <- dp_omni(resistance, radius = 15, seed = 1)

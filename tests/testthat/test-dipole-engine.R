@@ -3,7 +3,7 @@
 # small-grid target (oracle 1)
 
 test_that("node order matches the prototype and terra's cells", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   proto <- dipole_prototype()
   x <- dipole_test_grid()
   circuit <- new_dp_circuit(x$conductance)
@@ -22,7 +22,7 @@ test_that("node order matches the prototype and terra's cells", {
 })
 
 test_that("links and conductances match the prototype", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   proto <- dipole_prototype()
   x <- dipole_test_grid()
   circuit <- new_dp_circuit(x$conductance)
@@ -61,20 +61,20 @@ parity_check <- function(conductance, suit, radius_km, n_draws = 5, m = 400) {
 }
 
 test_that("accumulating given injections matches the prototype (oracle 2)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid()
   parity_check(x$conductance, x$suitability, radius_km = 8)
   parity_check(x$conductance, x$suitability, radius_km = Inf)
 })
 
 test_that("accumulation matches the prototype on the reference crop", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   ref <- terra::rast(test_path("fixtures", "crop_R6_reference.tif"))
   parity_check(ref$conductance, ref$source_strength, radius_km = 15, n_draws = 4, m = 2000)
 })
 
 test_that("the pair sum S covers exactly the pairs the sampler can draw", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   circuit <- new_dp_circuit(x$conductance)
   gi <- dipole_graph_info(circuit)
@@ -88,7 +88,7 @@ test_that("the pair sum S covers exactly the pairs the sampler can draw", {
 })
 
 test_that("results don't depend on batching and are reproducible", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   circuit <- new_dp_circuit(x$conductance)
   w <- dp_node_values(circuit, x$suitability)
@@ -145,11 +145,11 @@ exact_check <- function(radius) {
 }
 
 test_that("the estimator converges to the exact target, disk kernel (oracle 1)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   exact_check(radius = 5)
 })
 
 test_that("the estimator converges to the exact target, no limit (oracle 1)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   exact_check(radius = Inf)
 })

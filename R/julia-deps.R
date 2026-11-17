@@ -53,9 +53,14 @@ local_clean_library_path <- function(envir = parent.frame()) {
 #' Julia Packages circuitscaper Needs
 #'
 #' Circuitscape.jl and Omniscape.jl, plus Tables.jl, which 'JuliaConnectoR'
-#' needs (it would otherwise install it the first time Julia starts).
+#' needs (it would otherwise install it the first time Julia starts). The
+#' dipole methods use only Julia's standard library, so they need Tables.jl
+#' alone.
+#' @param circuitscape Logical. Include Circuitscape.jl and Omniscape.jl.
 #' @noRd
-julia_packages <- function() c("Circuitscape", "Omniscape", "Tables")
+julia_packages <- function(circuitscape = TRUE) {
+  c(if (circuitscape) c("Circuitscape", "Omniscape"), "Tables")
+}
 
 
 #' Install Julia Packages

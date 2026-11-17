@@ -137,7 +137,7 @@ currents summed in parallel over Julia's threads; set the number with
 }
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 result <- dp_omni(resistance, radius = 15, seed = 1)

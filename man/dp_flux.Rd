@@ -74,7 +74,7 @@ carry no flow. The share that would have had to move between components,
 attribute, with a warning if it exceeds 1\%.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 present <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

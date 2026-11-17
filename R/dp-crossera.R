@@ -51,7 +51,7 @@
 #'
 #' @seealso [dp_pathways()], [cs_advanced()]
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
 #' present <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
@@ -126,7 +126,7 @@ dp_flux <- function(resistance, present, future, source_threshold = 0.01,
 #'
 #' @seealso [dp_flux()], [dp_omni()]
 #'
-#' @examplesIf circuitscaper::cs_julia_available()
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
 #' present <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

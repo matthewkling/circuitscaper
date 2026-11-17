@@ -44,7 +44,7 @@ The factorization lives in the Julia session. If Julia is restarted
 is rebuilt automatically the next time it is used.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 circuit <- dp_circuit(resistance)

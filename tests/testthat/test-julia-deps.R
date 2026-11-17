@@ -55,6 +55,88 @@ test_that("packages are added (and updated on request) in a script", {
 
 test_that("the package list includes what JuliaConnectoR needs", {
   expect_setequal(julia_packages(), c("Circuitscape", "Omniscape", "Tables"))
+  # The dipole methods use only Julia's standard library
+  expect_identical(julia_packages(circuitscape = FALSE), "Tables")
+})
+
+# Replace circuitscaper's Julia state until the calling test ends.
+local_cs_state <- function(..., .env = parent.frame()) {
+  old <- as.list(.cs_env, all.names = TRUE)
+  list2env(list(...), envir = .cs_env)
+  withr::defer({
+    rm(list = ls(.cs_env, all.names = TRUE), envir = .cs_env)
+    list2env(old, envir = .cs_env)
+  }, envir = .env)
+}
+
+test_that("only the cs_*() and os_*() functions load Circuitscape and Omniscape", {
+  loads <- 0L
+  local_mocked_bindings(
+    cs_setup = function(...) invisible(TRUE),
+    load_circuitscape = function(...) {
+      loads <<- loads + 1L
+      invisible(TRUE)
+    }
+  )
+  ensure_julia(circuitscape = FALSE)
+  expect_identical(loads, 0L)
+  ensure_julia()
+  expect_identical(loads, 1L)
+})
+
+test_that("load_circuitscape() loads once, and says how to install what's missing", {
+  local_cs_state(loaded_packages = c("Circuitscape", "Omniscape"))
+  local_mocked_bindings(jl_eval = function(expr) stop("Julia was called"))
+  expect_true(load_circuitscape())
+
+  local_cs_state(loaded_packages = character(0))
+  local_mocked_bindings(jl_eval = function(expr) FALSE)
+  expect_error(load_circuitscape(), "cs_install_julia()", fixed = TRUE)
+  expect_length(.cs_env$loaded_packages, 0)
+})
+
+test_that("cs_julia_available(circuitscape = FALSE) needs only a recent Julia", {
+  local_mocked_bindings(find_julia_bin = function(...) NULL)
+  expect_false(cs_julia_available(circuitscape = FALSE))
+
+  local_mocked_bindings(
+    find_julia_bin = function(...) "/fake/julia",
+    julia_version = function(bin) package_version("1.9.4")
+  )
+  expect_false(cs_julia_available(circuitscape = FALSE))
+
+  # A recent Julia is enough; the packages aren't checked
+  local_mocked_bindings(
+    julia_version = function(bin) package_version("1.12.1"),
+    local_clean_library_path = function(...) stop("packages were checked")
+  )
+  expect_true(cs_julia_available(circuitscape = FALSE))
+})
+
+test_that("cs_install_julia(circuitscape = FALSE) installs and loads no packages but Tables", {
+  installed <- NULL
+  loads <- 0L
+  local_mocked_bindings(
+    find_julia_bin = function(...) "/fake/bin/julia",
+    julia_version = function(bin) package_version("1.12.1"),
+    check_julia_version = function(...) invisible(TRUE),
+    install_julia_packages = function(bin, packages, ...) {
+      installed <<- packages
+      invisible(TRUE)
+    },
+    cs_setup = function(...) invisible(TRUE),
+    load_circuitscape = function(...) {
+      loads <<- loads + 1L
+      invisible(TRUE)
+    }
+  )
+  suppressMessages(cs_install_julia(circuitscape = FALSE))
+  expect_identical(installed, "Tables")
+  expect_identical(loads, 0L)
+
+  suppressMessages(cs_install_julia())
+  expect_setequal(installed, c("Circuitscape", "Omniscape", "Tables"))
+  expect_identical(loads, 1L)
 })
 
 test_that("a failing Julia child process stops with its output", {

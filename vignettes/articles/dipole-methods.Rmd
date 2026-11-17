@@ -328,8 +328,9 @@ draws of $10^5$ dipoles, on synthetic suitability surfaces:
 | 18 million | 3.0 min | 2.2 min | 40–45 GB |
 
 A first `dp_omni()` call on a raster includes building the circuit, so it
-takes about the sum of the two columns. Starting Julia adds about 17 s
-once per session.
+takes about the sum of the two columns. Starting Julia adds a few seconds once per session; the dipole methods
+don't need the Circuitscape and Omniscape packages, so a session that
+only uses them skips loading and warming those up.
 
 For comparison, on the 0.73-million-cell *P. edulis* surface on the same
 machine, `os_run()` on 10 threads took 48–116 s for radii of 15–120 cells

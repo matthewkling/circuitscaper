@@ -77,7 +77,7 @@ the current injected there.
 Reproducibility is as for \code{\link[=dp_omni]{dp_omni()}}.
 }
 \examples{
-\dontshow{if (circuitscaper::cs_julia_available()) withAutoprint(\{ # examplesIf}
+\dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 set.seed(1)
