@@ -120,5 +120,6 @@ if (FALSE) { # circuitscaper::cs_julia_available()
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
+DONTSHOW({JuliaConnectoR::stopJulia()})
 }
 ```

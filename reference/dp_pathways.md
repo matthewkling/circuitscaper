@@ -121,5 +121,6 @@ present <- terra::rast(system.file("extdata/source.tif", package = "circuitscape
 future <- terra::flip(present, "horizontal")
 result <- dp_pathways(resistance, present, future, radius = 20, seed = 1)
 terra::plot(result)
+DONTSHOW({JuliaConnectoR::stopJulia()})
 }
 ```
