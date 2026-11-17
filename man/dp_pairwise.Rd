@@ -45,11 +45,13 @@ A \link[terra:SpatRaster]{terra::SpatRaster} with one layer, \code{current}. Att
 \code{"halves"} (see \code{\link[=dp_omni]{dp_omni()}}) and \code{"seed"}.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Maps connectivity among every pair of a set of focal nodes, the
 squared-current analogue of \code{\link[=cs_pairwise]{cs_pairwise()}}'s cumulative current map, at
 a cost that doesn't grow with the number of nodes.
-}
-\details{
+
 For each link \eqn{e} of the circuit (see \code{\link[=dp_circuit]{dp_circuit()}}), the target is
 \eqn{\sum_{i<j} I_e(i,j)^2}, over unordered pairs of focal nodes, where
 \eqn{I_e(i,j)} is the current through \eqn{e} when one unit flows from

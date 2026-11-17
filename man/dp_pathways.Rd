@@ -61,11 +61,13 @@ As for \code{\link[=dp_omni]{dp_omni()}}. The \code{"halves"} diagnostic is over
 are present or future sources.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Maps the pathways that connect present habitat to future habitat within
 dispersal reach: random-sign dipoles with one end in present habitat and
 the other in future habitat. Magnitude only, without direction.
-}
-\details{
+
 As \code{\link[=dp_omni]{dp_omni()}}, with pairs \eqn{(i, j)} weighted by
 \eqn{p_i f_j k(d_{ij})}: \eqn{i} in present habitat, \eqn{j} in future
 habitat, within \code{radius} of each other. The pairing is one-way, but the

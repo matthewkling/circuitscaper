@@ -12,4 +12,4 @@ notes
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
 ^dev$
-^CLAUDE\.md$
+^vignettes/articles$

@@ -1,5 +1,7 @@
 #' Pairwise Connectivity Among Focal Nodes From Random Dipoles
 #'
+#' \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+#'
 #' Maps connectivity among every pair of a set of focal nodes, the
 #' squared-current analogue of [cs_pairwise()]'s cumulative current map, at
 #' a cost that doesn't grow with the number of nodes.

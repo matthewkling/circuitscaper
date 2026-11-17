@@ -1,5 +1,7 @@
 #' Cross-Era Net Flux
 #'
+#' \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+#'
 #' Maps the net flow of a range shift: present habitat injects current and
 #' future habitat withdraws it, in fixed amounts, in one solve. The result
 #' is signed, so it has direction.
@@ -98,6 +100,8 @@ dp_flux <- function(resistance, present, future, source_threshold = 0.01,
 
 
 #' Cross-Era Gross Pathways From Random Dipoles
+#'
+#' \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 #'
 #' Maps the pathways that connect present habitat to future habitat within
 #' dispersal reach: random-sign dipoles with one end in present habitat and

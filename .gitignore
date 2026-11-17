@@ -4,6 +4,6 @@
 .Ruserdata
 inst/doc
 circuitscaper.Rproj
-docs
+/docs
 notes
 .DS_Store

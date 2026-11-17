@@ -1,5 +1,7 @@
 #' Prepare a Circuit for the Dipole Methods
 #'
+#' \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+#'
 #' Builds and factors the circuit for a resistance surface once, so that
 #' several dipole-method runs on the same surface (different radii, source
 #' strengths, seeds or methods) can reuse it. Pass the result as the

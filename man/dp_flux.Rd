@@ -44,11 +44,13 @@ direction.}
 Attribute \code{"imbalance"} (see Details).
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Maps the net flow of a range shift: present habitat injects current and
 future habitat withdraws it, in fixed amounts, in one solve. The result
 is signed, so it has direction.
-}
-\details{
+
 The injection is \eqn{b = p / \sum p - f / \sum f}, with \eqn{p} and
 \eqn{f} the present and future source strengths: one unit enters at
 present habitat and leaves at future habitat, wherever it has to travel.
