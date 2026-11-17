@@ -1,8 +1,6 @@
 # Cross-Era Gross Pathways From Random Dipoles
 
-Maps the pathways that connect present habitat to future habitat within
-dispersal reach: random-sign dipoles with one end in present habitat and
-the other in future habitat. Magnitude only, without direction.
+**\[experimental\]**
 
 ## Usage
 
@@ -93,6 +91,10 @@ The `"halves"` diagnostic is over cells that are present or future
 sources.
 
 ## Details
+
+Maps the pathways that connect present habitat to future habitat within
+dispersal reach: random-sign dipoles with one end in present habitat and
+the other in future habitat. Magnitude only, without direction.
 
 As
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),

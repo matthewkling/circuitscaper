@@ -1,22 +1,32 @@
 # circuitscaper
 
-**circuitscaper** provides a streamlined R interface for
-[Circuitscape.jl](https://github.com/Circuitscape/Circuitscape.jl) and
-[Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl). It allows
-you to run these high-performance landscape connectivity models entirely
-from R, while Julia handles the heavy lifting under the hood.
+**circuitscaper** is circuit-theory landscape connectivity for R. You
+work with `terra` rasters in R, while Julia handles the heavy lifting
+under the hood. It offers two families of methods:
 
-- **Native R Workflow:** Input and output `terra` raster objects
-  directly.
-- **Automated Setup:** One-line installation of Julia and all required
-  dependencies.
-- **High Performance:** Leverages Julia’s state-of-the-art solvers for
-  large landscapes.
+- **Circuitscape and Omniscape** (`cs_*()`, `os_*()`): the established
+  tools, run through
+  [Circuitscape.jl](https://github.com/Circuitscape/Circuitscape.jl) and
+  [Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl), with the
+  same results as running them directly.
+- **Dipole methods** (`dp_*()`, experimental): circuitscaper’s own
+  methods for pairwise, omnidirectional and cross-era connectivity. They
+  factor one circuit and solve many superposed source–sink pairs against
+  it, so a map takes about 32 solves whatever the number of pairs, and
+  each map comes with an estimate of its own noise. They compute a
+  related but different quantity (squared rather than absolute current)
+  and are not yet published; see the [Dipole
+  methods](https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html)
+  article.
+
+Installation of Julia and its packages takes one line, and Julia threads
+speed up Omniscape and the dipole methods on large landscapes.
 
 > Note: **circuitscaper** is an independent R package and is not
-> affiliated with the Circuitscape development team. It is a lightweight
-> wrapper to the excellent Julia tools developed by Brad McRae, Viral
-> Shah, Tanmay Mohapatra, Ranjan Anantharaman, and collaborators.
+> affiliated with the Circuitscape development team. Its `cs_*()` and
+> `os_*()` functions wrap the excellent Julia tools developed by Brad
+> McRae, Viral Shah, Tanmay Mohapatra, Ranjan Anantharaman, and
+> collaborators.
 
 ## Installation
 
@@ -54,27 +64,41 @@ plot(result$current_map)
 ``` r
 
 
-# Omniscape -- wall-to-wall moving-window connectivity
-# (result is a multi-layer raster of current flow variables)
-result <- os_run(resistance, radius = 10)
-plot(result$normalized_current)
+# Omnidirectional connectivity across the whole landscape, with Omniscape's
+# moving window and with random dipoles
+# (each result is a multi-layer raster of current flow variables)
+os <- os_run(resistance, radius = 10)
+dp <- dp_omni(resistance, radius = 10, seed = 1)
+plot(c(os$normalized_current, dp$normalized_current),
+     main = c("os_run()", "dp_omni()"))
 ```
 
 ![](reference/figures/README-example-2.png)
 
 ## Functions
 
-| Function | Description | Julia backend |
+Choose by the question you’re asking; where both families answer it, the
+[getting started
+vignette](https://matthewkling.github.io/circuitscaper/articles/getting-started.html)
+helps choose between them.
+
+| Question | Circuitscape and Omniscape | Dipole methods |
 |----|----|----|
-| **[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)** | Pairwise effective resistance and current flow | `Circuitscape.compute()` |
-| **[`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)** | One-to-all connectivity analysis | `Circuitscape.compute()` |
-| **[`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)** | All-to-one connectivity analysis | `Circuitscape.compute()` |
-| **[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)** | Advanced mode with custom sources and grounds | `Circuitscape.compute()` |
-| **[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)** | Omniscape moving-window connectivity | `Omniscape.run_omniscape()` |
-| **[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)** | Define conditions for conditional Omniscape connectivity | ??? |
-| **[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)** | Initialize Julia session (called automatically) | [`JuliaConnectoR::juliaEval()`](https://rdrr.io/pkg/JuliaConnectoR/man/juliaEval.html) |
-| **[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)** | Install Julia and required packages | Julia’s official release index; `Pkg.add()` |
-| **[`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md)** | Check whether Julia, Circuitscape.jl, and Omniscape.jl are installed | `julia -e "using Circuitscape"` via [`system2()`](https://rdrr.io/r/base/system2.html) |
+| How well connected are these sites, and through where? | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) | [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md) |
+| How does current spread from, or converge on, each site? | [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md), [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md) |  |
+| How does movement flow between a source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
+| Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
+| How could habitat shift between climate eras, and along which routes? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )` | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md) |
+
+Also:
+
+| Function | Description |
+|----|----|
+| **[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)** | Define conditions for conditional Omniscape connectivity |
+| **[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)** | Factor a circuit once, to reuse across dipole-method runs |
+| **[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)** | Initialize the Julia session and set its threads (called automatically) |
+| **[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)** | Install Julia and the required Julia packages |
+| **[`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md)** | Check whether Julia, Circuitscape.jl, and Omniscape.jl are installed |
 
 ## Requirements
 
@@ -86,7 +110,14 @@ plot(result$normalized_current)
 ## Learn More
 
 - [Getting started
-  vignette](https://matthewkling.github.io/circuitscaper/articles/getting-started.html)
+  vignette](https://matthewkling.github.io/circuitscaper/articles/getting-started.html):
+  installation, inputs and choosing a method
+- [Circuitscape and
+  Omniscape](https://matthewkling.github.io/circuitscaper/articles/circuitscape-omniscape.html):
+  each mode and its options
+- [Dipole
+  methods](https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html):
+  using them, how they work, and how they compare
 - [Circuitscape user
   guide](https://docs.circuitscape.org/Circuitscape.jl/latest/)
 - [Omniscape
@@ -101,40 +132,65 @@ plot(result$normalized_current)
 
 # Package index
 
-## All functions
+## Circuitscape
 
-- [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)
-  : Advanced Circuitscape Analysis
+Circuitscape’s four modes, run through Circuitscape.jl.
+
+- [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
+  : Pairwise Circuitscape Analysis
+- [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
+  : One-to-All Circuitscape Analysis
 - [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)
   : All-to-One Circuitscape Analysis
+- [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)
+  : Advanced Circuitscape Analysis
+
+## Omniscape
+
+Moving-window connectivity, run through Omniscape.jl.
+
+- [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
+  : Run Omniscape Moving-Window Connectivity Analysis
+- [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+  : Define a Condition for Conditional Omniscape Connectivity
+
+## Dipole methods
+
+circuitscaper’s own methods: pairwise, omnidirectional and cross-era
+connectivity from superposed random dipoles on one factored circuit.
+Experimental; see the Dipole methods article.
+
+- [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
+  **\[experimental\]** : Prepare a Circuit for the Dipole Methods
+- [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+  **\[experimental\]** : Omnidirectional Connectivity From Random
+  Dipoles
+- [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
+  **\[experimental\]** : Pairwise Connectivity Among Focal Nodes From
+  Random Dipoles
+- [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+  **\[experimental\]** : Cross-Era Net Flux
+- [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
+  **\[experimental\]** : Cross-Era Gross Pathways From Random Dipoles
+
+## Setup
+
+Finding, installing and starting Julia.
+
+- [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+  : Set Up Julia and Load Circuitscape/Omniscape
 - [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
   : Install Julia and Required Packages
 - [`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md)
   : Check if Julia and Required Packages Are Available
-- [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
-  : One-to-All Circuitscape Analysis
-- [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
-  : Pairwise Circuitscape Analysis
-- [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-  : Set Up Julia and Load Circuitscape/Omniscape
-- [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
-  : Prepare a Circuit for the Dipole Methods
-- [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-  : Cross-Era Net Flux
-- [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
-  : Omnidirectional Connectivity From Random Dipoles
-- [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
-  : Pairwise Connectivity Among Focal Nodes From Random Dipoles
-- [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-  : Cross-Era Gross Pathways From Random Dipoles
-- [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
-  : Define a Condition for Conditional Omniscape Connectivity
-- [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
-  : Run Omniscape Moving-Window Connectivity Analysis
 
 # Articles
 
-### All vignettes
+### Articles
 
 - [Getting Started with
   circuitscaper](https://matthewkling.github.io/circuitscaper/articles/getting-started.md):
+- [Circuitscape and
+  Omniscape](https://matthewkling.github.io/circuitscaper/articles/circuitscape-omniscape.md):
+- [Dipole
+  methods](https://matthewkling.github.io/circuitscaper/articles/dipole-methods.md):

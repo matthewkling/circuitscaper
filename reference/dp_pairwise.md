@@ -1,10 +1,6 @@
 # Pairwise Connectivity Among Focal Nodes From Random Dipoles
 
-Maps connectivity among every pair of a set of focal nodes, the
-squared-current analogue of
-[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)'s
-cumulative current map, at a cost that doesn't grow with the number of
-nodes.
+**\[experimental\]**
 
 ## Usage
 
@@ -71,6 +67,12 @@ counted; for `method = "random"`, also `"halves"` (see
 and `"seed"`.
 
 ## Details
+
+Maps connectivity among every pair of a set of focal nodes, the
+squared-current analogue of
+[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)'s
+cumulative current map, at a cost that doesn't grow with the number of
+nodes.
 
 For each link \\e\\ of the circuit (see
 [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)),

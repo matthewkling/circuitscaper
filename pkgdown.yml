@@ -2,8 +2,10 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  articles/circuitscape-omniscape: circuitscape-omniscape.html
+  articles/dipole-methods: dipole-methods.html
   getting-started: getting-started.html
-last_built: 2026-11-17T19:32Z
+last_built: 2026-11-17T20:36Z
 urls:
   reference: https://matthewkling.github.io/circuitscaper/reference
   article: https://matthewkling.github.io/circuitscaper/articles

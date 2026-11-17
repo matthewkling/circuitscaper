@@ -4,19 +4,25 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Circuitscape and Omniscape Connectivity Analysis via Julia • circuitscaper</title>
+<title>Circuit-Theory Connectivity with Circuitscape, Omniscape and Dipole Methods • circuitscaper</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" sizes="any" href="favicon.ico">
 <link rel="manifest" href="site.webmanifest">
-<script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
+  window.MathJax = {
+    chtml: {
+      fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
+    }
+  };
+</script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Circuitscape and Omniscape Connectivity Analysis via Julia">
-<meta name="description" content="Provides an R-native interface to the Circuitscape.jl and Omniscape.jl Julia packages for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while Julia handles computation invisibly. Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis. Methods are described in McRae (2006) &lt;doi:10.1111/j.0014-3820.2006.tb00500.x&gt; and Landau et al. (2021) &lt;doi:10.21105/joss.02829&gt;.">
-<meta property="og:description" content="Provides an R-native interface to the Circuitscape.jl and Omniscape.jl Julia packages for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while Julia handles computation invisibly. Supports all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis. Methods are described in McRae (2006) &lt;doi:10.1111/j.0014-3820.2006.tb00500.x&gt; and Landau et al. (2021) &lt;doi:10.21105/joss.02829&gt;.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Circuit-Theory Connectivity with Circuitscape, Omniscape and Dipole Methods">
+<meta name="description" content="Landscape connectivity modeling with circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while Julia handles computation invisibly. Runs all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis through the Circuitscape.jl and Omniscape.jl Julia packages; these methods are described in McRae (2006) &lt;doi:10.1111/j.0014-3820.2006.tb00500.x&gt; and Landau et al. (2021) &lt;doi:10.21105/joss.02829&gt;. Also provides experimental dipole methods, which map pairwise, omnidirectional and cross-era connectivity from random source-sink pairs superposed on a single factored circuit, at a cost that doesn't grow with the number of pairs.">
+<meta property="og:description" content="Landscape connectivity modeling with circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while Julia handles computation invisibly. Runs all four Circuitscape modes (pairwise, one-to-all, all-to-one, advanced) and Omniscape moving-window analysis through the Circuitscape.jl and Omniscape.jl Julia packages; these methods are described in McRae (2006) &lt;doi:10.1111/j.0014-3820.2006.tb00500.x&gt; and Landau et al. (2021) &lt;doi:10.21105/joss.02829&gt;. Also provides experimental dipole methods, which map pairwise, omnidirectional and cross-era connectivity from random source-sink pairs superposed on a single factored circuit, at a cost that doesn't grow with the number of pairs.">
 <meta property="og:image" content="https://matthewkling.github.io/circuitscaper/logo.png">
 </head>
 <body>
@@ -41,6 +47,8 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/getting-started.html">Getting Started with circuitscaper</a></li>
+    <li><a class="dropdown-item" href="articles/circuitscape-omniscape.html">Circuitscape and Omniscape</a></li>
+    <li><a class="dropdown-item" href="articles/dipole-methods.html">Dipole methods</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -65,17 +73,16 @@
 </div>
 <!-- badges: start -->
 
-<p><strong>circuitscaper</strong> provides a streamlined R interface for <a href="https://github.com/Circuitscape/Circuitscape.jl" class="external-link">Circuitscape.jl</a> and <a href="https://github.com/Circuitscape/Omniscape.jl" class="external-link">Omniscape.jl</a>. It allows you to run these high-performance landscape connectivity models entirely from R, while Julia handles the heavy lifting under the hood.</p>
+<p><strong>circuitscaper</strong> is circuit-theory landscape connectivity for R. You work with <code>terra</code> rasters in R, while Julia handles the heavy lifting under the hood. It offers two families of methods:</p>
 <ul>
 <li>
-<strong>Native R Workflow:</strong> Input and output <code>terra</code> raster objects directly.</li>
+<strong>Circuitscape and Omniscape</strong> (<code>cs_*()</code>, <code>os_*()</code>): the established tools, run through <a href="https://github.com/Circuitscape/Circuitscape.jl" class="external-link">Circuitscape.jl</a> and <a href="https://github.com/Circuitscape/Omniscape.jl" class="external-link">Omniscape.jl</a>, with the same results as running them directly.</li>
 <li>
-<strong>Automated Setup:</strong> One-line installation of Julia and all required dependencies.</li>
-<li>
-<strong>High Performance:</strong> Leverages Julia’s state-of-the-art solvers for large landscapes.</li>
+<strong>Dipole methods</strong> (<code>dp_*()</code>, experimental): circuitscaper’s own methods for pairwise, omnidirectional and cross-era connectivity. They factor one circuit and solve many superposed source–sink pairs against it, so a map takes about 32 solves whatever the number of pairs, and each map comes with an estimate of its own noise. They compute a related but different quantity (squared rather than absolute current) and are not yet published; see the <a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole methods</a> article.</li>
 </ul>
+<p>Installation of Julia and its packages takes one line, and Julia threads speed up Omniscape and the dipole methods on large landscapes.</p>
 <blockquote>
-<p>Note: <strong>circuitscaper</strong> is an independent R package and is not affiliated with the Circuitscape development team. It is a lightweight wrapper to the excellent Julia tools developed by Brad McRae, Viral Shah, Tanmay Mohapatra, Ranjan Anantharaman, and collaborators.</p>
+<p>Note: <strong>circuitscaper</strong> is an independent R package and is not affiliated with the Circuitscape development team. Its <code>cs_*()</code> and <code>os_*()</code> functions wrap the excellent Julia tools developed by Brad McRae, Viral Shah, Tanmay Mohapatra, Ranjan Anantharaman, and collaborators.</p>
 </blockquote>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -108,15 +115,19 @@
 <p><img src="reference/figures/README-example-1.png" alt="" width="100%"></p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
-<span><span class="co"># Omniscape -- wall-to-wall moving-window connectivity</span></span>
-<span><span class="co"># (result is a multi-layer raster of current flow variables)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">normalized_current</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Omnidirectional connectivity across the whole landscape, with Omniscape's</span></span>
+<span><span class="co"># moving window and with random dipoles</span></span>
+<span><span class="co"># (each result is a multi-layer raster of current flow variables)</span></span>
+<span><span class="va">os</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="va">dp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">os</span><span class="op">$</span><span class="va">normalized_current</span>, <span class="va">dp</span><span class="op">$</span><span class="va">normalized_current</span><span class="op">)</span>,</span>
+<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"os_run()"</span>, <span class="st">"dp_omni()"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-example-2.png" alt="" width="100%"></p>
 </div>
 <div class="section level2">
 <h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a>
 </h2>
+<p>Choose by the question you’re asking; where both families answer it, the <a href="https://matthewkling.github.io/circuitscaper/articles/getting-started.html">getting started vignette</a> helps choose between them.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -124,58 +135,74 @@
 <col width="33%">
 </colgroup>
 <thead><tr>
-<th>Function</th>
-<th>Description</th>
-<th>Julia backend</th>
+<th>Question</th>
+<th>Circuitscape and Omniscape</th>
+<th>Dipole methods</th>
 </tr></thead>
 <tbody>
 <tr>
-<td><strong><code><a href="reference/cs_pairwise.html">cs_pairwise()</a></code></strong></td>
-<td>Pairwise effective resistance and current flow</td>
-<td><code>Circuitscape.compute()</code></td>
+<td>How well connected are these sites, and through where?</td>
+<td><code><a href="reference/cs_pairwise.html">cs_pairwise()</a></code></td>
+<td><code><a href="reference/dp_pairwise.html">dp_pairwise()</a></code></td>
 </tr>
 <tr>
-<td><strong><code><a href="reference/cs_one_to_all.html">cs_one_to_all()</a></code></strong></td>
-<td>One-to-all connectivity analysis</td>
-<td><code>Circuitscape.compute()</code></td>
+<td>How does current spread from, or converge on, each site?</td>
+<td>
+<code><a href="reference/cs_one_to_all.html">cs_one_to_all()</a></code>, <code><a href="reference/cs_all_to_one.html">cs_all_to_one()</a></code>
+</td>
+<td></td>
 </tr>
 <tr>
-<td><strong><code><a href="reference/cs_all_to_one.html">cs_all_to_one()</a></code></strong></td>
-<td>All-to-one connectivity analysis</td>
-<td><code>Circuitscape.compute()</code></td>
+<td>How does movement flow between a source area and a destination?</td>
+<td><code><a href="reference/cs_advanced.html">cs_advanced()</a></code></td>
+<td></td>
 </tr>
 <tr>
-<td><strong><code><a href="reference/cs_advanced.html">cs_advanced()</a></code></strong></td>
-<td>Advanced mode with custom sources and grounds</td>
-<td><code>Circuitscape.compute()</code></td>
+<td>Where are the corridors and barriers across the whole landscape?</td>
+<td><code><a href="reference/os_run.html">os_run()</a></code></td>
+<td><code><a href="reference/dp_omni.html">dp_omni()</a></code></td>
 </tr>
 <tr>
-<td><strong><code><a href="reference/os_run.html">os_run()</a></code></strong></td>
-<td>Omniscape moving-window connectivity</td>
-<td><code>Omniscape.run_omniscape()</code></td>
+<td>How could habitat shift between climate eras, and along which routes?</td>
+<td>
+<code><a href="reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>
+</td>
+<td>
+<code><a href="reference/dp_flux.html">dp_flux()</a></code>, <code><a href="reference/dp_pathways.html">dp_pathways()</a></code>
+</td>
 </tr>
+</tbody>
+</table>
+<p>Also:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
 <tr>
 <td><strong><code><a href="reference/os_condition.html">os_condition()</a></code></strong></td>
 <td>Define conditions for conditional Omniscape connectivity</td>
-<td>???</td>
+</tr>
+<tr>
+<td><strong><code><a href="reference/dp_circuit.html">dp_circuit()</a></code></strong></td>
+<td>Factor a circuit once, to reuse across dipole-method runs</td>
 </tr>
 <tr>
 <td><strong><code><a href="reference/cs_setup.html">cs_setup()</a></code></strong></td>
-<td>Initialize Julia session (called automatically)</td>
-<td><code><a href="https://rdrr.io/pkg/JuliaConnectoR/man/juliaEval.html" class="external-link">JuliaConnectoR::juliaEval()</a></code></td>
+<td>Initialize the Julia session and set its threads (called automatically)</td>
 </tr>
 <tr>
 <td><strong><code><a href="reference/cs_install_julia.html">cs_install_julia()</a></code></strong></td>
-<td>Install Julia and required packages</td>
-<td>Julia’s official release index; <code>Pkg.add()</code>
-</td>
+<td>Install Julia and the required Julia packages</td>
 </tr>
 <tr>
 <td><strong><code><a href="reference/cs_julia_available.html">cs_julia_available()</a></code></strong></td>
 <td>Check whether Julia, Circuitscape.jl, and Omniscape.jl are installed</td>
-<td>
-<code>julia -e "using Circuitscape"</code> via <code><a href="https://rdrr.io/r/base/system2.html" class="external-link">system2()</a></code>
-</td>
 </tr>
 </tbody>
 </table>
@@ -193,7 +220,12 @@
 <h2 id="learn-more">Learn More<a class="anchor" aria-label="anchor" href="#learn-more"></a>
 </h2>
 <ul>
-<li><a href="https://matthewkling.github.io/circuitscaper/articles/getting-started.html">Getting started vignette</a></li>
+<li>
+<a href="https://matthewkling.github.io/circuitscaper/articles/getting-started.html">Getting started vignette</a>: installation, inputs and choosing a method</li>
+<li>
+<a href="https://matthewkling.github.io/circuitscaper/articles/circuitscape-omniscape.html">Circuitscape and Omniscape</a>: each mode and its options</li>
+<li>
+<a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole methods</a>: using them, how they work, and how they compare</li>
 <li><a href="https://docs.circuitscape.org/Circuitscape.jl/latest/" class="external-link">Circuitscape user guide</a></li>
 <li><a href="https://docs.circuitscape.org/Omniscape.jl/latest/" class="external-link">Omniscape documentation</a></li>
 <li>McRae, B.H. (2006). Isolation by resistance. <em>Evolution</em>, 60(8), 1551-1561.</li>

@@ -10,7 +10,13 @@
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
-<script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
+  window.MathJax = {
+    chtml: {
+      fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
+    }
+  };
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -38,6 +44,8 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/getting-started.html">Getting Started with circuitscaper</a></li>
+    <li><a class="dropdown-item" href="../articles/circuitscape-omniscape.html">Circuitscape and Omniscape</a></li>
+    <li><a class="dropdown-item" href="../articles/dipole-methods.html">Dipole methods</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -82,15 +90,37 @@ circuit theory considers all possible pathways simultaneously. This
 makes it especially effective at identifying movement corridors and
 pinch points — places where connectivity is funneled through narrow
 gaps.</p>
-<p>circuitscaper brings this approach to R by wrapping two Julia tools:
-<strong>Circuitscape</strong> (which computes connectivity between
-specific sites) and <strong>Omniscape</strong> (which maps connectivity
-continuously across an entire landscape).</p>
-<p>This vignette provides a basic overview of the circuitscaper R
-package. For more details on circuit theory and the underlying Julia
-algorithms, see the <a href="https://circuitscape.org" class="external-link">Circuitscape</a>
-and <a href="https://docs.circuitscape.org/Omniscape.jl/latest/" class="external-link">Omniscape</a>
-documentation.</p>
+<p>circuitscaper brings circuit-theory connectivity to R, with two
+families of methods that take the same inputs (terra rasters) and run in
+the same Julia session:</p>
+<ul>
+<li>
+<strong>Circuitscape and Omniscape</strong> (<code>cs_*()</code> and
+<code>os_*()</code> functions). The established tools, run through the
+<a href="https://github.com/Circuitscape/Circuitscape.jl" class="external-link">Circuitscape.jl</a>
+and <a href="https://github.com/Circuitscape/Omniscape.jl" class="external-link">Omniscape.jl</a>
+Julia packages. Results are the same as running those tools
+directly.</li>
+<li>
+<strong>Dipole methods</strong> (<code>dp_*()</code> functions).
+circuitscaper’s own methods, which factor one circuit and solve many
+superposed source–sink pairs (“dipoles”) against it. They cover similar
+questions — pairwise, omnidirectional and cross-era connectivity — much
+faster and with a built-in error estimate, but they compute a related,
+different quantity (squared rather than absolute current) and are
+stochastic. They are <strong>experimental</strong>: new, not yet
+published, and their interface may change.</li>
+</ul>
+<p>This vignette covers installation, inputs and how to choose a method.
+Two articles on the package website go further:</p>
+<ul>
+<li>
+<a href="https://matthewkling.github.io/circuitscaper/articles/circuitscape-omniscape.html">Circuitscape
+and Omniscape</a>: each mode and its options.</li>
+<li>
+<a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole
+methods</a>: how to use them, how they work, and how they compare.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -98,8 +128,7 @@ documentation.</p>
 <p>circuitscaper requires Julia (&gt;= 1.10) with the Circuitscape and
 Omniscape packages. You can install everything from R:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Install circuitscaper (from GitHub during development)</span></span>
-<span><span class="co"># remotes::install_github("matthewkling/circuitscaper")</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"circuitscaper"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span></span>
@@ -115,9 +144,15 @@ find it automatically, searching the <code>JULIA_HOME</code> and
 else, you can point to it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>julia_home <span class="op">=</span> <span class="st">"/path/to/julia/bin"</span><span class="op">)</span></span></code></pre></div>
+<p>Julia starts the first time you call a circuitscaper function, or
+when you call <code><a href="../reference/cs_setup.html">cs_setup()</a></code>. To use several threads, which
+speeds up Omniscape and the dipole methods, call
+<code>cs_setup(threads = )</code> at the start of your session:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="key-inputs">Key Inputs<a class="anchor" aria-label="anchor" href="#key-inputs"></a>
+<h2 id="key-inputs">Key inputs<a class="anchor" aria-label="anchor" href="#key-inputs"></a>
 </h2>
 <div class="section level3">
 <h3 id="the-resistance-surface">The resistance surface<a class="anchor" aria-label="anchor" href="#the-resistance-surface"></a>
@@ -134,338 +169,179 @@ as adjacency graph networks, circuitscaper currently only supports
 rasters.)</p>
 <p>Resistance values must be positive. If your data represents
 conductance (ease of movement) rather than resistance, set
-<code>resistance_is = "conductances"</code>. Circuitscape treats a
-conductance of zero as no connection, but Omniscape requires all values
-to be positive in either case. To make cells impassable, set them to
-<code>NA</code>.</p>
+<code>resistance_is = "conductances"</code>. Circuitscape and the dipole
+methods treat a conductance of zero as no connection, but Omniscape
+requires all values to be positive in either case. To make cells
+impassable, set them to <code>NA</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="focal-nodes">Focal nodes<a class="anchor" aria-label="anchor" href="#focal-nodes"></a>
 </h3>
-<p>Circuitscape’s focal-node modes (pairwise, one-to-all, all-to-one)
-require <strong>focal nodes</strong> — the sites between which you want
-to measure connectivity. These are typically habitat patches,
-populations, protected areas, or sampling locations. You can provide
-them as:</p>
+<p>The focal-node methods (<code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>,
+<code><a href="../reference/cs_one_to_all.html">cs_one_to_all()</a></code>, <code><a href="../reference/cs_all_to_one.html">cs_all_to_one()</a></code> and
+<code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code>) require <strong>focal nodes</strong> — the
+sites between which you want to measure connectivity. These are
+typically habitat patches, populations, protected areas, or sampling
+locations. You can provide them as:</p>
 <ul>
 <li>A matrix or data.frame of x/y coordinates (simplest)</li>
 <li>A raster with positive integer IDs at each site (0 and NA are
 ignored)</li>
 </ul>
 </div>
+<div class="section level3">
+<h3 id="source-strength">Source strength<a class="anchor" aria-label="anchor" href="#source-strength"></a>
+</h3>
+<p>The omnidirectional methods (<code><a href="../reference/os_run.html">os_run()</a></code> and
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code>) need no focal nodes: every cell can be a source,
+weighted by its <strong>source strength</strong>, such as habitat
+quality or suitability. By default both use the conductance surface (the
+inverse of resistance). The cross-era methods (<code><a href="../reference/dp_flux.html">dp_flux()</a></code>
+and <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code>) take two source-strength surfaces, one
+for the present and one for a future period.</p>
+</div>
 </div>
 <div class="section level2">
-<h2 id="choosing-a-mode">Choosing a Mode<a class="anchor" aria-label="anchor" href="#choosing-a-mode"></a>
+<h2 id="choosing-a-method">Choosing a method<a class="anchor" aria-label="anchor" href="#choosing-a-method"></a>
 </h2>
-<p>circuitscaper provides four Circuitscape modes and one Omniscape
-mode. Here’s how to choose:</p>
-<p><strong>Pairwise</strong> is a common starting point. Use it when you
-have discrete sites (habitat patches, populations) and want to know how
-well-connected they are to each other. The resistance matrix is useful
-as a distance metric for analyses such as isolation by resistance in
-population genetics.</p>
-<p><strong>One-to-all</strong> iterates over each focal node, injecting
-current at that node and grounding all others. This emphasizes how
-current disperses outward from each source, making it useful for
-modeling recolonization potential or identifying which sites have the
-best overall connectivity to the network.</p>
-<p><strong>All-to-one</strong> is the reverse: all other nodes inject
-current while each node takes a turn as the ground. This emphasizes
-convergence and is useful for identifying the most accessible or
-reachable sites — for example, which protected areas are easiest to
-reach via migration.</p>
-<p><strong>Advanced</strong> is for when you want full control over
-source and ground placement rather than using focal nodes. You provide
-explicit source current and ground conductance rasters, and a single
-circuit is solved. This is useful for modeling directional movement
-between a defined source area and a destination (e.g., current flow
-between a migratory species’ winter and summer ranges).</p>
-<p><strong>Omniscape</strong> is fundamentally different — it doesn’t
-require focal nodes at all. It uses a moving window to compute
-omnidirectional connectivity everywhere in the landscape. Use it for
-wall-to-wall connectivity mapping when you want to identify corridors
-and barriers across the full extent.</p>
+<p>Start from the question you’re asking:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Question</th>
+<th>Circuitscape and Omniscape</th>
+<th>Dipole methods</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>How well connected are these sites to each other, and through
+where?</td>
+<td><code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code></td>
+<td><code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code></td>
+</tr>
+<tr class="even">
+<td>How does current spread out from, or converge on, each site?</td>
+<td>
+<code><a href="../reference/cs_one_to_all.html">cs_one_to_all()</a></code>, <code><a href="../reference/cs_all_to_one.html">cs_all_to_one()</a></code>
+</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>How does movement flow between a defined source area and a
+destination?</td>
+<td><code><a href="../reference/cs_advanced.html">cs_advanced()</a></code></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Where are the corridors and barriers across the whole
+landscape?</td>
+<td><code><a href="../reference/os_run.html">os_run()</a></code></td>
+<td><code><a href="../reference/dp_omni.html">dp_omni()</a></code></td>
+</tr>
+<tr class="odd">
+<td>How could habitat shift between climate eras, and along which
+routes?</td>
+<td>
+<code><a href="../reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>
+</td>
+<td>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pairwise</strong> analyses treat discrete sites (habitat
+patches, populations) and ask how well they’re connected to each other.
+<code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code> also returns the matrix of effective
+resistances between sites, a distance measure for analyses such as
+isolation by resistance in population genetics.</p>
+<p><strong>One-to-all</strong> and <strong>all-to-one</strong> modes
+inject current at each site in turn (or ground each in turn),
+emphasizing how current disperses from, or converges on, each site —
+useful for recolonization potential, or finding the most reachable
+sites.</p>
+<p><strong>Advanced</strong> mode gives full control over where current
+enters and leaves: explicit source and ground rasters, and one circuit
+solved.</p>
+<p><strong>Omnidirectional</strong> analyses need no focal nodes. They
+map connectivity continuously across the landscape among all habitat
+within a dispersal radius, to identify corridors and barriers across the
+full extent.</p>
+<p><strong>Cross-era</strong> analyses ask how habitat could shift
+between eras, such as under climate change. <code><a href="../reference/os_condition.html">os_condition()</a></code>
+restricts Omniscape’s connections to sources and targets with compatible
+present and future conditions. <code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow
+from present to future habitat, with direction;
+<code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> maps the routes between present and future
+habitat within dispersal reach.</p>
+<div class="section level3">
+<h3 id="circuitscape-and-omniscape-or-dipole-methods">Circuitscape and Omniscape, or dipole methods?<a class="anchor" aria-label="anchor" href="#circuitscape-and-omniscape-or-dipole-methods"></a>
+</h3>
+<p>Where both families answer a question, choose by what you need:</p>
+<ul>
+<li>
+<strong>Circuitscape and Omniscape</strong> are established and
+published, so results compare directly with the many studies that use
+them. They also offer outputs the dipole methods don’t: pairwise
+resistance matrices, voltage and per-pair maps, short-circuit regions
+and conditional connectivity.</li>
+<li>
+<strong>Dipole methods</strong> are much faster on large grids, with
+many focal nodes, or when you want many runs (several radii, species or
+scenarios). They treat every habitat cell as a source without block
+sizes or windows, and each map comes with an estimate of its own noise.
+But their maps are of squared current over the whole circuit, which
+ranks cells similarly to Circuitscape and Omniscape but isn’t the same
+quantity, and they carry some sampling noise. See the <a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole
+methods</a> article before relying on them.</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
-<h2 id="circuitscape-pairwise-mode">Circuitscape: Pairwise Mode<a class="anchor" aria-label="anchor" href="#circuitscape-pairwise-mode"></a>
+<h2 id="a-first-look">A first look<a class="anchor" aria-label="anchor" href="#a-first-look"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rspatial.org/" class="external-link">terra</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Resistance surface (higher values = harder to traverse)</span></span>
 <span><span class="va">resistance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/resistance.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Option 1: Focal nodes as coordinates (simplest)</span></span>
-<span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">10</span>, <span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">10</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span><span class="op">)</span></span>
+<span><span class="co"># Pairwise Circuitscape among four sites</span></span>
+<span><span class="va">sites</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">40</span>, <span class="fl">10</span>, <span class="fl">10</span>, <span class="fl">40</span>, <span class="fl">10</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">pw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">sites</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pw</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span>
+<span><span class="va">pw</span><span class="op">$</span><span class="va">resistance_matrix</span></span>
 <span></span>
-<span><span class="co"># Option 2: Focal nodes as a raster (integer IDs; 0 and NA are not nodes)</span></span>
-<span><span class="co"># locations &lt;- rast("path/to/focal_nodes.tif")</span></span>
-<span><span class="co"># result &lt;- cs_pairwise(resistance, locations)</span></span>
-<span></span>
-<span><span class="co"># Cumulative current map -- high values indicate important movement corridors</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Pairwise resistance matrix -- can be used as a connectivity distance metric</span></span>
-<span><span class="va">result</span><span class="op">$</span><span class="va">resistance_matrix</span></span></code></pre></div>
+<span><span class="co"># Omnidirectional connectivity: Omniscape and the dipole method</span></span>
+<span><span class="va">os</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="va">dp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">10</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">os</span><span class="op">$</span><span class="va">normalized_current</span>, <span class="va">dp</span><span class="op">$</span><span class="va">normalized_current</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="circuitscape-one-to-all-and-all-to-one-modes">Circuitscape: One-to-All and All-to-One Modes<a class="anchor" aria-label="anchor" href="#circuitscape-one-to-all-and-all-to-one-modes"></a>
-</h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_one_to_all.html">cs_one_to_all</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_all_to_one.html">cs_all_to_one</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">cumulative_current</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="circuitscape-advanced-mode">Circuitscape: Advanced Mode<a class="anchor" aria-label="anchor" href="#circuitscape-advanced-mode"></a>
-</h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">source_layer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">ground_layer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/ground.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_advanced.html">cs_advanced</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">source_layer</span>, <span class="va">ground_layer</span>,</span>
-<span>                      ground_is <span class="op">=</span> <span class="st">"conductances"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Current density -- corridors and pinch points where flow is concentrated</span></span>
-<span><span class="co"># i.e. possible preservation priorities</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"current"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Voltage -- analogous to movement probability, decreasing with distance</span></span>
-<span><span class="co"># and resistance from sources</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"voltage"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Power dissipation -- areas of current flow through high-resistance areas,</span></span>
-<span><span class="co"># i.e. possible restoration priorities</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">[[</span><span class="st">"current"</span><span class="op">]</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span> <span class="op">*</span> <span class="va">resistance</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="additional-circuitscape-options">Additional Circuitscape Options<a class="anchor" aria-label="anchor" href="#additional-circuitscape-options"></a>
-</h2>
-<p>The <code>cs_*</code> functions expose several additional
-Circuitscape features.</p>
-<div class="section level3">
-<h3 id="per-pair-current-and-voltage-maps">Per-pair current and voltage maps<a class="anchor" aria-label="anchor" href="#per-pair-current-and-voltage-maps"></a>
-</h3>
-<p>By default, pairwise, one-to-all, and all-to-one modes return only
-the cumulative current map. Set <code>cumulative_only = FALSE</code> to
-include per-pair (or per-node) current layers, and
-<code>write_voltage = TRUE</code> to include voltage layers:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span>,</span>
-<span>                      cumulative_only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>                      write_voltage <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">current_map</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="variable-source-strengths">Variable source strengths<a class="anchor" aria-label="anchor" href="#variable-source-strengths"></a>
-</h3>
-<p>By default, each focal node injects 1 amp of current. Use
-<code>source_strengths</code> to assign different injection strengths
-per node — useful when sites differ in population size or habitat
-area:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Strengths in the same order as the locations</span></span>
-<span><span class="va">strengths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2.5</span>, <span class="fl">1.0</span>, <span class="fl">0.5</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_one_to_all.html">cs_one_to_all</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">coords</span>, source_strengths <span class="op">=</span> <span class="va">strengths</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="short-circuit-regions">Short-circuit regions<a class="anchor" aria-label="anchor" href="#short-circuit-regions"></a>
-</h3>
-<p>Short-circuit regions represent areas of zero resistance (e.g., lakes
-that can be crossed freely, or developed areas that funnel movement).
-Pass a raster where cells sharing the same positive integer value are
-short-circuited:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">polygons</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/short_circuit_regions.tif"</span><span class="op">)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span>, short_circuit <span class="op">=</span> <span class="va">polygons</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="includeexclude-pairs">Include/exclude pairs<a class="anchor" aria-label="anchor" href="#includeexclude-pairs"></a>
-</h3>
-<p>For large numbers of focal nodes, you may want to restrict analysis
-to a subset of pairs:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span>,</span>
-<span>                      included_pairs <span class="op">=</span> <span class="st">"path/to/pairs.txt"</span><span class="op">)</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="omniscape-moving-window-connectivity">Omniscape: Moving-Window Connectivity<a class="anchor" aria-label="anchor" href="#omniscape-moving-window-connectivity"></a>
-</h2>
-<p>Omniscape computes omnidirectional connectivity using a moving
-window. It does not require focal nodes — every cell can serve as a
-source.</p>
-<p>The two key parameters are:</p>
-<ul>
-<li>
-<strong><code>radius</code></strong>: The moving window radius in
-pixels. This defines the neighborhood over which connectivity is
-evaluated — conceptually, how far the organism can disperse. Larger
-radii capture longer-distance connectivity but increase computation time
-substantially.</li>
-<li>
-<strong><code>block_size</code></strong>: Aggregation factor for
-source points (default 1, no aggregation). Setting
-<code>block_size = 3</code> groups sources into 3x3 blocks, reducing the
-number of circuit solves with typically negligible effects on results.
-This is the primary knob for trading off speed vs. precision.</li>
-</ul>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>, block_size <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<p>Omniscape returns up to three layers:</p>
-<ul>
-<li>
-<strong><code>cumulative_current</code></strong>: Raw current flow
-summed across all moving-window iterations. Higher values indicate cells
-that carry more current overall.</li>
-<li>
-<strong><code>flow_potential</code></strong>: What current flow
-would look like if resistance were uniform everywhere. This isolates the
-effect of source geometry from landscape resistance.</li>
-<li>
-<strong><code>normalized_current</code></strong>: Cumulative current
-divided by flow potential. Values greater than 1 indicate corridors
-where connectivity is higher than expected given the arrangement of
-sources; values less than 1 indicate relative barriers. This is usually
-the most informative layer.</li>
-</ul>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="with-source-strength-weights">With source strength weights<a class="anchor" aria-label="anchor" href="#with-source-strength-weights"></a>
-</h3>
-<p>By default, source strength is derived from the inverse of
-resistance. You can provide an explicit source strength raster (e.g.,
-habitat quality) to weight sources independently of resistance:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">source_strength</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/habitat_quality.tif"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>                 source_strength <span class="op">=</span> <span class="va">source_strength</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="conditional-connectivity">Conditional connectivity<a class="anchor" aria-label="anchor" href="#conditional-connectivity"></a>
-</h3>
-<p>Conditional connectivity restricts which sources are connected to
-each target, based on their values on a condition layer. Use
-<code><a href="../reference/os_condition.html">os_condition()</a></code> to define the comparison. For categorical
-data, <code>type = "equal"</code> connects only cells in the same
-class:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">landcover</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/landcover.tif"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>                 condition <span class="op">=</span> <span class="fu"><a href="../reference/os_condition.html">os_condition</a></span><span class="op">(</span><span class="va">landcover</span>, type <span class="op">=</span> <span class="st">"equal"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>For continuous data, <code>lower</code> and <code>upper</code> bound
-the difference between source and target values. Supplying a
-<code>future</code> layer compares each source’s present-day value
-against the target’s future value, as in climate-tracking connectivity.
-Here, sources connect to targets whose future temperature is between 1
-degree cooler and 3 degrees warmer than the source’s present
-temperature:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">temp_now</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/temperature_current.tif"</span><span class="op">)</span></span>
-<span><span class="va">temp_future</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/temperature_2080.tif"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>                 condition <span class="op">=</span> <span class="fu"><a href="../reference/os_condition.html">os_condition</a></span><span class="op">(</span><span class="va">temp_now</span>, future <span class="op">=</span> <span class="va">temp_future</span>,</span>
-<span>                                          lower <span class="op">=</span> <span class="op">-</span><span class="fl">3</span>, upper <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>Up to two conditions can be combined by passing a list of
-<code><a href="../reference/os_condition.html">os_condition()</a></code> objects; see <code><a href="../reference/os_condition.html">?os_condition</a></code> for
-details.</p>
-</div>
-<div class="section level3">
-<h3 id="parallel-processing">Parallel processing<a class="anchor" aria-label="anchor" href="#parallel-processing"></a>
-</h3>
-<p>For large landscapes, enable Julia multithreading to reduce compute
-times. Set the number of threads with <code><a href="../reference/cs_setup.html">cs_setup()</a></code>, ideally
-at the start of your session:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/os_run.html">os_run</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">20</span>,</span>
-<span>                 block_size <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>                 parallelize <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Julia’s thread count is fixed when Julia starts, so if Julia is
-already running with fewer threads, <code>cs_setup(threads = 4)</code>
-restarts it. That takes about as long as the first setup, since
-Circuitscape and Omniscape are loaded and warmed up again. If the
-running Julia session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code>
-warns, says how to fix it, and runs serially.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a>
-</h2>
-<p>Circuitscape computation time scales with the number of non-NA cells
-in the resistance raster and, for focal-node modes, with the number of
-pairs or iterations. A few practical guidelines:</p>
-<ul>
-<li>
-<strong>Raster size</strong>: Problems up to ~1 million cells run
-comfortably. For larger landscapes, consider aggregating the resistance
-surface before analysis.</li>
-<li>
-<strong>Number of focal nodes</strong>: Pairwise mode solves
-n*(n-1)/2 circuits, so computation grows quadratically with the number
-of nodes. Use <code>included_pairs</code> to limit the set if
-needed.</li>
-<li>
-<strong>Omniscape</strong>: Computation is dominated by the number
-of source pixels and the <code>radius</code>. Use
-<code>block_size</code> to reduce the source count and keep
-<code>radius</code> as small as ecologically justified. Enable
-<code>parallelize = TRUE</code> for large runs.</li>
-<li>
-<strong>Solver choice</strong>: The default <code>"cg+amg"</code>
-(iterative) solver works well for large problems. For small rasters
-(under ~10,000 cells), <code>"cholmod"</code> (direct solver) may be
-faster.</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="saving-outputs">Saving Outputs<a class="anchor" aria-label="anchor" href="#saving-outputs"></a>
-</h2>
-<p>By default, intermediate files are written to a temporary directory
-and cleaned up. To persist output files (ASC rasters, INI configuration,
-and resistance matrices), use <code>output_dir</code>:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">locations</span>,</span>
-<span>                      output_dir <span class="op">=</span> <span class="st">"my_output_directory"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="tips">Tips<a class="anchor" aria-label="anchor" href="#tips"></a>
+<h2 id="saving-outputs-and-other-tips">Saving outputs and other tips<a class="anchor" aria-label="anchor" href="#saving-outputs-and-other-tips"></a>
 </h2>
 <ul>
-<li><p><strong>CRS preservation</strong>: circuitscaper captures the CRS
-from your input raster and reattaches it to outputs, even though
-Circuitscape’s ASCII grid format doesn’t carry CRS information.</p></li>
-<li><p><strong>Conductance input</strong>: If your surface represents
-ease of movement rather than difficulty, set
+<li>
+<strong>CRS preservation</strong>: circuitscaper reattaches your
+input raster’s CRS to outputs.</li>
+<li>
+<strong>Conductance input</strong>: If your surface represents ease
+of movement rather than difficulty, set
 <code>resistance_is = "conductances"</code> to avoid inverting values
-manually. There’s a similar option for grounds in advanced
-mode.</p></li>
+manually.</li>
 <li>
-<p><strong>Normalized current for Circuitscape</strong>: Omniscape
-returns normalized current (actual current / flow potential)
-automatically. You can compute the equivalent for Circuitscape by
-running the analysis twice — once with your resistance surface and once
-with a uniform surface — and dividing:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span>      <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="va">sites</span><span class="op">)</span></span>
-<span><span class="va">result_null</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cs_pairwise.html">cs_pairwise</a></span><span class="op">(</span><span class="va">resistance</span> <span class="op">*</span> <span class="fl">0</span> <span class="op">+</span> <span class="fl">1</span>, <span class="va">sites</span><span class="op">)</span></span>
-<span><span class="va">normalized</span>  <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">current_map</span> <span class="op">/</span> <span class="va">result_null</span><span class="op">$</span><span class="va">current_map</span></span></code></pre></div>
-<p>Values greater than 1 indicate areas where landscape resistance is
-concentrating current flow; values less than 1 indicate areas where
-current is lower than expected from geometry alone.</p>
-</li>
-<li><p><strong>Verbose output</strong>: Set <code>verbose = TRUE</code>
-to see Circuitscape’s solver progress, useful for debugging or
-monitoring long runs.</p></li>
+<strong>Output files</strong>: The <code>cs_*()</code> and
+<code>os_*()</code> functions write intermediate files to a temporary
+directory and clean up. To keep them (ASC rasters, INI configuration and
+resistance matrices), use <code>output_dir</code>.</li>
+<li>
+<strong>Verbose output</strong>: Set <code>verbose = TRUE</code> in
+the <code>cs_*()</code> and <code>os_*()</code> functions to see the
+solver’s progress, useful for debugging or monitoring long runs.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

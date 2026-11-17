@@ -1,8 +1,6 @@
 # Cross-Era Net Flux
 
-Maps the net flow of a range shift: present habitat injects current and
-future habitat withdraws it, in fixed amounts, in one solve. The result
-is signed, so it has direction.
+**\[experimental\]**
 
 ## Usage
 
@@ -68,6 +66,10 @@ with layers:
 Attribute `"imbalance"` (see Details).
 
 ## Details
+
+Maps the net flow of a range shift: present habitat injects current and
+future habitat withdraws it, in fixed amounts, in one solve. The result
+is signed, so it has direction.
 
 The injection is \\b = p / \sum p - f / \sum f\\, with \\p\\ and \\f\\
 the present and future source strengths: one unit enters at present

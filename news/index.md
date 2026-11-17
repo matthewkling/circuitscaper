@@ -31,6 +31,15 @@
   These methods map squared current on the whole circuit, so their
   results differ from Circuitscape’s and Omniscape’s by design; see
   [`?dp_omni`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+  They are experimental.
+
+### Documentation
+
+- The getting-started vignette now covers both families of methods, with
+  a guide to choosing one by question. Mode-by-mode material for
+  Circuitscape and Omniscape moved to a website article, beside a new
+  article on the dipole methods: usage, how they work, and how they
+  compare.
 
 ### Bug fixes
 

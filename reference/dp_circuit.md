@@ -1,14 +1,6 @@
 # Prepare a Circuit for the Dipole Methods
 
-Builds and factors the circuit for a resistance surface once, so that
-several dipole-method runs on the same surface (different radii, source
-strengths, seeds or methods) can reuse it. Pass the result as the
-`resistance` argument of
-[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
-[`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md),
-[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-or
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md).
+**\[experimental\]**
 
 ## Usage
 
@@ -40,6 +32,16 @@ dp_circuit(resistance, resistance_is = "resistances", flow_potential = TRUE)
 A `dp_circuit` object.
 
 ## Details
+
+Builds and factors the circuit for a resistance surface once, so that
+several dipole-method runs on the same surface (different radii, source
+strengths, seeds or methods) can reuse it. Pass the result as the
+`resistance` argument of
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
+[`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md),
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+or
+[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md).
 
 The circuit is Circuitscape's default raster graph: every non-NA cell is
 a node, joined to its 8 neighbours by links of conductance \\(c_u +

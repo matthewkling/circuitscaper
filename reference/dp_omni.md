@@ -1,10 +1,6 @@
 # Omnidirectional Connectivity From Random Dipoles
 
-Maps omnidirectional connectivity among habitat, in the role of
-[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md),
-with the random-dipole method: many random source-sink pairs superposed
-on one factored circuit, which takes about `n_draws` solves whatever the
-number of pairs.
+**\[experimental\]**
 
 ## Usage
 
@@ -99,6 +95,12 @@ estimates from odd and even draws on source cells (Spearman's \\\rho\\
 and the median relative difference), and `"seed"`.
 
 ## Details
+
+Maps omnidirectional connectivity among habitat, in the role of
+[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md),
+with the random-dipole method: many random source-sink pairs superposed
+on one factored circuit, which takes about `n_draws` solves whatever the
+number of pairs.
 
 For each link \\e\\ of the circuit (see
 [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)),
