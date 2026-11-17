@@ -1,5 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://matthewkling.github.io/circuitscaper/404.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/CLAUDE.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/LICENSE-text.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/articles/getting-started.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/articles/index.html</loc></url>
@@ -14,6 +15,11 @@
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/cs_setup.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/dp_circuit.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/dp_flux.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/dp_omni.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.html</loc></url>
+<url><loc>https://matthewkling.github.io/circuitscaper/reference/dp_pathways.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/index.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/os_condition.html</loc></url>
 <url><loc>https://matthewkling.github.io/circuitscaper/reference/os_run.html</loc></url>

@@ -16,6 +16,16 @@
   : Pairwise Circuitscape Analysis
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   : Set Up Julia and Load Circuitscape/Omniscape
+- [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
+  : Prepare a Circuit for the Dipole Methods
+- [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+  : Cross-Era Net Flux
+- [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+  : Omnidirectional Connectivity From Random Dipoles
+- [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
+  : Pairwise Connectivity Among Focal Nodes From Random Dipoles
+- [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
+  : Cross-Era Gross Pathways From Random Dipoles
 - [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
   : Define a Condition for Conditional Omniscape Connectivity
 - [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)

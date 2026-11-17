@@ -38,6 +38,22 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="circuitscaper-development-version">circuitscaper (development version)<a class="anchor" aria-label="anchor" href="#circuitscaper-development-version"></a></h2>
 <div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li>New dipole methods: connectivity from many balanced source-sink pairs (“dipoles”) superposed on one factored circuit, at a cost of one factorization and a few dozen solves whatever the number of pairs.
+<ul><li>
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code> maps omnidirectional connectivity among habitat, in the role of <code><a href="../reference/os_run.html">os_run()</a></code>, from random-sign dipoles within a radius (in pixels or km): current, flow potential and normalized current, with a built-in estimate of its sampling noise.</li>
+<li>
+<code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> maps connectivity among every pair of focal nodes, the squared-current analogue of <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s cumulative map, at a cost independent of the number of nodes, or exactly from one solve per node.</li>
+<li>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow of a range shift from present to future habitat, with direction, in one solve.</li>
+<li>
+<code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> maps the pathways connecting present to future habitat within dispersal reach.</li>
+<li>
+<code><a href="../reference/dp_circuit.html">dp_circuit()</a></code> prepares a circuit whose factorizations several runs can reuse.</li>
+</ul>
+These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
 <ul><li><p><code>cs_install_julia(force = TRUE)</code> now updates Circuitscape.jl and Omniscape.jl even when a new release needs newer versions of their own dependencies. It previously held those dependencies fixed, so, for example, it stayed on Circuitscape.jl 6.1 instead of installing 6.2, which needs a newer GZip.jl.</p></li>
 <li><p><code><a href="../reference/cs_one_to_all.html">cs_one_to_all()</a></code> and <code><a href="../reference/cs_all_to_one.html">cs_all_to_one()</a></code> return per-node current layers only with <code>cumulative_only = FALSE</code>, as documented. Circuitscape.jl before 6.2 wrote these maps regardless, so with older versions both functions also returned them by default.</p></li>

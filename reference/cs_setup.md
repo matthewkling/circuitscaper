@@ -30,8 +30,8 @@ cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE)
   running with fewer threads, it is restarted with `threads` threads
   (see Threading, below). This setting controls parallelism for
   [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
-  only; Circuitscape functions (`cs_*`) run single-threaded regardless
-  of this value.
+  and the dipole methods (`dp_*`); Circuitscape functions (`cs_*`) run
+  single-threaded regardless of this value.
 
 - quiet:
 
@@ -70,8 +70,10 @@ starts and sets up Julia again.
 
 Multi-threading is used by
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
-when `parallelize = TRUE`. Circuitscape functions (`cs_pairwise`,
-`cs_one_to_all`, etc.) do not benefit from multiple threads.
+when `parallelize = TRUE`, and always by the dipole methods (e.g.,
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)).
+Circuitscape functions (`cs_pairwise`, `cs_one_to_all`, etc.) do not
+benefit from multiple threads.
 
     cs_setup(threads = 4)
     os_run(resistance, radius = 50, parallelize = TRUE)
