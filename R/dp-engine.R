@@ -213,38 +213,6 @@ print.dp_circuit <- function(x, ...) {
 }
 
 
-# Kernels ------------------------------------------------------------------
-
-# A kernel is a set of cell offsets (dr, dc) around a source cell: for row
-# offset dr = dr0 + d - 1, column offsets -hw[d, k] .. hw[d, k] (none if
-# hw < 0), where k = rowmap[row] lets the kernel vary with the source cell's
-# grid row. An empty hw means no distance limit.
-
-#' Largest h With h^2 <= x, Robust to sqrt Rounding
-#' @noRd
-isqrt_floor <- function(x) {
-  h <- floor(sqrt(pmax(x, 0)))
-  h <- h + ((h + 1)^2 <= x)
-  h <- h - (h^2 > x)
-  as.integer(ifelse(x < 0, -1L, h))
-}
-
-#' Disk Kernel of `radius` Pixels: dr^2 + dc^2 <= radius^2
-#' @noRd
-dp_kernel_pixels <- function(radius, nrow) {
-  R <- floor(radius)
-  dr <- -R:R
-  list(dr0 = as.integer(-R), hw = matrix(isqrt_floor(radius^2 - dr^2), ncol = 1),
-       rowmap = rep(1L, nrow))
-}
-
-#' No Distance Limit
-#' @noRd
-dp_kernel_none <- function() {
-  list(dr0 = 0L, hw = matrix(0L, 0, 0), rowmap = integer(0))
-}
-
-
 # Engine hooks ---------------------------------------------------------------
 
 #' Random-Sign Dipoles

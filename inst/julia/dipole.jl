@@ -366,26 +366,32 @@ function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
         P[gr.node_c[j] - c0 + 2, gr.node_r[j] - r0 + 1] = s.w2[j]
     end
     cumsum!(P, P, dims = 1)
-    total = 0.0
-    for i in nodes
-        s.w1[i] > 0 || continue
-        ri = gr.node_r[i]
-        ci = gr.node_c[i]
-        kr = K.rowmap[ri]
-        acc = 0.0
-        for d in axes(K.hw, 1)
-            h = K.hw[d, kr]
-            h < 0 && continue
-            r = ri + K.dr0 + d - 1
-            r0 <= r <= r1 || continue
-            lo = max(ci - h, c0)
-            hi = min(ci + h, c1)
-            lo > hi && continue
-            acc += P[hi - c0 + 2, r - r0 + 1] - P[lo - c0 + 1, r - r0 + 1]
+    # Fixed chunks summed in order, so S doesn't depend on the thread count
+    chunks = collect(Iterators.partition(nodes, 4096))
+    part = zeros(length(chunks))
+    @threads for k in eachindex(chunks)
+        t = 0.0
+        for i in chunks[k]
+            s.w1[i] > 0 || continue
+            ri = gr.node_r[i]
+            ci = gr.node_c[i]
+            kr = K.rowmap[ri]
+            acc = 0.0
+            for d in axes(K.hw, 1)
+                h = K.hw[d, kr]
+                h < 0 && continue
+                r = ri + K.dr0 + d - 1
+                r0 <= r <= r1 || continue
+                lo = max(ci - h, c0)
+                hi = min(ci + h, c1)
+                lo > hi && continue
+                acc += P[hi - c0 + 2, r - r0 + 1] - P[lo - c0 + 1, r - r0 + 1]
+            end
+            t += s.w1[i] * acc
         end
-        total += s.w1[i] * acc
+        part[k] = t
     end
-    total
+    sum(part)
 end
 
 # Random-sign dipoles from `s`, solved against each circuit. Returns one
@@ -457,7 +463,8 @@ function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws:
     circs = [circuit(id) for id in asvec(ids)]
     s = sampler(first(asvec(ids)), w1, w2, dr0, hw, rowmap)
     S = pair_sum(s)
-    S > 0 || error("no pairs of source cells can be drawn: check source strengths and radius")
+    # No pairs can be drawn; R reports it
+    S > 0 || return (S = 0.0, cells = Matrix{Float64}[])
     b = batch > 0 ? Int(batch) : default_batch(nnodes(s.graph))
     accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b)
     (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)])
