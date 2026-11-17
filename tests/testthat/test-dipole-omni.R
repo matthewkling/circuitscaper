@@ -19,9 +19,15 @@ test_that("dp_omni converges to the exact reference crop (oracle 3)", {
     se <- stats::sd(totals) / sqrt(length(totals))
     expect_lt(abs(mean(totals) - sum(exact)), 3 * se + 1e-3 * sum(exact))
     mu <- rowMeans(est)
-    z <- (mu - exact) / (apply(est, 1, stats::sd) / sqrt(ncol(est)))
-    expect_lt(mean(abs(z) > 4), 0.01)
     expect_lt(stats::median(abs(mu / exact - 1)), 0.04)
+    # Per-cell z-scores only where current isn't negligible: estimates at
+    # cells carrying < 1e-4 of the maximum are so skewed that 8 runs'
+    # spread understates their noise. With 8 runs, z has t-like tails
+    # (~0.5% beyond 4); 16 seed groups on Julia 1.10 and 1.12 gave <= 0.9%.
+    keep <- exact > 1e-4 * max(exact)
+    z <- (mu - exact) / (apply(est, 1, stats::sd) / sqrt(ncol(est)))
+    expect_lt(mean(abs(z[keep]) > 4), 0.02)
+    expect_lt(stats::quantile(abs(mu[keep] / exact[keep] - 1), 0.95), 0.12)
   }
 })
 
