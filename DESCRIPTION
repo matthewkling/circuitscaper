@@ -25,6 +25,7 @@ Imports:
     tools,
     utils
 Suggests:
+    Matrix,
     testthat (>= 3.0.0),
     withr,
     knitr,

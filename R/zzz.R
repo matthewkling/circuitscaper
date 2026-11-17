@@ -7,6 +7,7 @@
   .cs_env$julia_threads <- 1L
   .cs_env$julia_interactive <- 0L
   .cs_env$julia_bin <- NULL
+  .cs_env$dp_free <- list()
 }
 
 .onAttach <- function(libname, pkgname) {

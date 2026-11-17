@@ -17,8 +17,8 @@ common Windows install locations.}
 \item{threads}{Integer. Number of Julia threads. Default \code{1L}. If Julia
 is already running with fewer threads, it is restarted with \code{threads}
 threads (see Threading, below). This setting controls parallelism for
-\code{\link[=os_run]{os_run()}} only; Circuitscape functions (\verb{cs_*}) run single-threaded
-regardless of this value.}
+\code{\link[=os_run]{os_run()}} and the dipole methods (\verb{dp_*}); Circuitscape functions
+(\verb{cs_*}) run single-threaded regardless of this value.}
 
 \item{quiet}{Logical. Suppress Julia startup messages. Default \code{TRUE}.}
 }
@@ -51,7 +51,8 @@ with \code{JuliaConnectoR::stopJulia()}), the next \code{cs_setup()} call, or th
 next \verb{cs_*()} or \verb{os_*()} call, starts and sets up Julia again.
 \subsection{Threading}{
 
-Multi-threading is used by \code{\link[=os_run]{os_run()}} when \code{parallelize = TRUE}.
+Multi-threading is used by \code{\link[=os_run]{os_run()}} when \code{parallelize = TRUE}, and
+always by the dipole methods (e.g., \code{\link[=dp_omni]{dp_omni()}}).
 Circuitscape functions (\code{cs_pairwise}, \code{cs_one_to_all}, etc.) do not
 benefit from multiple threads.
 
