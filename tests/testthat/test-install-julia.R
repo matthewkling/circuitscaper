@@ -147,7 +147,9 @@ test_that("install_julia_binary installs a release where cs_setup finds it", {
   file.create(file.path(stale, julia_exe()))
   cat(stale, file = file.path(depot, "prefs", "JuliaCall"))
   withr::local_options(JULIA_HOME = NULL)
-  withr::local_envvar(JULIA_HOME = NA, JULIA_DEPOT_PATH = depot)
+  # start_julia() sets JULIA_BINDIR, so clear it in case an earlier test
+  # started Julia
+  withr::local_envvar(JULIA_HOME = NA, JULIA_BINDIR = NA, JULIA_DEPOT_PATH = depot)
   expect_identical(find_julia_bin(login_shell = FALSE), installed_julia_bin())
 })
 

@@ -46,9 +46,9 @@
 #'
 #' ## Accuracy
 #' Each draw contributes noise with a relative standard deviation of about
-#' 1.4, so per-cell noise falls as \eqn{1/\sqrt{\mathrm{n\_draws}}}: about
-#' 5--12% in current and less in normalized current at the default 32
-#' draws. More dipoles per draw help only until pairs are well covered
+#' 1.4, so per-cell noise falls as \eqn{1/\sqrt{\mathrm{n\_draws}}}: in
+#' tests at the default 32 draws, about 6--12% in current and 3--10% in
+#' normalized current. More dipoles per draw help only until pairs are well covered
 #' (about \eqn{10^5}). The `"halves"` attribute compares estimates from the
 #' odd and even draws, an estimate of the noise of a run.
 #'

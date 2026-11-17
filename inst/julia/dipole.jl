@@ -312,14 +312,19 @@ end
 # injection doesn't depend on batching or threads
 draw_rng(seed::Integer, draw::Integer) = Xoshiro(UInt64[seed, draw])
 
-# Fill B's columns with draws `draws`: m random-sign unit dipoles each
-function injections!(B::Matrix{Float64}, s::Sampler, seed::Integer, draws::AbstractVector{<:Integer}, m::Integer)
+random_sign(rng::AbstractRNG) = rand(rng, Bool) ? 1.0 : -1.0
+
+# Fill B's columns with draws `draws`: m dipoles each, weighted by
+# `weight(rng)` (random signs; another distribution, e.g. Cauchy for
+# absolute current, plugs in here)
+function injections!(B::Matrix{Float64}, s::Sampler, seed::Integer, draws::AbstractVector{<:Integer},
+                     m::Integer; weight::W = random_sign) where {W}
     fill!(B, 0.0)
     @threads for k in eachindex(draws)
         rng = draw_rng(seed, draws[k])
         for _ in 1:m
             i, j = draw_pair(rng, s)
-            sg = rand(rng, Bool) ? 1.0 : -1.0
+            sg = weight(rng)
             @inbounds B[i, k] += sg
             @inbounds B[j, k] -= sg
         end
@@ -397,18 +402,139 @@ end
 # Random-sign dipoles from `s`, solved against each circuit. Returns one
 # LinkSums per circuit; all circuits see the same injections.
 function run_dipoles(circs::Vector{Circuit}, s::Sampler, seed::Integer, n_draws::Integer,
-                     m::Integer; batch::Int = default_batch(nnodes(s.graph)), f = abs2)
+                     m::Integer; batch::Int = default_batch(nnodes(s.graph)), f = abs2,
+                     weight = random_sign)
     n = nnodes(s.graph)
     accs = [LinkSums(nlinks(c.graph)) for c in circs]
     for s0 in 1:batch:n_draws
         draws = s0:min(n_draws, s0 + batch - 1)
-        B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m)
+        B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m; weight = weight)
         for (c, acc) in zip(circs, accs)
             accumulate!(acc, c, B, s0; f = f)
         end
     end
     accs
 end
+
+
+# Focal nodes ------------------------------------------------------------------
+
+# Groups of focal nodes by connected component; pairs never span components
+function focal_groups(gr::Graph, nodes::Vector{Int})
+    groups = Dict{Int, Vector{Int}}()
+    for v in nodes
+        push!(get!(groups, gr.comp[v], Int[]), v)
+    end
+    [groups[k] for k in sort!(collect(keys(groups))) if length(groups[k]) >= 2]
+end
+
+# Each draw weights every pair of focal nodes (within a component) by an
+# independent standard normal: b_i = sum_{j>i} xi_ij - sum_{j<i} xi_ji, so
+# the injection is antisymmetric in pairs and sums to zero. The mean squared
+# link current over draws estimates sum_{i<j} I_e(i, j)^2.
+function focal_injections!(B::Matrix{Float64}, groups::Vector{Vector{Int}}, seed::Integer,
+                           draws::AbstractVector{<:Integer})
+    fill!(B, 0.0)
+    @threads for k in eachindex(draws)
+        rng = draw_rng(seed, draws[k])
+        for nodes in groups, i in eachindex(nodes), j in (i + 1):length(nodes)
+            xi = randn(rng)
+            @inbounds B[nodes[i], k] += xi
+            @inbounds B[nodes[j], k] -= xi
+        end
+    end
+    B
+end
+
+function pairwise_random(id::Real, nodes, seed::Real, n_draws::Real, batch::Real)
+    c = circuit(id)
+    gr = c.graph
+    groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
+    isempty(groups) && return (n_pairs = 0, cells = zeros(0, 2))
+    b = batch > 0 ? Int(batch) : default_batch(nnodes(gr))
+    acc = LinkSums(nlinks(gr))
+    for s0 in 1:b:Int(n_draws)
+        draws = s0:min(Int(n_draws), s0 + b - 1)
+        B = focal_injections!(Matrix{Float64}(undef, nnodes(gr), length(draws)), groups,
+                              Int(seed), draws)
+        accumulate!(acc, c, B, s0)
+    end
+    (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
+     cells = node_sums(gr, acc.s))
+end
+
+# Exact sum over pairs of focal nodes of squared link current, from one
+# solve per node: with y_i a link's current for unit flow from node i to its
+# component's first node, sum_{i<j} (y_i - y_j)^2 = N sum y_i^2 - (sum y_i)^2.
+# Returns per-node sums over incident links (nodes x 1).
+function pairwise_exact(id::Real, nodes, batch::Real)
+    c = circuit(id)
+    gr = c.graph
+    groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
+    isempty(groups) && return (n_pairs = 0, cells = zeros(0, 1))
+    jobs = [(v, g[1]) for g in groups for v in g[2:end]]
+    n_comp = zeros(Int, gr.ncomp)
+    for g in groups
+        n_comp[gr.comp[g[1]]] = length(g)
+    end
+    b = batch > 0 ? Int(batch) : default_batch(nnodes(gr))
+    a, bb, g = gr.a, gr.b, c.g
+    sy = zeros(nlinks(gr))
+    sy2 = zeros(nlinks(gr))
+    for s0 in 1:b:length(jobs)
+        part = jobs[s0:min(length(jobs), s0 + b - 1)]
+        B = zeros(nnodes(gr), length(part))
+        for (k, (v, ref)) in enumerate(part)
+            B[v, k] = 1.0
+            B[ref, k] = -1.0
+        end
+        Vt = permutedims(c.fac \ B)
+        @threads for e in eachindex(a)
+            t1 = 0.0
+            t2 = 0.0
+            @inbounds for k in axes(Vt, 1)
+                y = g[e] * (Vt[k, a[e]] - Vt[k, bb[e]])
+                t1 += y
+                t2 += y * y
+            end
+            sy[e] += t1
+            sy2[e] += t2
+        end
+    end
+    x = [max(n_comp[gr.comp[a[e]]] * sy2[e] - sy[e]^2, 0.0) for e in eachindex(a)]
+    (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
+     cells = node_sums(gr, reshape(x, :, 1)))
+end
+
+
+# Net flux ---------------------------------------------------------------------
+
+# One solve of a given injection (balanced within each component). Returns
+# per-node sums over incident links of |I|, I^2, and the x and y components
+# of I times the link's unit direction (x east, y north on the grid).
+function flux(id::Real, b)
+    c = circuit(id)
+    gr = c.graph
+    V = c.fac \ Vector{Float64}(asvec(b))
+    out = zeros(nnodes(gr), 4)
+    for e in eachindex(gr.a)
+        i = gr.a[e]
+        j = gr.b[e]
+        I = c.g[e] * (V[i] - V[j])
+        dx = gr.node_c[j] - gr.node_c[i]
+        dy = gr.node_r[i] - gr.node_r[j]
+        len = sqrt(dx^2 + dy^2)
+        for v in (i, j)
+            out[v, 1] += abs(I)
+            out[v, 2] += I^2
+            out[v, 3] += I * dx / len
+            out[v, 4] += I * dy / len
+        end
+    end
+    out
+end
+
+components(id::Real) = circuit(id).graph.comp
 
 
 # Registry: circuits held for R ----------------------------------------------

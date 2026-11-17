@@ -18,8 +18,8 @@
 #' @param threads Integer. Number of Julia threads. Default `1L`. If Julia
 #'   is already running with fewer threads, it is restarted with `threads`
 #'   threads (see Threading, below). This setting controls parallelism for
-#'   [os_run()] only; Circuitscape functions (`cs_*`) run single-threaded
-#'   regardless of this value.
+#'   [os_run()] and the dipole methods (`dp_*`); Circuitscape functions
+#'   (`cs_*`) run single-threaded regardless of this value.
 #' @param quiet Logical. Suppress Julia startup messages. Default `TRUE`.
 #'
 #' @return Invisibly returns `TRUE` on success.
@@ -38,7 +38,8 @@
 #' next `cs_*()` or `os_*()` call, starts and sets up Julia again.
 #'
 #' ## Threading
-#' Multi-threading is used by [os_run()] when `parallelize = TRUE`.
+#' Multi-threading is used by [os_run()] when `parallelize = TRUE`, and
+#' always by the dipole methods (e.g., [dp_omni()]).
 #' Circuitscape functions (`cs_pairwise`, `cs_one_to_all`, etc.) do not
 #' benefit from multiple threads.
 #'

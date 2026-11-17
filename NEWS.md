@@ -1,5 +1,27 @@
 # circuitscaper (development version)
 
+## New features
+
+* New dipole methods: connectivity from many balanced source-sink pairs
+  ("dipoles") superposed on one factored circuit, at a cost of one
+  factorization and a few dozen solves whatever the number of pairs.
+  * `dp_omni()` maps omnidirectional connectivity among habitat, in the
+    role of `os_run()`, from random-sign dipoles within a radius (in
+    pixels or km): current, flow potential and normalized current, with a
+    built-in estimate of its sampling noise.
+  * `dp_pairwise()` maps connectivity among every pair of focal nodes, the
+    squared-current analogue of `cs_pairwise()`'s cumulative map, at a cost
+    independent of the number of nodes, or exactly from one solve per node.
+  * `dp_flux()` maps the net flow of a range shift from present to future
+    habitat, with direction, in one solve.
+  * `dp_pathways()` maps the pathways connecting present to future habitat
+    within dispersal reach.
+  * `dp_circuit()` prepares a circuit whose factorizations several runs can
+    reuse.
+
+  These methods map squared current on the whole circuit, so their results
+  differ from Circuitscape's and Omniscape's by design; see `?dp_omni`.
+
 ## Bug fixes
 
 * `cs_install_julia(force = TRUE)` now updates Circuitscape.jl and

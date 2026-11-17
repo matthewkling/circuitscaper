@@ -1,9 +1,12 @@
 # Helpers for the dipole-method tests
 
 # The reference R prototype (a verbatim copy of dev/dipole/prototype/dipole.R),
-# in its own environment so its dp_*() functions don't mask the package's
+# in its own environment so its dp_*() functions don't mask the package's.
+# Its parent is terra's namespace, since the prototype calls terra functions
+# unqualified and other tests may change the search path.
 dipole_prototype <- function() {
-  env <- new.env()
+  skip_if_not_installed("Matrix")
+  env <- new.env(parent = asNamespace("terra"))
   sys.source(test_path("fixtures", "dipole-prototype.R"), envir = env)
   env
 }
