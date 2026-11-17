@@ -38,6 +38,7 @@
 #' circuit
 #' a <- dp_omni(circuit, radius = 10)
 #' b <- dp_omni(circuit, radius = 20)
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_circuit <- function(resistance, resistance_is = "resistances",

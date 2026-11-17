@@ -49,6 +49,7 @@ circuit <- dp_circuit(resistance)
 circuit
 a <- dp_omni(circuit, radius = 10)
 b <- dp_omni(circuit, radius = 20)
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \seealso{

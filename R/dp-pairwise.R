@@ -55,6 +55,7 @@
 #' result <- dp_pairwise(resistance, nodes, seed = 1)
 #' exact <- dp_pairwise(resistance, nodes, method = "exact")
 #' terra::plot(c(result, exact))
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_pairwise <- function(resistance, locations, method = c("random", "exact"),

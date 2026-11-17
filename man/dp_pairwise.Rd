@@ -83,6 +83,7 @@ nodes <- terra::spatSample(resistance, 30, xy = TRUE)[, 1:2]
 result <- dp_pairwise(resistance, nodes, seed = 1)
 exact <- dp_pairwise(resistance, nodes, method = "exact")
 terra::plot(c(result, exact))
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \seealso{

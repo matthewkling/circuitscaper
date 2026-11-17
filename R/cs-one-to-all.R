@@ -38,6 +38,7 @@
 #' coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 #' result <- cs_one_to_all(res, coords)
 #' plot(result)
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 cs_one_to_all <- function(resistance,

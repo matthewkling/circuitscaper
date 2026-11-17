@@ -89,6 +89,7 @@
 #' result <- cs_pairwise(res, coords, cumulative_only = FALSE)
 #' plot(result$current_map)
 #' result$resistance_matrix
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 cs_pairwise <- function(resistance,

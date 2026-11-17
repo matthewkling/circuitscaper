@@ -98,6 +98,7 @@ origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
 dest <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
 result <- cs_advanced(res, origin, dest, ground_is = "conductances")
 plot(result)
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \references{
