@@ -80,6 +80,7 @@
 #' cs_setup()
 #' cs_setup(threads = 4)
 #' cs_setup(julia_home = "/usr/local/julia/bin")
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {

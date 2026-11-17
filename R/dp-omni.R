@@ -108,6 +108,7 @@
 #' result <- dp_omni(resistance, radius = 15, seed = 1)
 #' terra::plot(result)
 #' attr(result, "halves")
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_omni <- function(resistance, radius, source_strength = NULL,

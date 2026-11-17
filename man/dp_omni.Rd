@@ -141,6 +141,7 @@ resistance <- terra::rast(system.file("extdata/resistance.tif",
 result <- dp_omni(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "halves")
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \seealso{

@@ -97,6 +97,7 @@
 #' zones <- (init(res, "col") > ncol(res) / 2) + 1
 #' result_cond <- os_run(res, radius = 10, condition = zones)
 #' plot(result_cond)
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 os_run <- function(resistance,

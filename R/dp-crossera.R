@@ -56,6 +56,7 @@
 #' future <- terra::flip(present, "horizontal")
 #' result <- dp_flux(resistance, present, future)
 #' terra::plot(result)
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_flux <- function(resistance, present, future, source_threshold = 0.01,
@@ -128,6 +129,7 @@ dp_flux <- function(resistance, present, future, source_threshold = 0.01,
 #' future <- terra::flip(present, "horizontal")
 #' result <- dp_pathways(resistance, present, future, radius = 20, seed = 1)
 #' terra::plot(result)
+#' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_pathways <- function(resistance, present, future, radius, source_threshold = 0.01,

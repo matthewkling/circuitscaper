@@ -79,6 +79,7 @@ present <- terra::rast(system.file("extdata/source.tif", package = "circuitscape
 future <- terra::flip(present, "horizontal")
 result <- dp_flux(resistance, present, future)
 terra::plot(result)
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \seealso{

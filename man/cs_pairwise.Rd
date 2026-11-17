@@ -121,6 +121,7 @@ coords <- matrix(c(10, 40, 40, 40, 10, 10, 40, 10), ncol = 2, byrow = TRUE)
 result <- cs_pairwise(res, coords, cumulative_only = FALSE)
 plot(result$current_map)
 result$resistance_matrix
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \references{

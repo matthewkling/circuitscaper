@@ -79,6 +79,7 @@ with a warning if it finds one.
 cs_setup()
 cs_setup(threads = 4)
 cs_setup(julia_home = "/usr/local/julia/bin")
+\dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \references{
