@@ -1,4 +1,46 @@
 url: https://matthewkling.github.io/circuitscaper/
 template:
   bootstrap: 5
+  math-rendering: mathjax
 
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - getting-started
+  - articles/circuitscape-omniscape
+  - articles/dipole-methods
+
+reference:
+- title: Circuitscape
+  desc: Circuitscape's four modes, run through Circuitscape.jl.
+  contents:
+  - cs_pairwise
+  - cs_one_to_all
+  - cs_all_to_one
+  - cs_advanced
+- title: Omniscape
+  desc: Moving-window connectivity, run through Omniscape.jl.
+  contents:
+  - os_run
+  - os_condition
+- title: Dipole methods
+  desc: >
+    circuitscaper's own methods: pairwise, omnidirectional and cross-era
+    connectivity from superposed random dipoles on one factored circuit.
+    Experimental; see the Dipole methods article.
+  contents:
+  - dp_circuit
+  - dp_omni
+  - dp_pairwise
+  - dp_flux
+  - dp_pathways
+- title: Setup
+  desc: Finding, installing and starting Julia.
+  contents:
+  - cs_setup
+  - cs_install_julia
+  - cs_julia_available
+- title: internal
+  contents:
+  - circuitscaper-package

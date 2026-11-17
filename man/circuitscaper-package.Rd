@@ -4,11 +4,11 @@
 \name{circuitscaper-package}
 \alias{circuitscaper}
 \alias{circuitscaper-package}
-\title{circuitscaper: 'Circuitscape' and 'Omniscape' Connectivity Analysis via 'Julia'}
+\title{circuitscaper: Circuit-Theory Connectivity with 'Circuitscape', 'Omniscape' and Dipole Methods}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Provides an R-native interface to the 'Circuitscape.jl' and 'Omniscape.jl' 'Julia' packages for landscape connectivity modeling using circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while 'Julia' handles computation invisibly. Supports all four 'Circuitscape' modes (pairwise, one-to-all, all-to-one, advanced) and 'Omniscape' moving-window analysis. Methods are described in McRae (2006) \doi{10.1111/j.0014-3820.2006.tb00500.x} and Landau et al. (2021) \doi{10.21105/joss.02829}.
+Landscape connectivity modeling with circuit theory. Users work entirely in R with familiar objects (SpatRaster, file paths) while 'Julia' handles computation invisibly. Runs all four 'Circuitscape' modes (pairwise, one-to-all, all-to-one, advanced) and 'Omniscape' moving-window analysis through the 'Circuitscape.jl' and 'Omniscape.jl' 'Julia' packages; these methods are described in McRae (2006) \doi{10.1111/j.0014-3820.2006.tb00500.x} and Landau et al. (2021) \doi{10.21105/joss.02829}. Also provides experimental dipole methods, which map pairwise, omnidirectional and cross-era connectivity from random source-sink pairs superposed on a single factored circuit, at a cost that doesn't grow with the number of pairs.
 }
 \seealso{
 Useful links:

@@ -21,13 +21,15 @@ use. Default \code{TRUE}. If \code{FALSE}, it is built when first needed.}
 A \code{dp_circuit} object.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Builds and factors the circuit for a resistance surface once, so that
 several dipole-method runs on the same surface (different radii, source
 strengths, seeds or methods) can reuse it. Pass the result as the
 \code{resistance} argument of \code{\link[=dp_omni]{dp_omni()}}, \code{\link[=dp_pairwise]{dp_pairwise()}}, \code{\link[=dp_flux]{dp_flux()}} or
 \code{\link[=dp_pathways]{dp_pathways()}}.
-}
-\details{
+
 The circuit is Circuitscape's default raster graph: every non-NA cell is
 a node, joined to its 8 neighbours by links of conductance
 \eqn{(c_u + c_v)/2}, divided by \eqn{\sqrt{2}} on diagonals. Cells with

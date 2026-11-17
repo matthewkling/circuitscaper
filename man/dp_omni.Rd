@@ -63,12 +63,14 @@ draws on source cells (Spearman's \eqn{\rho} and the median relative
 difference), and \code{"seed"}.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 Maps omnidirectional connectivity among habitat, in the role of
 \code{\link[=os_run]{os_run()}}, with the random-dipole method: many random source-sink pairs
 superposed on one factored circuit, which takes about \code{n_draws} solves
 whatever the number of pairs.
-}
-\details{
+
 For each link \eqn{e} of the circuit (see \code{\link[=dp_circuit]{dp_circuit()}}), the method
 estimates
 \deqn{T_e = \sum_{i \ne j} w_i w_j k(d_{ij}) I_e(i,j)^2}
