@@ -20,10 +20,9 @@ cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE)
   variable, the `JULIA_BINDIR` environment variable, a Julia installed
   by
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
-  (or by
-  [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html)),
-  the system PATH (including a login shell's PATH on macOS and Linux),
-  and common Windows install locations.
+  (or by `JuliaCall::install_julia()`), the system PATH (including a
+  login shell's PATH on macOS and Linux), and common Windows install
+  locations.
 
 - threads:
 

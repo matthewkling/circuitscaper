@@ -2,7 +2,24 @@
 
 ## circuitscaper (development version)
 
+### Bug fixes
+
+- `cs_install_julia(force = TRUE)` now updates Circuitscape.jl and
+  Omniscape.jl even when a new release needs newer versions of their own
+  dependencies. It previously held those dependencies fixed, so, for
+  example, it stayed on Circuitscape.jl 6.1 instead of installing 6.2,
+  which needs a newer GZip.jl.
+
+- [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md)
+  and
+  [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md)
+  return per-node current layers only with `cumulative_only = FALSE`, as
+  documented. Circuitscape.jl before 6.2 wrote these maps regardless, so
+  with older versions both functions also returned them by default.
+
 ## circuitscaper 0.2.0
+
+CRAN release: 2026-11-06
 
 ### New features
 
@@ -46,12 +63,10 @@
   circuitscaper’s user data directory
   (`tools::R_user_dir("circuitscaper")`) and is found automatically by
   [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md).
-  Previously it used
-  [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html),
-  which in the current CRAN release of ‘JuliaCall’ (0.17.6) installs
-  Julia 1.9 when asked for the latest version and can’t install Julia
-  1.10 or later, so a fresh install failed with errors such as
-  “undefined symbol: SET_SYMVALUE”.
+  Previously it used `JuliaCall::install_julia()`, which in the current
+  CRAN release of ‘JuliaCall’ (0.17.6) installs Julia 1.9 when asked for
+  the latest version and can’t install Julia 1.10 or later, so a fresh
+  install failed with errors such as “undefined symbol: SET_SYMVALUE”.
 
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   now starts the Julia it finds explicitly, so the Julia whose version
@@ -59,13 +74,11 @@
   message if an older Julia is already running in the session.
 
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-  now finds Julia wherever
-  [`JuliaCall::julia_setup()`](https://rdrr.io/pkg/JuliaCall/man/julia_setup.html)
-  would, instead of only on the PATH. Previously, a Julia installed by
+  now finds Julia wherever `JuliaCall::julia_setup()` would, instead of
+  only on the PATH. Previously, a Julia installed by
   [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
-  (which
-  [`JuliaCall::install_julia()`](https://rdrr.io/pkg/JuliaCall/man/install_julia.html)
-  places outside the PATH) was not found in later sessions, so
+  (which `JuliaCall::install_julia()` places outside the PATH) was not
+  found in later sessions, so
   [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   failed with “Julia not found” until `julia_home` was given explicitly.
   The same applied to Julia installed via juliaup or Homebrew when R was

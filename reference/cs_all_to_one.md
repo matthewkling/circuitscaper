@@ -135,7 +135,8 @@ with the following layers:
 - current\_*N*:
 
   Per-node current map for focal node *N*, where *N* is the integer node
-  ID from the `locations` raster. One layer per focal node.
+  ID from the `locations` raster. One layer per focal node, included
+  only when `cumulative_only = FALSE`.
 
 ## Details
 

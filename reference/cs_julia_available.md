@@ -23,6 +23,5 @@ successfully, `FALSE` otherwise.
 
 ``` r
 cs_julia_available()
-#> Warning: running command ''/usr/bin/julia' --startup-file=no -e "using Circuitscape, Omniscape; println(true)" 2>/dev/null' had status 1
 #> [1] FALSE
 ```
