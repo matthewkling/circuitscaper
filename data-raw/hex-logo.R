@@ -32,8 +32,8 @@ inch_per_R <- 1.176                      # print scale: inches of logo per R; se
 # sticker size (sqrt(3) x 2 R) that sizes below assume
 
 # title
-title <- "circuitscaper"
-title_width <- 0.85                      # share of the hexagon's width the title spans
+title <- "circuit   \n   scaper"
+title_width <- 0.75                      # share of the hexagon's width the title spans
 title_y <- 0                             # height of the title's vertical center, units of R
 font_choices <- list(c("Helvetica Neue", "Condensed Bold"),
                      c("Helvetica Neue", "Bold"),
@@ -45,10 +45,10 @@ font_choices <- list(c("Helvetica Neue", "Condensed Bold"),
 noise_scales <- c(60, 20, 6)             # background noise feature sizes, cells,
 noise_weights <- c(1, 0.6, 0.3)          # and their relative amplitudes
 bg_resistance <- 10
-bg_contrast <- 1
+bg_contrast <- 1.25
 letter_quantile <- 0.001
 letter_factor <- 0.001
-seed <- 15 # (77 also good)         # background noise seed
+seed <- 48 # (77 also good)         # background noise seed
 
 # palette: magma on sqrt(current), stretched between these quantiles of the cells in the hexagon
 col <- list(border = "black", current = viridisLite::magma(256))
@@ -74,7 +74,10 @@ if(is.null(font)) stop("none of the title fonts in `font_choices` is installed")
 # hexagon, centered on (0, title_y * R) in landscape cells
 em <- 1000
 shape <- systemfonts::shape_string(title, path = font$path, index = font$index,
-                                   size = em, res = 72)$shape
+                                   size = em, res = 72, align = "center",
+                                   lineheight = 0.6)$shape
+shape <- shape[shape$glyph != "\n", ]   # the newline maps to the font's .notdef glyph (a box)
+
 outline <- systemfonts::glyph_outline(shape$index, path = font$path, index = font$index,
                                       size = em)
 outline$x <- outline$x + shape$x_offset[outline$glyph]
@@ -97,7 +100,12 @@ half_h <- R + pad
 cells <- terra::rast(xmin = -half_w, xmax = half_w, ymin = -half_h, ymax = half_h,
                      resolution = 1, crs = "local")
 
-letters <- terra::rasterize(contours, cells, fun = "count", background = 0) %% 2 == 1
+# letter coverage: each cell's share inside a letter, from a finer rasterization, so edge cells
+# follow the true outline rather than a staircase
+supersample <- 16
+fine <- terra::rast(terra::ext(cells), resolution = 1 / supersample, crs = "local")
+letters <- terra::rasterize(contours, fine, fun = "count", background = 0) %% 2 == 1
+letters <- terra::aggregate(letters, supersample, fun = "mean")
 
 # standardized Gaussian noise with features of about `scale` cells: white noise on a coarse
 # grid, interpolated to the landscape grid
@@ -111,17 +119,23 @@ noise <- function(scale){
 }
 z <- standardize(Reduce(`+`, Map(function(s, w) w * noise(s), noise_scales, noise_weights)))
 background <- bg_resistance * exp(bg_contrast * z)
+
 letter_resistance <- letter_factor *
       terra::global(background, quantile, probs = letter_quantile)[[1]]
-resistance <- terra::ifel(letters, letter_resistance, background)
+# blend in log space, so a half-covered cell gets the geometric mean of the two resistances
+resistance <- exp(letters * log(letter_resistance) + (1 - letters) * log(background))
 names(resistance) <- "resistance"
 
 # connectivity --------------------------------------------------------------------------------
 
 # exact current between the centers of the landscape's top and bottom edges
 locations <- cbind(0, c(-half_h, half_h))
-flow <- dp_pairwise(resistance, locations, method = "exact")
-flow <- as.data.frame(flow$current, xy = TRUE)
+
+# flow <- cs_pairwise(resistance, locations, four_neighbors = TRUE)$current_map
+flow <- cs_pairwise(resistance, locations, avg_resistances = TRUE)$current_map
+# flow <- dp_pairwise(resistance, locations, method = "exact")$current
+
+flow <- as.data.frame(flow, xy = TRUE)
 names(flow) <- c("X", "Y", "current")
 
 in_hex <- function(X, Y, r) abs(X) <= sqrt(3) / 2 * r & abs(Y) <= r - abs(X) / sqrt(3)
