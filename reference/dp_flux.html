@@ -58,7 +58,9 @@
 <span>  source_threshold <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  radius_units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pixels"</span>, <span class="st">"km"</span><span class="op">)</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
-<span>  direction <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  direction <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  cell_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"absolute"</span>, <span class="st">"rms"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -103,16 +105,37 @@ reference system's units, converted to km, on projected grids.</p></dd>
 <code>"resistances"</code> (default) or <code>"conductances"</code>. Ignored for a circuit.</p></dd>
 
 
+<dt id="arg-normalize">normalize<a class="anchor" aria-label="anchor" href="#arg-normalize"></a></dt>
+<dd><p>Logical. Also compute flow potential (the same flow on
+the uniform circuit, conductance 1 on the same cells) and normalized
+current. Default <code>TRUE</code>.</p></dd>
+
+
 <dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
 <dd><p>Logical. Also return the components of net flow.
 Default <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-cell-value">cell_value<a class="anchor" aria-label="anchor" href="#arg-cell-value"></a></dt>
+<dd><p>Character. How <code>current</code> sums a cell's links:
+<code>"absolute"</code> (default), half the sum of absolute current, as in
+Circuitscape's current maps; or <code>"rms"</code>, the square root of half the sum
+of squared current, as in <code><a href="dp_omni.html">dp_omni()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers:</p><dl><dt>current</dt>
 <dd><p>Half the sum of absolute current over a cell's links, as
-in Circuitscape's current maps (without the injection term).</p></dd>
+in Circuitscape's current maps (without the injection term), or with
+<code>cell_value = "rms"</code>, the square root of half the sum of squared
+current.</p></dd>
+
+<dt>flow_potential, normalized_current</dt>
+<dd><p>(with <code>normalize</code>) <code>current</code>
+on the uniform circuit, summarised the same way, and <code>current</code>
+divided by it: above 1 where the landscape channels the flow, below 1
+where it impedes it.</p></dd>
 
 <dt>flow_x, flow_y</dt>
 <dd><p>(with <code>direction</code>) Net flow through the cell
@@ -135,15 +158,19 @@ populations to restoration sites. Flows in opposite directions cancel, so
 the map shows net movement. For movement between the two distributions
 without direction, where every pair counts whichever way it flows, see
 <code><a href="dp_omni.html">dp_omni()</a></code> with a <code>destination</code>.</p>
-<p>The map is the signed sum over origin–destination pairs of cells within
-<code>radius</code> of each other,
+<p>Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see <code><a href="dp_circuit.html">dp_circuit()</a></code>). The map is defined per link, as
+the signed sum over origin–destination pairs of cells within <code>radius</code> of
+each other,
 $$F_e = \frac{1}{W} \sum_{i,j} o_i\, d_j\, k(d_{ij})\, I_e(i,j),$$
 where \(o\) and \(d\) are origin and destination strength, \(k\) is
 1 for cells within <code>radius</code> of each other and 0 otherwise, \(I_e(i,j)\)
 is the current through link \(e\) when one unit flows from \(i\) to
 \(j\), and \(W = \sum_{i,j} o_i d_j k(d_{ij})\) makes the pair weights
 sum to one unit of flow. Pairs never span groups of cells that NA cells
-separate (components), since no current passes between them.</p>
+separate (components), since no current passes between them. A cell's
+value combines the links that meet at it, up to 8 (see <code>current</code> below),
+each link being shared by the two cells it joins.</p>
 <p>The sum is linear in the pairs' currents, so it takes a single solve, of
 the injection \(b_i = (o_i\, (Kd)_i - d_i\, (Ko)_i) / W\), where
 \((Kd)_i\) is the destination strength within reach of cell \(i\) and
@@ -161,11 +188,31 @@ flow that turns the origin distribution into the destination one.</p>
 however electrically far away it is. (With grounds, as in
 <code><a href="cs_advanced.html">cs_advanced()</a></code>, current drains into the nearest destination instead.)</p>
 <p>Swapping <code>origin</code> and <code>destination</code> reverses the flow: the same <code>current</code>,
-with <code>flow_x</code> and <code>flow_y</code> negated.</p>
+with <code>flow_x</code> and <code>flow_y</code> negated.</p><div class="section">
+<h3 id="directional-and-undirected-maps">Directional and undirected maps<a class="anchor" aria-label="anchor" href="#directional-and-undirected-maps"></a></h3>
+
+
+<p><code><a href="dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the undirected counterpart, from the
+same pairs: their squared currents, so flows in opposite directions don't
+cancel. <code><a href="dp_directionality.html">dp_directionality()</a></code> computes both maps at once, with their
+ratio, which shows where movement between the two distributions is
+one-way and where it runs both ways.</p>
+</div>
+
+<div class="section">
+<h3 id="performance">Performance<a class="anchor" aria-label="anchor" href="#performance"></a></h3>
+
+
+<p>The time is mostly factoring the circuit, and with <code>normalize</code>, its
+uniform twin, which about doubles it; set <code>normalize = FALSE</code> to skip
+that. Each map then takes one solve. To reuse factorizations across runs,
+pass a circuit from <code><a href="dp_circuit.html">dp_circuit()</a></code>.</p>
+</div>
+
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="dp_omni.html">dp_omni()</a></code>, <code><a href="cs_advanced.html">cs_advanced()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="dp_omni.html">dp_omni()</a></code>, <code><a href="dp_directionality.html">dp_directionality()</a></code>, <code><a href="cs_advanced.html">cs_advanced()</a></code></p></div>
     </div>
 
     <div class="section level2">

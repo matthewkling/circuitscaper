@@ -55,6 +55,7 @@
 <span>  <span class="va">locations</span>,</span>
 <span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"random"</span>, <span class="st">"exact"</span><span class="op">)</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
+<span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -89,6 +90,12 @@ supported.</p></dd>
 <code>"resistances"</code> (default) or <code>"conductances"</code>. Ignored for a circuit.</p></dd>
 
 
+<dt id="arg-normalize">normalize<a class="anchor" aria-label="anchor" href="#arg-normalize"></a></dt>
+<dd><p>Logical. Also compute flow potential (the same pairs on
+the uniform circuit, conductance 1 on the same cells) and normalized
+current. Default <code>TRUE</code>.</p></dd>
+
+
 <dt id="arg-n-draws">n_draws<a class="anchor" aria-label="anchor" href="#arg-n-draws"></a></dt>
 <dd><p>Integer. Number of draws (solves) for <code>method = "random"</code>.
 Default <code>32</code>.</p></dd>
@@ -103,7 +110,9 @@ as the <code>"seed"</code> attribute.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with one layer, <code>current</code>. Attributes:
+    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>current</code>, and with
+<code>normalize</code>, <code>flow_potential</code> and <code>normalized_current</code>, as in
+<code><a href="dp_omni.html">dp_omni()</a></code>. Attributes:
 <code>"n_pairs"</code>, the number of pairs counted; for <code>method = "random"</code>, also
 <code>"halves"</code> (see <code><a href="dp_omni.html">dp_omni()</a></code>) and <code>"seed"</code>.</p>
     </div>
@@ -112,7 +121,9 @@ as the <code>"seed"</code> attribute.</p></dd>
     <p>Maps connectivity among every pair of a set of focal nodes, the
 squared-current analogue of <code><a href="cs_pairwise.html">cs_pairwise()</a></code>'s cumulative current map, at
 a cost that doesn't grow with the number of nodes.</p>
-<p>For each link \(e\) of the circuit (see <code><a href="dp_circuit.html">dp_circuit()</a></code>), the target is
+<p>Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see <code><a href="dp_circuit.html">dp_circuit()</a></code>). For each link \(e\), the
+target is
 \(\sum_{i&lt;j} I_e(i,j)^2\), over unordered pairs of focal nodes, where
 \(I_e(i,j)\) is the current through \(e\) when one unit flows from
 node \(i\) to node \(j\). A cell's value is
@@ -131,6 +142,10 @@ exact target, using
 link, with \(y_i\) its current when node \(i\) is the source.</p>
 <p>Unlike Circuitscape's cell maps, no current is added at focal nodes for
 the current injected there.</p>
+<p>Flow potential is the same quantity on the uniform circuit (with the same
+draws, for <code>method = "random"</code>), and normalized current is current
+divided by it, as in <code><a href="dp_omni.html">dp_omni()</a></code>. Normalizing takes a second
+factorization and, for <code>method = "exact"</code>, a second set of solves.</p>
 <p>Reproducibility is as for <code><a href="dp_omni.html">dp_omni()</a></code>.</p>
     </div>
     <div class="section level2">
@@ -147,7 +162,7 @@ the current injected there.</p>
 <span class="r-in"><span><span class="va">nodes</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/sample.html" class="external-link">spatSample</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="fl">30</span>, xy <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">dp_pairwise</span><span class="op">(</span><span class="va">resistance</span>, <span class="va">nodes</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">exact</span> <span class="op">&lt;-</span> <span class="fu">dp_pairwise</span><span class="op">(</span><span class="va">resistance</span>, <span class="va">nodes</span>, method <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">result</span>, <span class="va">exact</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">normalized_current</span>, <span class="va">exact</span><span class="op">$</span><span class="va">normalized_current</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">DONTSHOW</span><span class="op">(</span><span class="op">{</span><span class="fu">JuliaConnectoR</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html" class="external-link">stopJulia</a></span><span class="op">(</span><span class="op">)</span><span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>

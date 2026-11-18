@@ -64,6 +64,7 @@ all pairs of focal nodes.</p>
 <span>  write_voltage <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cumulative_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  source_strengths <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  solver <span class="op">=</span> <span class="st">"cg+amg"</span>,</span>
 <span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -145,6 +146,13 @@ Default <code>NULL</code> (all nodes inject 1 amp).</p></li>
 </ul></dd>
 
 
+<dt id="arg-normalize">normalize<a class="anchor" aria-label="anchor" href="#arg-normalize"></a></dt>
+<dd><p>Logical. Also compute flow potential and normalized
+current, by running Circuitscape a second time on a uniform surface (see
+Details). Default <code>TRUE</code>, as in <code><a href="os_run.html">os_run()</a></code>; this doubles the run time,
+so set it to <code>FALSE</code> if you only need the current map and resistances.</p></dd>
+
+
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>
 <dd><p>Character. Solver to use: <code>"cg+amg"</code> (default) or <code>"cholmod"</code>.</p></dd>
 
@@ -162,8 +170,9 @@ automatically.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A named list with:</p><dl><dt>current_map</dt>
-<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a>. By default contains a single
-<code>cumulative_current</code> layer (current flow summed across all pairs). When
+<dd><p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a>. By default contains a
+<code>cumulative_current</code> layer (current flow summed across all pairs), and
+with <code>normalize</code>, <code>flow_potential</code> and <code>normalized_current</code> layers. When
 <code>cumulative_only = FALSE</code>, additional per-pair layers are included
 (e.g., <code>current_1_2</code>, <code>current_1_3</code>). When <code>write_voltage = TRUE</code>,
 per-pair voltage layers are included (e.g., <code>voltage_1_2</code>,
@@ -186,6 +195,15 @@ current map that highlights important movement corridors.</p>
 connectivity between discrete habitat patches or populations. The resistance
 matrix can be used as a distance metric in analyses such as isolation by
 resistance.</p>
+<p>With <code>normalize = TRUE</code>, the analysis is repeated on a uniform surface:
+resistance 1 on every cell of the circuit, with the same NA cells, cells
+of zero conductance, focal nodes, short-circuit regions, included pairs
+and source strengths. Its cumulative current is the flow potential, the
+current expected from the layout of the nodes alone, and normalized
+current is cumulative current divided by it: above 1 where the landscape
+channels current, below 1 where it impedes it, as in <code><a href="os_run.html">os_run()</a></code>. With
+<code>output_dir</code>, the uniform run's files go in its <code>flow_potential</code>
+subdirectory.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

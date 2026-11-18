@@ -38,6 +38,9 @@ one factored circuit. Experimental; see the Dipole methods article.
   Random Dipoles
 - [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
   **\[experimental\]** : Directional Flow Between Two Distributions
+- [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+  **\[experimental\]** : Directional and Undirected Flow Between Two
+  Distributions
 
 ## Setup
 

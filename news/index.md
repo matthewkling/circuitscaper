@@ -21,10 +21,26 @@
     squared-current analogue of
     [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
     cumulative map, at a cost independent of the number of nodes, or
-    exactly from one solve per node.
+    exactly from one solve per node, with flow potential and normalized
+    current.
   - [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
     maps the net flow from an origin to a destination distribution, with
-    direction, in one solve, among pairs within an optional radius.
+    direction, in one solve, among pairs within an optional radius, with
+    flow potential and normalized current as in
+    [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+    Its current is the sum of absolute current over a cell’s links, as
+    in Circuitscape, or with `cell_value = "rms"`, the RMS current, as
+    in
+    [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+  - [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+    maps both at once from the same pairs, the directional map of
+    [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+    and the undirected map of `dp_omni(destination = )`, with their
+    ratio: where movement between the two distributions is one-way and
+    where it runs both ways. Both it and `dp_omni(destination = )`
+    center their random dipoles on the pairs’ mean dipole, which is
+    solved exactly, so their noise is much smaller where movement is
+    one-way.
   - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
     prepares a circuit whose factorizations several runs can reuse.
 
@@ -39,6 +55,17 @@
   it.
 
 ### Changes
+
+- [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
+  gains `normalize`, which runs Circuitscape a second time on a uniform
+  surface and adds `flow_potential` and `normalized_current` layers to
+  `current_map`, as in
+  [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md).
+  It is `TRUE` by default, for the same default across the package, so
+  [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
+  now takes about twice as long and its `current_map` has these two
+  extra layers after `cumulative_current`; set `normalize = FALSE` for
+  the previous behaviour.
 
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
   now only starts Julia. Circuitscape and Omniscape are loaded and

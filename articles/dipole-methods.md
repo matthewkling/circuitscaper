@@ -57,8 +57,8 @@ result
 #> coord. ref. : lon/lat WGS 84 (CRS84) (OGC:CRS84)
 #> source(s)   : memory
 #> names       :   current, flow_potential, normalized_current
-#> min values  :  0.001761,       0.069517,           0.021525
-#> max values  : 12.301189,       8.540498,           4.388027
+#> min values  :  0.001193,        0.06085,           0.018936
+#> max values  : 12.640086,       7.724435,           4.832281
 plot(result, nc = 3)
 ```
 
@@ -107,7 +107,7 @@ c(current = rho(os$cumulative_current, result$current),
   flow_potential = rho(os$flow_potential, result$flow_potential),
   normalized_current = rho(os$normalized_current, result$normalized_current))
 #>            current     flow_potential normalized_current 
-#>          0.9762027          0.9773197          0.9501101
+#>          0.9750985          0.9748595          0.9527434
 ```
 
 The patterns match closely, but not exactly, because the two methods
@@ -168,8 +168,8 @@ halves’ median relative difference.
 
 attr(result, "halves")
 #>                     spearman median_rel_diff
-#> current            0.9771919      0.13398254
-#> normalized_current 0.9518182      0.09060579
+#> current            0.9772751       0.1313614
+#> normalized_current 0.9383485       0.1041585
 ```
 
 Two settings control accuracy:
@@ -193,9 +193,9 @@ noise <- t(sapply(draws, function(n) {
 dimnames(noise) <- list(paste(draws, "draws"), c("current", "normalized_current"))
 round(noise, 3)
 #>           current normalized_current
-#> 8 draws     0.266              0.187
-#> 32 draws    0.134              0.091
-#> 128 draws   0.056              0.043
+#> 8 draws     0.236              0.190
+#> 32 draws    0.131              0.104
+#> 128 draws   0.055              0.045
 ```
 
 On real landscapes at the default 32 draws, per-cell noise has been
@@ -235,7 +235,7 @@ random <- dp_pairwise(circuit, nodes, seed = 1)
 exact <- dp_pairwise(circuit, nodes, method = "exact")
 cs <- cs_pairwise(resistance, nodes)
 
-pw <- c(cs$current_map, exact, random)
+pw <- c(cs$current_map$cumulative_current, exact$current, random$current)
 names(pw) <- c("cs_pairwise()", "dp_pairwise(), exact", "dp_pairwise(), random")
 plot(pw, nc = 3)
 ```
@@ -247,10 +247,11 @@ plot of chunk pairwise
 ``` r
 
 
-c(random_vs_exact = rho(random, exact),
-  exact_vs_circuitscape = rho(exact, cs$current_map))
-#>       random_vs_exact exact_vs_circuitscape 
-#>             0.9953820             0.9720331
+c(random_vs_exact = rho(random$current, exact$current),
+  exact_vs_circuitscape = rho(exact$current, cs$current_map$cumulative_current),
+  normalized = rho(exact$normalized_current, cs$current_map$normalized_current))
+#>       random_vs_exact exact_vs_circuitscape            normalized 
+#>             0.9953820             0.9720331             0.9790386
 ```
 
 As with
@@ -260,8 +261,10 @@ the quantity is squared rather than absolute current, so
 ranks cells like
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
 (on the 2 km *P. edulis* surface, \\\rho\\ = 0.98–0.997 for 25 to 200
-nodes) without matching its values. It doesn’t give the resistance
-matrix between nodes; use
+nodes) without matching its values. Both also return flow potential and
+normalized current, from the same pairs on a uniform surface.
+[`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
+doesn’t give the resistance matrix between nodes; use
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
 for that.
 
@@ -289,14 +292,18 @@ taking an origin and a destination surface:
   swapping origin and destination gives the same map. It uses random
   dipoles, as with one surface.
 
-Here, the package’s example source and ground layers stand in for the
-two distributions, say a breeding range at the bottom of the landscape
-and a wintering range at the top:
+As an example, take the low-resistance cells of the example landscape as
+habitat, and a range on it that shifts north: the same habitat, under a
+climatic envelope centered 14 cells further north. The two distributions
+overlap in the middle of the landscape, as present and future ranges, or
+two seasonal ranges, often do:
 
 ``` r
 
-origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
-destination <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+habitat <- resistance == 1
+y <- init(resistance, "y")
+origin <- habitat * exp(-((y - 18) / 8)^2)
+destination <- habitat * exp(-((y - 32) / 8)^2)
 plot(c(origin, destination), nc = 2, main = c("origin", "destination"))
 ```
 
@@ -335,9 +342,9 @@ origin–destination pairs (weighted by strength) that are within reach:
 
 ``` r
 
-near <- dp_flux(circuit, origin, destination, radius = 45)
+near <- dp_flux(circuit, origin, destination, radius = 15)
 attr(near, "in_reach")
-#> [1] 0.4468008
+#> [1] 0.229299
 ```
 
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
@@ -347,7 +354,7 @@ surface:
 
 ``` r
 
-between <- dp_omni(circuit, radius = 45, source_strength = origin,
+between <- dp_omni(circuit, radius = 15, source_strength = origin,
                    destination = destination, seed = 1)
 plot(between, nc = 3)
 ```
@@ -355,6 +362,27 @@ plot(between, nc = 3)
 ![plot of chunk between](figures/dp-between-1.png)
 
 plot of chunk between
+
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+computes both maps at once, from the same pairs, and their ratio,
+`directionality`. It works like an \\R^2\\: the share of the pairs’
+squared current (and so of the power they dissipate) that their mean
+flow accounts for. It is near 1 where all pairs cross a cell the same
+way, and near 0 where flows in opposite directions cancel, so it shows
+where movement between the two distributions is one-way and where it
+runs both ways. Here, movement is most one-way along the corridor
+between the two ranges, and least where they overlap:
+
+``` r
+
+both <- dp_directionality(circuit, origin, destination, radius = 15,
+                          normalize = FALSE, seed = 1)
+plot(both[[c("flux_current", "omni_current", "directionality")]], nc = 3)
+```
+
+![plot of chunk directionality](figures/dp-directionality-1.png)
+
+plot of chunk directionality
 
 ### Choosing a map
 
@@ -378,12 +406,19 @@ The dipole maps differ along four lines:
 
 A directional map from one surface is always zero: for every pair from
 \\i\\ to \\j\\ there is the same pair from \\j\\ to \\i\\, and their
-currents cancel.
-[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
-and
+currents cancel. With two surfaces,
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+gives both columns at once. The directional map is never more than the
+undirected one, once both are on the same scale, which is what makes its
+ratio a share between 0 and 1.
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-both take a `radius` (in
-[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
+and
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+all take a `radius` (in
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+and
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md),
 the default is no limit);
 [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
 pairs all focal nodes.
@@ -455,12 +490,15 @@ isn’t implemented yet.
 builds Circuitscape’s default raster circuit: each non-NA cell is a
 node, joined to its 8 neighbours by links of conductance \\(c_u +
 c_v)/2\\, divided by \\\sqrt{2}\\ on diagonals, for cell conductances
-\\c\\. With node voltages \\v\\ and a vector \\b\\ of currents injected
-at the nodes, the circuit’s equations are \\L v = b\\, where \\L\\ is
-the graph Laplacian. A tiny conductance to ground at every node
-(\\10^{-12}\\) makes \\L\\ positive definite. It carries essentially no
-current, because every injection here is balanced: as much current
-leaves the circuit as enters.
+\\c\\. A link is the resistor between two neighbouring cells. Current
+flows along links, so the maps are defined per link and then combined
+over the links that meet at each cell (up to 8), each link being shared
+by the two cells it joins. With node voltages \\v\\ and a vector \\b\\
+of currents injected at the nodes, the circuit’s equations are \\L v =
+b\\, where \\L\\ is the graph Laplacian. A tiny conductance to ground at
+every node (\\10^{-12}\\) makes \\L\\ positive definite. It carries
+essentially no current, because every injection here is balanced: as
+much current leaves the circuit as enters.
 
 \\L\\ is the same whatever is injected, so it is factored once (a sparse
 Cholesky factorization), after which each new \\b\\ costs only a cheap
@@ -527,9 +565,12 @@ square-root scale of the maps, and less again where a cell’s links add
 independent noise. More dipoles only help to cover the population of
 pairs well, which happens by around \\10^5\\.
 
-Pairs are sampled by rejection: the first cell in proportion to \\w\\,
-the second uniformly among the cells within the radius, kept with
-probability \\w_j / \max(w)\\. \\S\\ sums over exactly the pairs the
+Pairs are sampled exactly, in two stages: the first cell \\i\\ in
+proportion to \\w_i\\ times the weight of the other cells within its
+reach, then the second among those cells in proportion to \\w_j\\, by
+picking a row of the kernel from per-row prefix sums of \\w\\ and a
+column by binary search. Each dipole costs one step per kernel row,
+however sparse the habitat. \\S\\ sums over exactly the pairs the
 sampler can produce, within each component.
 
 ### Flow potential and normalization
@@ -575,7 +616,8 @@ with a `destination` sums the pairs’ squared currents \\I_e(i,j)^2\\, as
 with one surface but with these weights. The pairing is one-way, but a
 pair’s squared current is the same in both directions, so random signs
 still apply, and the map doesn’t depend on which surface is the origin.
-Cells in both distributions take part at both ends.
+Cells in both distributions take part at both ends. Its dipoles are
+centered on their mean (see below).
 
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
 sums the pairs’ signed currents \\I_e(i,j)\\, divided by the total
@@ -603,6 +645,39 @@ movement from origin-only to destination-only habitat. With several
 components, each carries its share of \\W\\; origin cells with no
 destination within reach send nothing, and \\W / (\sum o \sum d)\\ is
 returned as `"in_reach"`.
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)’s
+flow potential is the same injection solved on the uniform circuit.
+
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+compares the two. On each link, \\F_e\\ is the pairs’ weighted mean
+current and \\U_e / W\\ their weighted mean squared current, so
+
+\\ R_e = \frac{W F_e^2}{U_e} = 1 -
+\frac{\mathrm{Var}(I_e)}{\mathrm{E}\[I_e^2\]} \\
+
+is between 0 and 1: the share of the pairs’ squared current that their
+mean flow accounts for. A cell’s `directionality` is \\W \sum_e F_e^2 /
+\sum_e U_e\\ over the links that meet at it, the links’ \\R_e\\ averaged
+with weights \\U_e\\. Only squares work here: the directional map gives
+the pairs’ mean current exactly and the random dipoles give their mean
+square, but no superposition gives their mean absolute current, which an
+\\L_1\\ version of the ratio would need.
+
+With two surfaces, the random dipoles are **centered**. The pairs’ mean
+dipole is \\\bar b = (W / S)\\ b\\, with \\b\\ the flux injection above,
+and its current is solved exactly. Each draw injects \\\sum_d s_d\\
+(\mathbf{e}\_{i_d} - \mathbf{e}\_{j_d} - \bar b)\\, which costs nothing
+extra, so its squared current estimates the variance of the pairs’
+currents, \\\mathbb{E}\[I_e^2\] - \bar I_e^2\\; the exact \\\bar I_e^2\\
+is added back. This is still unbiased, but its noise is proportional to
+the variance rather than to \\\mathbb{E}\[I_e^2\]\\, so it shrinks by a
+factor of about \\1 - R\\. That matters most exactly where the ratio is
+most interesting: where flow is one-way, the dipoles’ currents point the
+same way, so without centering every draw’s noise there is one shared
+random factor, and the ratio would be off by the same amount (about
+\\1.4 / \sqrt{\mathrm{n\\draws}}\\) across the whole region. With
+centering, the ratio also can’t exceed 1. With one surface, the mean
+dipole is zero and nothing changes.
 
 ### How the results differ from Circuitscape and Omniscape
 

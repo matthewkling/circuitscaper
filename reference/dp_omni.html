@@ -155,14 +155,17 @@ breeding to wintering grounds, or foraging to roosting habitat. The map is
 undirected: every pair counts whichever way it flows, so swapping the two
 surfaces gives the same map. For the net flow from one to the other, with
 its direction, see <code><a href="dp_flux.html">dp_flux()</a></code>.</p>
-<p>For each link \(e\) of the circuit (see <code><a href="dp_circuit.html">dp_circuit()</a></code>), the method
-estimates
+<p>Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see <code><a href="dp_circuit.html">dp_circuit()</a></code>). For each link \(e\), the
+method estimates
 $$T_e = \sum_{i \ne j} w_i w_j k(d_{ij}) I_e(i,j)^2$$
 over ordered pairs of cells, where \(w\) is source strength, \(k\) is
 1 for cells within <code>radius</code> of each other and 0 otherwise, and
 \(I_e(i,j)\) is the current through \(e\) when one unit flows from
-\(i\) to \(j\) on the whole circuit. A cell's current is
-\(\sqrt{\frac{1}{2}\sum_{e \ni \mathrm{cell}} T_e}\). For a unit flow,
+\(i\) to \(j\) on the whole circuit. A cell's current combines the
+links that meet at it, up to 8:
+\(\sqrt{\frac{1}{2}\sum_{e \ni \mathrm{cell}} T_e}\), where the half
+is because each link is shared by the two cells it joins. For a unit flow,
 a link's squared current is the derivative of the pair's effective
 resistance with respect to that link's resistance, so the map is the
 sensitivity of habitat-weighted pairwise resistance to degrading each
@@ -174,6 +177,14 @@ matter, and the map is the same whichever surface is the origin. A cell's
 pair with itself carries no current. Cells in both distributions take
 part at both ends, unlike in <code><a href="dp_flux.html">dp_flux()</a></code>, where their flow cancels. With
 one surface, \(o = d = w\).</p>
+<p>With two surfaces, the pairs have a mean dipole, whose current (the
+directional map of <code><a href="dp_flux.html">dp_flux()</a></code>) is solved exactly. Each draw's dipoles
+are centered on it, so the draws estimate only the variance of the pairs'
+currents, and the mean's exact squared current is added back. The
+estimate is still unbiased, but where the pairs' currents mostly agree in
+direction its noise is much smaller: by a factor of about \(1 - R\),
+with \(R\) as in <code><a href="dp_directionality.html">dp_directionality()</a></code>. With one surface, the mean
+dipole is zero.</p>
 <p>Each draw injects <code>n_dipoles</code> unit dipoles, pairs drawn in proportion to
 \(w_i w_j k(d_{ij})\), each with a random sign, and solves the circuit
 once. The random signs make the cross terms between dipoles average out,

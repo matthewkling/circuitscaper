@@ -52,9 +52,11 @@
 <ul><li>
 <code><a href="../reference/dp_omni.html">dp_omni()</a></code> maps omnidirectional connectivity among habitat, in the role of <code><a href="../reference/os_run.html">os_run()</a></code>, from random-sign dipoles within a radius (in pixels or km): current, flow potential and normalized current, with a built-in estimate of its sampling noise. With a <code>destination</code>, it maps the routes linking two distributions, such as present and future habitat, seasonal ranges, or two habitat types, without direction.</li>
 <li>
-<code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> maps connectivity among every pair of focal nodes, the squared-current analogue of <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s cumulative map, at a cost independent of the number of nodes, or exactly from one solve per node.</li>
+<code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> maps connectivity among every pair of focal nodes, the squared-current analogue of <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s cumulative map, at a cost independent of the number of nodes, or exactly from one solve per node, with flow potential and normalized current.</li>
 <li>
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow from an origin to a destination distribution, with direction, in one solve, among pairs within an optional radius.</li>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow from an origin to a destination distribution, with direction, in one solve, among pairs within an optional radius, with flow potential and normalized current as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>. Its current is the sum of absolute current over a cell’s links, as in Circuitscape, or with <code>cell_value = "rms"</code>, the RMS current, as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>.</li>
+<li>
+<code><a href="../reference/dp_directionality.html">dp_directionality()</a></code> maps both at once from the same pairs, the directional map of <code><a href="../reference/dp_flux.html">dp_flux()</a></code> and the undirected map of <code>dp_omni(destination = )</code>, with their ratio: where movement between the two distributions is one-way and where it runs both ways. Both it and <code>dp_omni(destination = )</code> center their random dipoles on the pairs’ mean dipole, which is solved exactly, so their noise is much smaller where movement is one-way.</li>
 <li>
 <code><a href="../reference/dp_circuit.html">dp_circuit()</a></code> prepares a circuit whose factorizations several runs can reuse.</li>
 </ul><p>These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>. They are experimental.</p>
@@ -63,8 +65,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="changes-development-version">Changes<a class="anchor" aria-label="anchor" href="#changes-development-version"></a></h3>
-<ul><li>
-<code><a href="../reference/cs_setup.html">cs_setup()</a></code> now only starts Julia. Circuitscape and Omniscape are loaded and warmed up on the first <code>cs_*()</code> or <code>os_*()</code> call of a session instead, so a session that only uses the dipole methods starts in a few seconds rather than 15 or more. Circuitscape and Omniscape sessions take the same total time as before.</li>
+<ul><li><p><code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code> gains <code>normalize</code>, which runs Circuitscape a second time on a uniform surface and adds <code>flow_potential</code> and <code>normalized_current</code> layers to <code>current_map</code>, as in <code><a href="../reference/os_run.html">os_run()</a></code>. It is <code>TRUE</code> by default, for the same default across the package, so <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code> now takes about twice as long and its <code>current_map</code> has these two extra layers after <code>cumulative_current</code>; set <code>normalize = FALSE</code> for the previous behaviour.</p></li>
+<li><p><code><a href="../reference/cs_setup.html">cs_setup()</a></code> now only starts Julia. Circuitscape and Omniscape are loaded and warmed up on the first <code>cs_*()</code> or <code>os_*()</code> call of a session instead, so a session that only uses the dipole methods starts in a few seconds rather than 15 or more. Circuitscape and Omniscape sessions take the same total time as before.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="documentation-development-version">Documentation<a class="anchor" aria-label="anchor" href="#documentation-development-version"></a></h3>

@@ -10,6 +10,7 @@ dp_pairwise(
   locations,
   method = c("random", "exact"),
   resistance_is = "resistances",
+  normalize = TRUE,
   n_draws = 32,
   seed = NULL
 )
@@ -45,6 +46,12 @@ dp_pairwise(
   Character. Whether `resistance` holds `"resistances"` (default) or
   `"conductances"`. Ignored for a circuit.
 
+- normalize:
+
+  Logical. Also compute flow potential (the same pairs on the uniform
+  circuit, conductance 1 on the same cells) and normalized current.
+  Default `TRUE`.
+
 - n_draws:
 
   Integer. Number of draws (solves) for `method = "random"`. Default
@@ -61,8 +68,11 @@ dp_pairwise(
 
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-with one layer, `current`. Attributes: `"n_pairs"`, the number of pairs
-counted; for `method = "random"`, also `"halves"` (see
+with layers `current`, and with `normalize`, `flow_potential` and
+`normalized_current`, as in
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+Attributes: `"n_pairs"`, the number of pairs counted; for
+`method = "random"`, also `"halves"` (see
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md))
 and `"seed"`.
 
@@ -74,13 +84,14 @@ squared-current analogue of
 cumulative current map, at a cost that doesn't grow with the number of
 nodes.
 
-For each link \\e\\ of the circuit (see
-[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)),
-the target is \\\sum\_{i\<j} I_e(i,j)^2\\, over unordered pairs of focal
-nodes, where \\I_e(i,j)\\ is the current through \\e\\ when one unit
-flows from node \\i\\ to node \\j\\. A cell's value is
-\\\sqrt{\frac{1}{2}\sum\_{e \ni \mathrm{cell}} (\cdot)}\\ over its
-links, as in
+Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see
+[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)).
+For each link \\e\\, the target is \\\sum\_{i\<j} I_e(i,j)^2\\, over
+unordered pairs of focal nodes, where \\I_e(i,j)\\ is the current
+through \\e\\ when one unit flows from node \\i\\ to node \\j\\. A
+cell's value is \\\sqrt{\frac{1}{2}\sum\_{e \ni \mathrm{cell}}
+(\cdot)}\\ over its links, as in
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
 Pairs are counted only within groups of cells connected to each other
 (no current passes across NA cells).
@@ -98,6 +109,13 @@ source.
 
 Unlike Circuitscape's cell maps, no current is added at focal nodes for
 the current injected there.
+
+Flow potential is the same quantity on the uniform circuit (with the
+same draws, for `method = "random"`), and normalized current is current
+divided by it, as in
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+Normalizing takes a second factorization and, for `method = "exact"`, a
+second set of solves.
 
 Reproducibility is as for
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
@@ -118,7 +136,7 @@ set.seed(1)
 nodes <- terra::spatSample(resistance, 30, xy = TRUE)[, 1:2]
 result <- dp_pairwise(resistance, nodes, seed = 1)
 exact <- dp_pairwise(resistance, nodes, method = "exact")
-terra::plot(c(result, exact))
+terra::plot(c(result$normalized_current, exact$normalized_current))
 DONTSHOW({JuliaConnectoR::stopJulia()})
 }
 ```

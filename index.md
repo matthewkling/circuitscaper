@@ -92,7 +92,7 @@ helps choose between them.
 | How does current spread from, or converge on, each site? | [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md), [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md) |  |
 | How does movement flow between a source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
-| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )` |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )`, [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md) |
 
 Also:
 

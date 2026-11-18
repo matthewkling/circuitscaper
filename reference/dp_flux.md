@@ -13,7 +13,9 @@ dp_flux(
   source_threshold = 0.01,
   radius_units = c("pixels", "km"),
   resistance_is = "resistances",
-  direction = TRUE
+  normalize = TRUE,
+  direction = TRUE,
+  cell_value = c("absolute", "rms")
 )
 ```
 
@@ -61,9 +63,22 @@ dp_flux(
   Character. Whether `resistance` holds `"resistances"` (default) or
   `"conductances"`. Ignored for a circuit.
 
+- normalize:
+
+  Logical. Also compute flow potential (the same flow on the uniform
+  circuit, conductance 1 on the same cells) and normalized current.
+  Default `TRUE`.
+
 - direction:
 
   Logical. Also return the components of net flow. Default `TRUE`.
+
+- cell_value:
+
+  Character. How `current` sums a cell's links: `"absolute"` (default),
+  half the sum of absolute current, as in Circuitscape's current maps;
+  or `"rms"`, the square root of half the sum of squared current, as in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
 
 ## Value
 
@@ -74,7 +89,15 @@ with layers:
 - current:
 
   Half the sum of absolute current over a cell's links, as in
-  Circuitscape's current maps (without the injection term).
+  Circuitscape's current maps (without the injection term), or with
+  `cell_value = "rms"`, the square root of half the sum of squared
+  current.
+
+- flow_potential, normalized_current:
+
+  (with `normalize`) `current` on the uniform circuit, summarised the
+  same way, and `current` divided by it: above 1 where the landscape
+  channels the flow, below 1 where it impedes it.
 
 - flow_x, flow_y:
 
@@ -99,15 +122,20 @@ it flows, see
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
 with a `destination`.
 
-The map is the signed sum over origin–destination pairs of cells within
-`radius` of each other, \$\$F_e = \frac{1}{W} \sum\_{i,j} o_i\\ d_j\\
-k(d\_{ij})\\ I_e(i,j),\$\$ where \\o\\ and \\d\\ are origin and
-destination strength, \\k\\ is 1 for cells within `radius` of each other
-and 0 otherwise, \\I_e(i,j)\\ is the current through link \\e\\ when one
-unit flows from \\i\\ to \\j\\, and \\W = \sum\_{i,j} o_i d_j
-k(d\_{ij})\\ makes the pair weights sum to one unit of flow. Pairs never
-span groups of cells that NA cells separate (components), since no
-current passes between them.
+Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see
+[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)).
+The map is defined per link, as the signed sum over origin–destination
+pairs of cells within `radius` of each other, \$\$F_e = \frac{1}{W}
+\sum\_{i,j} o_i\\ d_j\\ k(d\_{ij})\\ I_e(i,j),\$\$ where \\o\\ and \\d\\
+are origin and destination strength, \\k\\ is 1 for cells within
+`radius` of each other and 0 otherwise, \\I_e(i,j)\\ is the current
+through link \\e\\ when one unit flows from \\i\\ to \\j\\, and \\W =
+\sum\_{i,j} o_i d_j k(d\_{ij})\\ makes the pair weights sum to one unit
+of flow. Pairs never span groups of cells that NA cells separate
+(components), since no current passes between them. A cell's value
+combines the links that meet at it, up to 8 (see `current` below), each
+link being shared by the two cells it joins.
 
 The sum is linear in the pairs' currents, so it takes a single solve, of
 the injection \\b_i = (o_i\\ (Kd)\_i - d_i\\ (Ko)\_i) / W\\, where
@@ -132,9 +160,28 @@ current drains into the nearest destination instead.)
 Swapping `origin` and `destination` reverses the flow: the same
 `current`, with `flow_x` and `flow_y` negated.
 
+### Directional and undirected maps
+
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+with a `destination` maps the undirected counterpart, from the same
+pairs: their squared currents, so flows in opposite directions don't
+cancel.
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+computes both maps at once, with their ratio, which shows where movement
+between the two distributions is one-way and where it runs both ways.
+
+### Performance
+
+The time is mostly factoring the circuit, and with `normalize`, its
+uniform twin, which about doubles it; set `normalize = FALSE` to skip
+that. Each map then takes one solve. To reuse factorizations across
+runs, pass a circuit from
+[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md).
+
 ## See also
 
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md),
 [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md)
 
 ## Examples

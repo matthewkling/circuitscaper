@@ -209,8 +209,9 @@ ignored)</li>
 weighted by its <strong>source strength</strong>, such as habitat
 quality or suitability. By default both use the conductance surface (the
 inverse of resistance). For connectivity between two distributions,
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code> and <code>dp_omni(destination = )</code> take two
-surfaces: an origin and a destination.</p>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code>dp_omni(destination = )</code> and
+<code><a href="../reference/dp_directionality.html">dp_directionality()</a></code> take two surfaces: an origin and a
+destination.</p>
 </div>
 </div>
 <div class="section level2">
@@ -261,7 +262,8 @@ or present and future habitat), and which way does it flow?</td>
 <code><a href="../reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>, for
 climate</td>
 <td>
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code>dp_omni(destination = )</code>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code>dp_omni(destination = )</code>,
+<code><a href="../reference/dp_directionality.html">dp_directionality()</a></code>
 </td>
 </tr>
 </tbody>
@@ -289,10 +291,11 @@ change, breeding and wintering ranges, foraging and roosting habitat, or
 source populations and restoration sites. <code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps
 the net flow from origin to destination, with its direction;
 <code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the routes
-between them without direction. For climate change,
-<code><a href="../reference/os_condition.html">os_condition()</a></code> offers a related Omniscape analysis,
-restricting connections to sources and targets with compatible present
-and future conditions.</p>
+between them without direction; and <code><a href="../reference/dp_directionality.html">dp_directionality()</a></code>
+maps both, with their ratio, showing where movement is one-way and where
+it runs both ways. For climate change, <code><a href="../reference/os_condition.html">os_condition()</a></code>
+offers a related Omniscape analysis, restricting connections to sources
+and targets with compatible present and future conditions.</p>
 <div class="section level3">
 <h3 id="circuitscape-and-omniscape-or-dipole-methods">Circuitscape and Omniscape, or dipole methods?<a class="anchor" aria-label="anchor" href="#circuitscape-and-omniscape-or-dipole-methods"></a>
 </h3>

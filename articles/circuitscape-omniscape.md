@@ -113,9 +113,10 @@ plot of chunk advanced
 ### Per-pair current and voltage maps
 
 By default, pairwise, one-to-all, and all-to-one modes return only the
-cumulative current map. Set `cumulative_only = FALSE` to include
-per-pair (or per-node) current layers, and `write_voltage = TRUE` to
-include voltage layers:
+cumulative current map (for pairwise, with flow potential and normalized
+current; see below). Set `cumulative_only = FALSE` to include per-pair
+(or per-node) current layers, and `write_voltage = TRUE` to include
+voltage layers:
 
 ``` r
 
@@ -123,11 +124,11 @@ result <- cs_pairwise(resistance, coords,
                       cumulative_only = FALSE,
                       write_voltage = TRUE)
 names(result$current_map)
-#>  [1] "cumulative_current" "current_1_2"        "current_1_3"       
-#>  [4] "current_1_4"        "current_2_3"        "current_2_4"       
-#>  [7] "current_3_4"        "voltage_1_2"        "voltage_1_3"       
-#> [10] "voltage_1_4"        "voltage_2_3"        "voltage_2_4"       
-#> [13] "voltage_3_4"
+#>  [1] "cumulative_current" "flow_potential"     "normalized_current"
+#>  [4] "current_1_2"        "current_1_3"        "current_1_4"       
+#>  [7] "current_2_3"        "current_2_4"        "current_3_4"       
+#> [10] "voltage_1_2"        "voltage_1_3"        "voltage_1_4"       
+#> [13] "voltage_2_3"        "voltage_2_4"        "voltage_3_4"
 ```
 
 ### Variable source strengths
@@ -169,17 +170,18 @@ result <- cs_pairwise(resistance, coords,
 
 ### Normalized current
 
-Omniscape returns normalized current (actual current / flow potential)
-automatically. You can compute the equivalent for Circuitscape by
-running the analysis twice — once with your resistance surface and once
-with a uniform surface — and dividing:
+[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)
+and Omniscape return normalized current (current divided by flow
+potential) by default. For
+[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md),
+flow potential is the same analysis on a uniform surface: resistance 1
+on the same cells, with the same focal nodes. It shows the current
+expected from the layout of the nodes alone:
 
 ``` r
 
-result      <- cs_pairwise(resistance, coords)
-result_null <- cs_pairwise(resistance * 0 + 1, coords)
-normalized  <- result$current_map / result_null$current_map
-plot(normalized)
+result <- cs_pairwise(resistance, coords)
+plot(result$current_map, nc = 3)
 ```
 
 ![plot of chunk normalized](figures/cso-normalized-1.png)
@@ -188,7 +190,18 @@ plot of chunk normalized
 
 Values greater than 1 indicate areas where landscape resistance is
 concentrating current flow; values less than 1 indicate areas where
-current is lower than expected from geometry alone.
+current is lower than expected from geometry alone. Normalizing runs
+Circuitscape twice, so set `normalize = FALSE` if you don’t need it.
+
+For the other Circuitscape modes, you can compute the equivalent
+yourself by running the analysis on a uniform surface and dividing:
+
+``` r
+
+result      <- cs_one_to_all(resistance, coords)
+result_null <- cs_one_to_all(resistance * 0 + 1, coords)
+normalized  <- result / result_null
+```
 
 ## Omniscape: moving-window connectivity
 

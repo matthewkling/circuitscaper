@@ -122,18 +122,20 @@ swapping the two surfaces gives the same map. For the net flow from one
 to the other, with its direction, see
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md).
 
-For each link \\e\\ of the circuit (see
-[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)),
-the method estimates \$\$T_e = \sum\_{i \ne j} w_i w_j k(d\_{ij})
-I_e(i,j)^2\$\$ over ordered pairs of cells, where \\w\\ is source
-strength, \\k\\ is 1 for cells within `radius` of each other and 0
-otherwise, and \\I_e(i,j)\\ is the current through \\e\\ when one unit
-flows from \\i\\ to \\j\\ on the whole circuit. A cell's current is
-\\\sqrt{\frac{1}{2}\sum\_{e \ni \mathrm{cell}} T_e}\\. For a unit flow,
-a link's squared current is the derivative of the pair's effective
-resistance with respect to that link's resistance, so the map is the
-sensitivity of habitat-weighted pairwise resistance to degrading each
-cell.
+Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see
+[`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)).
+For each link \\e\\, the method estimates \$\$T_e = \sum\_{i \ne j} w_i
+w_j k(d\_{ij}) I_e(i,j)^2\$\$ over ordered pairs of cells, where \\w\\
+is source strength, \\k\\ is 1 for cells within `radius` of each other
+and 0 otherwise, and \\I_e(i,j)\\ is the current through \\e\\ when one
+unit flows from \\i\\ to \\j\\ on the whole circuit. A cell's current
+combines the links that meet at it, up to 8: \\\sqrt{\frac{1}{2}\sum\_{e
+\ni \mathrm{cell}} T_e}\\, where the half is because each link is shared
+by the two cells it joins. For a unit flow, a link's squared current is
+the derivative of the pair's effective resistance with respect to that
+link's resistance, so the map is the sensitivity of habitat-weighted
+pairwise resistance to degrading each cell.
 
 With a `destination`, the pair weights are \\o_i d_j k(d\_{ij})\\, with
 \\o\\ the origin (`source_strength`) and \\d\\ the destination strength.
@@ -143,6 +145,17 @@ itself carries no current. Cells in both distributions take part at both
 ends, unlike in
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
 where their flow cancels. With one surface, \\o = d = w\\.
+
+With two surfaces, the pairs have a mean dipole, whose current (the
+directional map of
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md))
+is solved exactly. Each draw's dipoles are centered on it, so the draws
+estimate only the variance of the pairs' currents, and the mean's exact
+squared current is added back. The estimate is still unbiased, but where
+the pairs' currents mostly agree in direction its noise is much smaller:
+by a factor of about \\1 - R\\, with \\R\\ as in
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md).
+With one surface, the mean dipole is zero.
 
 Each draw injects `n_dipoles` unit dipoles, pairs drawn in proportion to
 \\w_i w_j k(d\_{ij})\\, each with a random sign, and solves the circuit

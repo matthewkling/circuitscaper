@@ -143,9 +143,10 @@ need no focal nodes: every cell can be a source, weighted by its
 **source strength**, such as habitat quality or suitability. By default
 both use the conductance surface (the inverse of resistance). For
 connectivity between two distributions,
-[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-and `dp_omni(destination = )` take two surfaces: an origin and a
-destination.
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
+`dp_omni(destination = )` and
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+take two surfaces: an origin and a destination.
 
 ## Choosing a method
 
@@ -157,7 +158,7 @@ Start from the question you’re asking:
 | How does current spread out from, or converge on, each site? | [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md), [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md) |  |
 | How does movement flow between a defined source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
-| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )` |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )`, [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md) |
 
 **Pairwise** analyses treat discrete sites (habitat patches,
 populations) and ask how well they’re connected to each other.
@@ -185,8 +186,10 @@ and restoration sites.
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
 maps the net flow from origin to destination, with its direction;
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
-with a `destination` maps the routes between them without direction. For
-climate change,
+with a `destination` maps the routes between them without direction; and
+[`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
+maps both, with their ratio, showing where movement is one-way and where
+it runs both ways. For climate change,
 [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
 offers a related Omniscape analysis, restricting connections to sources
 and targets with compatible present and future conditions.

@@ -17,6 +17,7 @@ cs_pairwise(
   write_voltage = FALSE,
   cumulative_only = TRUE,
   source_strengths = NULL,
+  normalize = TRUE,
   solver = "cg+amg",
   output_dir = NULL,
   verbose = FALSE
@@ -108,6 +109,15 @@ cs_pairwise(
     node ID and strength in amps. Nodes not listed default to 1 amp.
     Default `NULL` (all nodes inject 1 amp).
 
+- normalize:
+
+  Logical. Also compute flow potential and normalized current, by
+  running Circuitscape a second time on a uniform surface (see Details).
+  Default `TRUE`, as in
+  [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md);
+  this doubles the run time, so set it to `FALSE` if you only need the
+  current map and resistances.
+
 - solver:
 
   Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
@@ -130,11 +140,12 @@ A named list with:
 
   A
   [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html).
-  By default contains a single `cumulative_current` layer (current flow
-  summed across all pairs). When `cumulative_only = FALSE`, additional
-  per-pair layers are included (e.g., `current_1_2`, `current_1_3`).
-  When `write_voltage = TRUE`, per-pair voltage layers are included
-  (e.g., `voltage_1_2`, `voltage_1_3`).
+  By default contains a `cumulative_current` layer (current flow summed
+  across all pairs), and with `normalize`, `flow_potential` and
+  `normalized_current` layers. When `cumulative_only = FALSE`,
+  additional per-pair layers are included (e.g., `current_1_2`,
+  `current_1_3`). When `write_voltage = TRUE`, per-pair voltage layers
+  are included (e.g., `voltage_1_2`, `voltage_1_3`).
 
 - resistance_matrix:
 
@@ -154,6 +165,17 @@ This is the most common Circuitscape mode and is typically used to
 quantify connectivity between discrete habitat patches or populations.
 The resistance matrix can be used as a distance metric in analyses such
 as isolation by resistance.
+
+With `normalize = TRUE`, the analysis is repeated on a uniform surface:
+resistance 1 on every cell of the circuit, with the same NA cells, cells
+of zero conductance, focal nodes, short-circuit regions, included pairs
+and source strengths. Its cumulative current is the flow potential, the
+current expected from the layout of the nodes alone, and normalized
+current is cumulative current divided by it: above 1 where the landscape
+channels current, below 1 where it impedes it, as in
+[`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md).
+With `output_dir`, the uniform run's files go in its `flow_potential`
+subdirectory.
 
 ## References
 
