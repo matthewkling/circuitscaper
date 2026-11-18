@@ -104,6 +104,27 @@ test_that("circuitscaper recovers when Julia is stopped", {
   expect_message(cs_setup(), "Initializing Julia")
   expect_identical(julia_session_state(), "ready")
   expect_true(.cs_env$julia_ready)
+  # Circuitscape and Omniscape load when the cs_*() and os_*() functions
+  # need them, not before
+  expect_false(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
+  expect_message(ensure_julia(), "Loading Circuitscape and Omniscape")
+  expect_true(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
+  expect_no_message(ensure_julia())
+})
+
+test_that("the dipole methods run without loading Circuitscape or Omniscape", {
+  skip_if_no_julia(circuitscape = FALSE)
+  JuliaConnectoR::stopJulia()
+  r <- terra::rast(system.file("extdata/resistance.tif", package = "circuitscaper"))
+  d <- suppressMessages(dp_omni(r, radius = 5, n_draws = 4, n_dipoles = 500, seed = 1))
+  expect_s4_class(d, "SpatRaster")
+  expect_false(isTRUE(jl_eval("isdefined(Main, :Circuitscape)")))
+  expect_false(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
+  expect_length(.cs_env$loaded_packages, 0)
+
+  # A Circuitscape run in the same Julia loads them then
+  sites <- matrix(c(10, 40, 40, 10), ncol = 2, byrow = TRUE)
+  expect_message(cs_pairwise(r, sites), "Loading Circuitscape and Omniscape")
   expect_true(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
 })
 

@@ -12,7 +12,7 @@ crossera_surfaces <- function() {
 }
 
 test_that("dp_flux matches the prototype's net flux (oracle 5)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   s <- crossera_surfaces()
   proto <- dipole_prototype()
   g <- proto$dp_graph(s$conductance)
@@ -37,7 +37,7 @@ test_that("dp_flux matches the prototype's net flux (oracle 5)", {
 })
 
 test_that("dp_flux gives the direction of flow", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   tmpl <- terra::rast(nrows = 15, ncols = 40, xmin = 0, xmax = 40, ymin = 0, ymax = 15,
                       crs = "EPSG:5070")
   cond <- terra::setValues(tmpl, 1)
@@ -60,7 +60,7 @@ test_that("dp_flux gives the direction of flow", {
 })
 
 test_that("dp_flux balances flow within each component", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)        # column 8 is NA
   present <- terra::setValues(x$conductance, 0)
   future <- present
@@ -96,7 +96,7 @@ test_that("dp_flux balances flow within each component", {
 })
 
 test_that("dp_pathways targets present-to-future pairs without bias", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   fut <- dipole_test_grid(split = TRUE, seed = 7)$suitability
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")

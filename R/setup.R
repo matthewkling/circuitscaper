@@ -1,13 +1,13 @@
-#' Set Up Julia and Load Circuitscape/Omniscape
+#' Set Up Julia
 #'
-#' Initialize the Julia session and load the Circuitscape and Omniscape Julia
-#' packages. This is called automatically on first use of any `cs_*` or `os_*`
-#' function. Call explicitly to control the Julia path, number of threads, or
-#' pre-warm the session.
+#' Start the Julia session that circuitscaper's functions run in. This is
+#' called automatically on first use of any `cs_*()`, `os_*()` or `dp_*()`
+#' function. Call it explicitly to control the Julia path or the number of
+#' threads, ideally at the start of your session.
 #'
 #' `cs_setup()` does **not** install Julia or Julia packages. If Julia is not
-#' found or the required packages are missing, it throws an informative error
-#' directing you to [cs_install_julia()].
+#' found, it throws an informative error directing you to
+#' [cs_install_julia()].
 #'
 #' @param julia_home Character. Path to the Julia `bin/` directory. If
 #'   `NULL` (default), Julia is looked for in: the `JULIA_HOME` option or
@@ -25,17 +25,21 @@
 #' @return Invisibly returns `TRUE` on success.
 #'
 #' @details
-#' `cs_setup()` will:
-#' * Verify that Julia is installed and accessible, and start it. Julia runs
-#'   in its own process, connected to R by 'JuliaConnectoR'.
-#' * Verify that the Circuitscape and Omniscape Julia packages are installed.
-#' * Load both packages and warm up the JIT compiler.
+#' `cs_setup()` verifies that Julia is installed and accessible, and starts
+#' it with the requested threads. Julia runs in its own process, connected to
+#' R by 'JuliaConnectoR'.
+#'
+#' The Circuitscape and Omniscape Julia packages are loaded later, the first
+#' time a `cs_*()` or `os_*()` function runs: that call checks they are
+#' installed, loads them and warms up Julia's compiler, which takes a few
+#' seconds to a minute once per session. The dipole methods (`dp_*()`) need
+#' neither package, so a session that only uses them skips that step.
 #'
 #' Once Julia is initialized, it stays warm for the R session. Subsequent calls
 #' to `cs_setup()` return immediately. If the Julia process has stopped in
 #' the meantime (for example, it crashed or ran out of memory, or was stopped
 #' with `JuliaConnectoR::stopJulia()`), the next `cs_setup()` call, or the
-#' next `cs_*()` or `os_*()` call, starts and sets up Julia again.
+#' next `cs_*()`, `os_*()` or `dp_*()` call, starts and sets up Julia again.
 #'
 #' ## Threading
 #' Multi-threading is used by [os_run()] when `parallelize = TRUE`, and
@@ -49,9 +53,10 @@
 #' ```
 #'
 #' Julia's thread count is fixed when Julia starts, so if Julia is already
-#' running with fewer threads, `cs_setup(threads = )` restarts it. This
-#' takes as long as the first setup, since Circuitscape and Omniscape are
-#' loaded and warmed up again, and it discards anything else in this R
+#' running with fewer threads, `cs_setup(threads = )` restarts it. After a
+#' restart, Circuitscape and Omniscape are loaded and warmed up again on the
+#' next `cs_*()` or `os_*()` call, and circuits from [dp_circuit()] are
+#' rebuilt when next used. A restart also discards anything else in this R
 #' session's Julia (e.g., objects created through 'JuliaConnectoR' by other
 #' code). Asking for fewer threads than Julia has doesn't restart it.
 #'
@@ -103,9 +108,10 @@ cs_setup <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
 }
 
 
-#' Start Julia and Load Circuitscape and Omniscape
+#' Start Julia
 #'
-#' The body of [cs_setup()] when Julia isn't set up yet.
+#' The body of [cs_setup()] when Julia isn't set up yet. Circuitscape and
+#' Omniscape are loaded separately, by `load_circuitscape()`.
 #' @param julia_home,threads,quiet As for [cs_setup()].
 #' @noRd
 init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
@@ -170,6 +176,29 @@ init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   .cs_env$julia_bin <- julia_bin
   .cs_env$julia_threads <- nthreads
   .cs_env$julia_interactive <- if (is.na(ninteractive)) 0L else ninteractive
+  .cs_env$loaded_packages <- character(0)
+
+  mark_julia_ready()
+  .cs_env$julia_ready <- TRUE
+  invisible(TRUE)
+}
+
+
+#' Load Circuitscape and Omniscape Into the Running Julia
+#'
+#' Checks that both packages are installed, loads them, applies the
+#' compatibility patches and warms up Julia's compiler with a tiny
+#' Circuitscape run. Returns at once if they are already loaded in this
+#' Julia. Called by `ensure_julia()` for the `cs_*()` and `os_*()` functions
+#' (and by [cs_install_julia()]); the dipole methods don't need it.
+#'
+#' @param quiet Logical. Hide a failed warm-up's warning.
+#' @return `TRUE` invisibly.
+#' @noRd
+load_circuitscape <- function(quiet = TRUE) {
+  if (all(c("Circuitscape", "Omniscape") %in% .cs_env$loaded_packages)) {
+    return(invisible(TRUE))
+  }
 
   # --- Check that required Julia packages are installed ---
   missing_pkgs <- character(0)
@@ -178,20 +207,17 @@ init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
   }
   if (length(missing_pkgs) > 0) {
     stop(
-      "Required Julia package(s) not installed: ",
-      paste(missing_pkgs, collapse = ", "), ".\n",
-      "Run cs_install_julia() to install all required packages.",
+      "Julia package(s) needed by the cs_*() and os_*() functions are not ",
+      "installed: ", paste(missing_pkgs, collapse = ", "), ".\n",
+      "Run cs_install_julia() to install them.",
       call. = FALSE
     )
   }
 
   # Load packages
-  message("Loading Circuitscape and Omniscape...")
+  message("Loading Circuitscape and Omniscape (one-time per session)...")
   jl_eval("using Circuitscape")
-  .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Circuitscape")
-
   jl_eval("using Omniscape")
-  .cs_env$loaded_packages <- c(.cs_env$loaded_packages, "Omniscape")
 
   # Apply compatibility patches for newer Julia versions
   patch_file <- system.file("julia", "patches.jl", package = "circuitscaper")
@@ -261,9 +287,11 @@ init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
     }
   )
 
-  mark_julia_ready()
+  # Recorded only once everything above succeeded, so a failed load is
+  # retried on the next call
+  .cs_env$loaded_packages <- union(.cs_env$loaded_packages,
+                                   c("Circuitscape", "Omniscape"))
   message("Ready.")
-  .cs_env$julia_ready <- TRUE
   invisible(TRUE)
 }
 
@@ -272,6 +300,8 @@ init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
 #'
 #' Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
 #' the recommended first step after installing the circuitscaper R package.
+#' If you only use the dipole methods (`dp_*()`), `circuitscape = FALSE`
+#' installs Julia alone, which is faster and smaller.
 #'
 #' In interactive sessions, prompts for confirmation before downloading. In
 #' non-interactive sessions (e.g., CI), proceeds without prompting.
@@ -294,16 +324,27 @@ init_julia <- function(julia_home = NULL, threads = 1L, quiet = TRUE) {
 #'   `FALSE`.
 #' @param version Character. Julia version to install, e.g. `"1.12.1"`.
 #'   Default `"latest"`, the latest stable release. Must be at least 1.10.
+#' @param circuitscape Logical. Install the Circuitscape and Omniscape Julia
+#'   packages, which the `cs_*()` and `os_*()` functions need. Default
+#'   `TRUE`. If `FALSE`, only Julia (and Tables.jl, which 'JuliaConnectoR'
+#'   uses) is installed: enough for the dipole methods (`dp_*()`). Run
+#'   `cs_install_julia()` again later to add the packages.
 #'
 #' @return Invisibly returns `TRUE` on success, `FALSE` if cancelled.
 #'
 #' @examples
 #' \dontrun{
 #' cs_install_julia()
+#'
+#' # Only the dipole methods
+#' cs_install_julia(circuitscape = FALSE)
 #' }
 #'
 #' @export
-cs_install_julia <- function(force = FALSE, version = "latest") {
+cs_install_julia <- function(force = FALSE, version = "latest", circuitscape = TRUE) {
+  circuitscape <- isTRUE(circuitscape)
+  packages <- julia_packages(circuitscape)
+  package_names <- if (circuitscape) "Circuitscape.jl and Omniscape.jl" else "Tables.jl"
   julia_bin <- find_julia_bin()
   need_julia <- force || is.null(julia_bin)
 
@@ -340,19 +381,20 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
   if (interactive()) {
     if (need_julia) {
       msg <- paste0(
-        "circuitscaper requires Julia and two Julia packages.\n",
+        if (circuitscape) "circuitscaper requires Julia and two Julia packages.\n"
+        else "The dipole methods require Julia.\n",
         "This will download and install:\n",
         "  - Julia ", if (identical(version, "latest")) "(latest release)"
         else version, ", into ", julia_install_root(), "\n",
-        "  - Circuitscape.jl and Omniscape.jl, into Julia's package depot\n",
-        "Together these take about 1-2 GB of disk space.\n",
+        "  - ", package_names, ", into Julia's package depot\n",
+        if (circuitscape) "Together these take about 1-2 GB of disk space.\n",
         "\nProceed?"
       )
     } else {
       msg <- paste0(
         "Julia found at: ", julia_bin, "\n",
         "This will install or update the required Julia packages\n",
-        "(Circuitscape.jl and Omniscape.jl).\n",
+        "(", package_names, ").\n",
         "\nProceed?"
       )
     }
@@ -375,15 +417,16 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
   # in a Julia session inside R (see install_julia_dependencies())
   julia_bin <- file.path(julia_home, julia_exe())
   check_julia_version(julia_bin)
-  message("Installing Circuitscape.jl and Omniscape.jl (this can take ",
-          "several minutes)...")
-  install_julia_packages(julia_bin, julia_packages(), update = force,
-                         quiet = FALSE)
+  message("Installing ", package_names,
+          if (circuitscape) " (this can take several minutes)", "...")
+  install_julia_packages(julia_bin, packages, update = force, quiet = FALSE)
 
   message("Installation complete. Julia and all required packages are ready.")
 
-  # Step 3: Complete session setup (starts Julia, loads packages, JIT warmup)
+  # Step 3: Complete session setup (starts Julia; with the Circuitscape
+  # packages, also loads them and warms up the compiler)
   cs_setup(julia_home = julia_home, quiet = TRUE)
+  if (circuitscape) load_circuitscape(quiet = TRUE)
 
   invisible(TRUE)
 }
@@ -392,15 +435,19 @@ cs_install_julia <- function(force = FALSE, version = "latest") {
 #' Ensure Julia is Ready
 #'
 #' Internal helper that calls [cs_setup()], which sets up Julia if it isn't
-#' set up yet (or is no longer running). If Julia or required packages are
+#' set up yet (or is no longer running), and then loads Circuitscape and
+#' Omniscape if they aren't loaded yet. If Julia or required packages are
 #' not installed, an informative error is thrown directing the user to
 #' [cs_install_julia()].
 #'
+#' @param circuitscape Logical. Also load Circuitscape and Omniscape, as the
+#'   `cs_*()` and `os_*()` functions need. The dipole methods pass `FALSE`.
 #' @return `TRUE` invisibly.
 #' @noRd
-ensure_julia <- function() {
+ensure_julia <- function(circuitscape = TRUE) {
   # When Julia is set up, cs_setup() only checks that it's still running.
   cs_setup()
+  if (circuitscape) load_circuitscape()
   invisible(TRUE)
 }
 
@@ -412,17 +459,27 @@ ensure_julia <- function() {
 #' session. It is used internally by example code and can be called by users
 #' to verify their setup before running analyses.
 #'
+#' @param circuitscape Logical. Also check that the Circuitscape and
+#'   Omniscape Julia packages load, as the `cs_*()` and `os_*()` functions
+#'   need. Default `TRUE`. Use `FALSE` to check for what the dipole methods
+#'   (`dp_*()`) need: a Julia that runs and is recent enough.
+#'
 #' @return `TRUE` if Julia is found (in the places [cs_setup()] searches) and
-#'   the 'Circuitscape' and 'Omniscape' Julia packages load successfully,
-#'   `FALSE` otherwise.
+#'   runs, is at least the minimum version, and (with `circuitscape = TRUE`)
+#'   loads the 'Circuitscape' and 'Omniscape' Julia packages; `FALSE`
+#'   otherwise.
 #'
 #' @examples
 #' cs_julia_available()
+#' cs_julia_available(circuitscape = FALSE)
 #'
 #' @export
-cs_julia_available <- function() {
+cs_julia_available <- function(circuitscape = TRUE) {
       julia_bin <- find_julia_bin()
       if (is.null(julia_bin)) return(FALSE)
+      v <- julia_version(julia_bin)
+      if (is.null(v) || v < min_julia_version()) return(FALSE)
+      if (!isTRUE(circuitscape)) return(TRUE)
       local_clean_library_path()
       tryCatch({
             out <- system2(

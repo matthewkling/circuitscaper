@@ -4,12 +4,19 @@
 \alias{cs_julia_available}
 \title{Check if Julia and Required Packages Are Available}
 \usage{
-cs_julia_available()
+cs_julia_available(circuitscape = TRUE)
+}
+\arguments{
+\item{circuitscape}{Logical. Also check that the Circuitscape and
+Omniscape Julia packages load, as the \verb{cs_*()} and \verb{os_*()} functions
+need. Default \code{TRUE}. Use \code{FALSE} to check for what the dipole methods
+(\verb{dp_*()}) need: a Julia that runs and is recent enough.}
 }
 \value{
 \code{TRUE} if Julia is found (in the places \code{\link[=cs_setup]{cs_setup()}} searches) and
-the 'Circuitscape' and 'Omniscape' Julia packages load successfully,
-\code{FALSE} otherwise.
+runs, is at least the minimum version, and (with \code{circuitscape = TRUE})
+loads the 'Circuitscape' and 'Omniscape' Julia packages; \code{FALSE}
+otherwise.
 }
 \description{
 Tests whether Julia is installed and the Circuitscape and Omniscape Julia packages
@@ -19,5 +26,6 @@ to verify their setup before running analyses.
 }
 \examples{
 cs_julia_available()
+cs_julia_available(circuitscape = FALSE)
 
 }

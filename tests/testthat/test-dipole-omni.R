@@ -5,7 +5,7 @@ reference_crop <- function() terra::rast(test_path("fixtures", "crop_R6_referenc
 layer <- function(r, name) terra::values(r[[name]], mat = FALSE)
 
 test_that("dp_omni converges to the exact reference crop (oracle 3)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   ref <- reference_crop()
   circuit <- dp_circuit(ref$conductance, resistance_is = "conductances")
   runs <- lapply(1:8, function(s) {
@@ -32,7 +32,7 @@ test_that("dp_omni converges to the exact reference crop (oracle 3)", {
 })
 
 test_that("dp_omni resembles Omniscape on the reference crop", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   ref <- reference_crop()
   d <- dp_omni(ref$conductance, radius = 6, source_strength = ref$suitability,
                resistance_is = "conductances", seed = 1)
@@ -51,7 +51,7 @@ test_that("dp_omni resembles Omniscape on the reference crop", {
 })
 
 test_that("dp_omni's scale doesn't depend on n_dipoles", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   ref <- reference_crop()
   circuit <- dp_circuit(ref$conductance, resistance_is = "conductances", flow_potential = FALSE)
   total <- function(m) {
@@ -64,7 +64,7 @@ test_that("dp_omni's scale doesn't depend on n_dipoles", {
 })
 
 test_that("dp_omni is reproducible and reuses circuits", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   a <- dp_omni(x$conductance, radius = 4, source_strength = x$suitability,
                resistance_is = "conductances", n_draws = 8, n_dipoles = 2000, seed = 3)
@@ -93,7 +93,7 @@ test_that("dp_omni is reproducible and reuses circuits", {
 })
 
 test_that("dp_omni handles km radii on lon/lat grids", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
   w <- dp_node_values(circuit, x$suitability)
@@ -117,7 +117,7 @@ test_that("dp_omni handles km radii on lon/lat grids", {
 })
 
 test_that("dp_omni checks its inputs", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid()
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
   expect_error(dp_omni(circuit, radius = 0.5), "smaller than a cell")

@@ -2,7 +2,7 @@
 % Please edit documentation in R/setup.R
 \name{cs_setup}
 \alias{cs_setup}
-\title{Set Up Julia and Load Circuitscape/Omniscape}
+\title{Set Up Julia}
 \usage{
 cs_setup(julia_home = NULL, threads = 1L, quiet = TRUE)
 }
@@ -26,29 +26,31 @@ threads (see Threading, below). This setting controls parallelism for
 Invisibly returns \code{TRUE} on success.
 }
 \description{
-Initialize the Julia session and load the Circuitscape and Omniscape Julia
-packages. This is called automatically on first use of any \verb{cs_*} or \verb{os_*}
-function. Call explicitly to control the Julia path, number of threads, or
-pre-warm the session.
+Start the Julia session that circuitscaper's functions run in. This is
+called automatically on first use of any \verb{cs_*()}, \verb{os_*()} or \verb{dp_*()}
+function. Call it explicitly to control the Julia path or the number of
+threads, ideally at the start of your session.
 }
 \details{
 \code{cs_setup()} does \strong{not} install Julia or Julia packages. If Julia is not
-found or the required packages are missing, it throws an informative error
-directing you to \code{\link[=cs_install_julia]{cs_install_julia()}}.
+found, it throws an informative error directing you to
+\code{\link[=cs_install_julia]{cs_install_julia()}}.
 
-\code{cs_setup()} will:
-\itemize{
-\item Verify that Julia is installed and accessible, and start it. Julia runs
-in its own process, connected to R by 'JuliaConnectoR'.
-\item Verify that the Circuitscape and Omniscape Julia packages are installed.
-\item Load both packages and warm up the JIT compiler.
-}
+\code{cs_setup()} verifies that Julia is installed and accessible, and starts
+it with the requested threads. Julia runs in its own process, connected to
+R by 'JuliaConnectoR'.
+
+The Circuitscape and Omniscape Julia packages are loaded later, the first
+time a \verb{cs_*()} or \verb{os_*()} function runs: that call checks they are
+installed, loads them and warms up Julia's compiler, which takes a few
+seconds to a minute once per session. The dipole methods (\verb{dp_*()}) need
+neither package, so a session that only uses them skips that step.
 
 Once Julia is initialized, it stays warm for the R session. Subsequent calls
 to \code{cs_setup()} return immediately. If the Julia process has stopped in
 the meantime (for example, it crashed or ran out of memory, or was stopped
 with \code{JuliaConnectoR::stopJulia()}), the next \code{cs_setup()} call, or the
-next \verb{cs_*()} or \verb{os_*()} call, starts and sets up Julia again.
+next \verb{cs_*()}, \verb{os_*()} or \verb{dp_*()} call, starts and sets up Julia again.
 \subsection{Threading}{
 
 Multi-threading is used by \code{\link[=os_run]{os_run()}} when \code{parallelize = TRUE}, and
@@ -61,9 +63,10 @@ os_run(resistance, radius = 50, parallelize = TRUE)
 }\if{html}{\out{</div>}}
 
 Julia's thread count is fixed when Julia starts, so if Julia is already
-running with fewer threads, \code{cs_setup(threads = )} restarts it. This
-takes as long as the first setup, since Circuitscape and Omniscape are
-loaded and warmed up again, and it discards anything else in this R
+running with fewer threads, \code{cs_setup(threads = )} restarts it. After a
+restart, Circuitscape and Omniscape are loaded and warmed up again on the
+next \verb{cs_*()} or \verb{os_*()} call, and circuits from \code{\link[=dp_circuit]{dp_circuit()}} are
+rebuilt when next used. A restart also discards anything else in this R
 session's Julia (e.g., objects created through 'JuliaConnectoR' by other
 code). Asking for fewer threads than Julia has doesn't restart it.
 

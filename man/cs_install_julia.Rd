@@ -4,7 +4,7 @@
 \alias{cs_install_julia}
 \title{Install Julia and Required Packages}
 \usage{
-cs_install_julia(force = FALSE, version = "latest")
+cs_install_julia(force = FALSE, version = "latest", circuitscape = TRUE)
 }
 \arguments{
 \item{force}{Logical. If \code{TRUE}, download and install Julia even if a
@@ -14,6 +14,12 @@ Use this to replace a Julia installation that is too old. Default
 
 \item{version}{Character. Julia version to install, e.g. \code{"1.12.1"}.
 Default \code{"latest"}, the latest stable release. Must be at least 1.10.}
+
+\item{circuitscape}{Logical. Install the Circuitscape and Omniscape Julia
+packages, which the \verb{cs_*()} and \verb{os_*()} functions need. Default
+\code{TRUE}. If \code{FALSE}, only Julia (and Tables.jl, which 'JuliaConnectoR'
+uses) is installed: enough for the dipole methods (\verb{dp_*()}). Run
+\code{cs_install_julia()} again later to add the packages.}
 }
 \value{
 Invisibly returns \code{TRUE} on success, \code{FALSE} if cancelled.
@@ -21,6 +27,8 @@ Invisibly returns \code{TRUE} on success, \code{FALSE} if cancelled.
 \description{
 Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
 the recommended first step after installing the circuitscaper R package.
+If you only use the dipole methods (\verb{dp_*()}), \code{circuitscape = FALSE}
+installs Julia alone, which is faster and smaller.
 }
 \details{
 In interactive sessions, prompts for confirmation before downloading. In
@@ -41,6 +49,9 @@ The Julia packages are installed into Julia's default package depot
 \examples{
 \dontrun{
 cs_install_julia()
+
+# Only the dipole methods
+cs_install_julia(circuitscape = FALSE)
 }
 
 }

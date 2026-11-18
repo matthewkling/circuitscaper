@@ -9,7 +9,7 @@ focal_cells <- function(r, n, seed = 1) {
 }
 
 test_that("exact pairwise matches a dense brute force, across components", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
   cells <- focal_cells(x$conductance, 12)
@@ -31,7 +31,7 @@ test_that("exact pairwise matches a dense brute force, across components", {
 })
 
 test_that("random pairwise is unbiased and matches exact (oracle 4)", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   ref <- terra::rast(test_path("fixtures", "crop_R6_reference.tif"))
   circuit <- dp_circuit(ref$conductance, resistance_is = "conductances")
   for (n in c(25, 200)) {
@@ -52,7 +52,7 @@ test_that("random pairwise is unbiased and matches exact (oracle 4)", {
 })
 
 test_that("dp_pairwise takes rasters of IDs and checks its nodes", {
-  skip_if_no_julia()
+  skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
   cells <- focal_cells(x$conductance, 6)

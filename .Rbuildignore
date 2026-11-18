@@ -13,3 +13,4 @@ notes
 ^CRAN-SUBMISSION$
 ^dev$
 ^vignettes/articles$
+^data-raw$
