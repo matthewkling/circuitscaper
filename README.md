@@ -18,12 +18,13 @@ under the hood. It offers two families of methods:
   [Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl), with the
   same results as running them directly.
 - **Dipole methods** (`dp_*()`, experimental): circuitscaper’s own
-  methods for pairwise, omnidirectional and cross-era connectivity. They
-  factor one circuit and solve many superposed source–sink pairs against
-  it, so a map takes about 32 solves whatever the number of pairs, and
-  each map comes with an estimate of its own noise. They compute a
-  related but different quantity (squared rather than absolute current)
-  and are not yet published; see the [Dipole
+  methods for pairwise and omnidirectional connectivity, and for
+  connectivity between two distributions. They factor one circuit and
+  solve many superposed source–sink pairs against it, so a map takes
+  about 32 solves whatever the number of pairs, and each map comes with
+  an estimate of its own noise. They compute a related but different
+  quantity (squared rather than absolute current) and are not yet
+  published; see the [Dipole
   methods](https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html)
   article.
 
@@ -96,7 +97,7 @@ helps choose between them.
 | How does current spread from, or converge on, each site? | `cs_one_to_all()`, `cs_all_to_one()` |  |
 | How does movement flow between a source area and a destination? | `cs_advanced()` |  |
 | Where are the corridors and barriers across the whole landscape? | `os_run()` | `dp_omni()` |
-| How could habitat shift between climate eras, and along which routes? | `os_run()` with `os_condition(future = )` | `dp_flux()`, `dp_pathways()` |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )` |
 
 Also:
 

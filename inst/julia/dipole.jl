@@ -351,30 +351,68 @@ function pair_sum(s::Sampler)
         end
         total = sum(W1 .* W2)
     else
-        members = [Int[] for _ in 1:gr.ncomp]
-        for i in eachindex(gr.comp)
-            push!(members[gr.comp[i]], i)
-        end
-        for nodes in members
+        for nodes in component_members(gr)
             total += kernel_pair_sum(s, nodes)
         end
     end
     max(total - self, 0.0)
 end
 
-# One component's sum over i of w1_i * (sum of w2 over i's kernel), from
-# per-row prefix sums of w2 over the component's bounding box
-function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
-    gr = s.graph
-    K = s.kernel
-    any(i -> s.w1[i] > 0, nodes) && any(i -> s.w2[i] > 0, nodes) || return 0.0
+# Node numbers in each component
+function component_members(gr::Graph)
+    members = [Int[] for _ in 1:gr.ncomp]
+    for i in eachindex(gr.comp)
+        push!(members[gr.comp[i]], i)
+    end
+    members
+end
+
+# Per-row prefix sums of w over one component's bounding box, for summing w
+# over a kernel window: P[k + 1, r] is the sum of w over columns c0 .. c0 + k - 1
+# of row r0 + r - 1
+struct WindowSums
+    P::Matrix{Float64}
+    r0::Int
+    r1::Int
+    c0::Int
+    c1::Int
+end
+
+function WindowSums(gr::Graph, w::Vector{Float64}, nodes::Vector{Int})
     r0, r1 = extrema(gr.node_r[i] for i in nodes)
     c0, c1 = extrema(gr.node_c[i] for i in nodes)
-    P = zeros(c1 - c0 + 2, r1 - r0 + 1)     # P[k + 1, r]: sum of w2 over columns c0 .. c0 + k - 1
+    P = zeros(c1 - c0 + 2, r1 - r0 + 1)
     for j in nodes
-        P[gr.node_c[j] - c0 + 2, gr.node_r[j] - r0 + 1] = s.w2[j]
+        P[gr.node_c[j] - c0 + 2, gr.node_r[j] - r0 + 1] = w[j]
     end
     cumsum!(P, P, dims = 1)
+    WindowSums(P, r0, r1, c0, c1)
+end
+
+# Sum of w over node i's kernel (its own cell included), within the component
+function window_sum(ws::WindowSums, K::Kernel, gr::Graph, i::Int)
+    ri = gr.node_r[i]
+    ci = gr.node_c[i]
+    kr = K.rowmap[ri]
+    acc = 0.0
+    for d in axes(K.hw, 1)
+        h = K.hw[d, kr]
+        h < 0 && continue
+        r = ri + K.dr0 + d - 1
+        ws.r0 <= r <= ws.r1 || continue
+        lo = max(ci - h, ws.c0)
+        hi = min(ci + h, ws.c1)
+        lo > hi && continue
+        acc += ws.P[hi - ws.c0 + 2, r - ws.r0 + 1] - ws.P[lo - ws.c0 + 1, r - ws.r0 + 1]
+    end
+    acc
+end
+
+# One component's sum over i of w1_i * (sum of w2 over i's kernel)
+function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
+    gr = s.graph
+    any(i -> s.w1[i] > 0, nodes) && any(i -> s.w2[i] > 0, nodes) || return 0.0
+    ws = WindowSums(gr, s.w2, nodes)
     # Fixed chunks summed in order, so S doesn't depend on the thread count
     chunks = collect(Iterators.partition(nodes, 4096))
     part = zeros(length(chunks))
@@ -382,25 +420,35 @@ function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
         t = 0.0
         for i in chunks[k]
             s.w1[i] > 0 || continue
-            ri = gr.node_r[i]
-            ci = gr.node_c[i]
-            kr = K.rowmap[ri]
-            acc = 0.0
-            for d in axes(K.hw, 1)
-                h = K.hw[d, kr]
-                h < 0 && continue
-                r = ri + K.dr0 + d - 1
-                r0 <= r <= r1 || continue
-                lo = max(ci - h, c0)
-                hi = min(ci + h, c1)
-                lo > hi && continue
-                acc += P[hi - c0 + 2, r - r0 + 1] - P[lo - c0 + 1, r - r0 + 1]
-            end
-            t += s.w1[i] * acc
+            t += s.w1[i] * window_sum(ws, s.kernel, gr, i)
         end
         part[k] = t
     end
     sum(part)
+end
+
+# Per node i, the sum of w over i's kernel (its own cell included) within its
+# component; with no kernel, the component's total of w
+function kernel_sums(gr::Graph, w::Vector{Float64}, K::Union{Nothing, Kernel})
+    out = zeros(nnodes(gr))
+    if K === nothing
+        tot = zeros(gr.ncomp)
+        for i in eachindex(w)
+            tot[gr.comp[i]] += w[i]
+        end
+        for i in eachindex(out)
+            out[i] = tot[gr.comp[i]]
+        end
+        return out
+    end
+    for nodes in component_members(gr)
+        any(i -> w[i] > 0, nodes) || continue
+        ws = WindowSums(gr, w, nodes)
+        @threads for i in nodes
+            out[i] = window_sum(ws, K, gr, i)
+        end
+    end
+    out
 end
 
 # Random-sign dipoles from `s`, solved against each circuit. Returns one
@@ -512,6 +560,35 @@ end
 
 
 # Net flux ---------------------------------------------------------------------
+
+# The injection whose single solve gives the signed sum over origin-destination
+# pairs within reach, sum_ij o_i d_j k_ij I(i, j), per unit of pair weight:
+#   b_i = (o_i (K d)_i - d_i (K o)_i) / W,   W = sum_i o_i (K d)_i,
+# with K the kernel within each component, each cell's own pair included (it
+# moves nothing). With no kernel and one component this is o/sum(o) - d/sum(d).
+# K is symmetric, so b sums to zero in each component; the withdrawals are
+# rescaled to make that exact despite rounding at the kernel's edge.
+# `in_reach` is W over the pair weight with no limits, sum(o) * sum(d).
+function flux_injection(gr::Graph, o::Vector{Float64}, d::Vector{Float64},
+                        K::Union{Nothing, Kernel})
+    inj = o .* kernel_sums(gr, d, K)
+    wd = d .* kernel_sums(gr, o, K)
+    pos = zeros(gr.ncomp)
+    neg = zeros(gr.ncomp)
+    for i in eachindex(inj)
+        pos[gr.comp[i]] += inj[i]
+        neg[gr.comp[i]] += wd[i]
+    end
+    W = sum(pos)
+    W > 0 || return (b = zeros(nnodes(gr)), in_reach = 0.0)
+    b = [(inj[i] - (neg[gr.comp[i]] > 0 ? wd[i] * pos[gr.comp[i]] / neg[gr.comp[i]] : 0.0)) / W
+         for i in eachindex(inj)]
+    (b = b, in_reach = W / (sum(o) * sum(d)))
+end
+
+flux_injection(id::Real, o, d, dr0, hw, rowmap) =
+    flux_injection(circuit(id).graph, Vector{Float64}(asvec(o)), Vector{Float64}(asvec(d)),
+                   make_kernel(dr0, hw, rowmap))
 
 # One solve of a given injection (balanced within each component). Returns
 # per-node sums over incident links of |I|, I^2, and the x and y components

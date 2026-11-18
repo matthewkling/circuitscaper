@@ -8,14 +8,15 @@
   * `dp_omni()` maps omnidirectional connectivity among habitat, in the
     role of `os_run()`, from random-sign dipoles within a radius (in
     pixels or km): current, flow potential and normalized current, with a
-    built-in estimate of its sampling noise.
+    built-in estimate of its sampling noise. With a `destination`, it maps
+    the routes linking two distributions, such as present and future
+    habitat, seasonal ranges, or two habitat types, without direction.
   * `dp_pairwise()` maps connectivity among every pair of focal nodes, the
     squared-current analogue of `cs_pairwise()`'s cumulative map, at a cost
     independent of the number of nodes, or exactly from one solve per node.
-  * `dp_flux()` maps the net flow of a range shift from present to future
-    habitat, with direction, in one solve.
-  * `dp_pathways()` maps the pathways connecting present to future habitat
-    within dispersal reach.
+  * `dp_flux()` maps the net flow from an origin to a destination
+    distribution, with direction, in one solve, among pairs within an
+    optional radius.
   * `dp_circuit()` prepares a circuit whose factorizations several runs can
     reuse.
 

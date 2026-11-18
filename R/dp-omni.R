@@ -7,6 +7,14 @@
 #' superposed on one factored circuit, which takes about `n_draws` solves
 #' whatever the number of pairs.
 #'
+#' With a `destination`, it maps connectivity between two distributions
+#' instead: the routes linking origin cells (`source_strength`) to
+#' destination cells within `radius`, for example present to future habitat,
+#' breeding to wintering grounds, or foraging to roosting habitat. The map is
+#' undirected: every pair counts whichever way it flows, so swapping the two
+#' surfaces gives the same map. For the net flow from one to the other, with
+#' its direction, see [dp_flux()].
+#'
 #' @details
 #' For each link \eqn{e} of the circuit (see [dp_circuit()]), the method
 #' estimates
@@ -20,6 +28,14 @@
 #' resistance with respect to that link's resistance, so the map is the
 #' sensitivity of habitat-weighted pairwise resistance to degrading each
 #' cell.
+#'
+#' With a `destination`, the pair weights are \eqn{o_i d_j k(d_{ij})}, with
+#' \eqn{o} the origin (`source_strength`) and \eqn{d} the destination
+#' strength. Since \eqn{I_e(i,j)^2 = I_e(j,i)^2}, only the unordered pairs
+#' matter, and the map is the same whichever surface is the origin. A cell's
+#' pair with itself carries no current. Cells in both distributions take
+#' part at both ends, unlike in [dp_flux()], where their flow cancels. With
+#' one surface, \eqn{o = d = w}.
 #'
 #' Each draw injects `n_dipoles` unit dipoles, pairs drawn in proportion to
 #' \eqn{w_i w_j k(d_{ij})}, each with a random sign, and solves the circuit
@@ -76,9 +92,14 @@
 #'   `radius_units`). `Inf` counts all pairs.
 #' @param source_strength Optional [terra::SpatRaster] or file path on the
 #'   same grid: source strength, e.g. habitat suitability. If `NULL`
-#'   (default), the conductance surface is used, as in [os_run()].
-#' @param source_threshold Numeric. Cells with source strength below this
-#'   are not sources. Default `0.01`.
+#'   (default), the conductance surface is used, as in [os_run()]. With a
+#'   `destination`, this is the origin strength.
+#' @param destination Optional [terra::SpatRaster] or file path on the same
+#'   grid: destination strength, e.g. habitat suitability in another period
+#'   or season. If given, only pairs of an origin and a destination cell
+#'   count. Default `NULL`: pairs of cells of one surface.
+#' @param source_threshold Numeric. Cells with source (or destination)
+#'   strength below this are not sources (or destinations). Default `0.01`.
 #' @param radius_units Character. `"pixels"` (default): the radius counts
 #'   cells, so the kernel is the cells with \eqn{dr^2 + dc^2 \le}
 #'   `radius`\eqn{^2}, as in [os_run()]. `"km"`: great-circle distance
@@ -99,10 +120,10 @@
 #' @return A [terra::SpatRaster] with layers `current`, and with
 #'   `normalize`, `flow_potential` and `normalized_current`. Attributes:
 #'   `"halves"`, a data frame comparing the estimates from odd and even
-#'   draws on source cells (Spearman's \eqn{\rho} and the median relative
-#'   difference), and `"seed"`.
+#'   draws on source (and destination) cells (Spearman's \eqn{\rho} and
+#'   the median relative difference), and `"seed"`.
 #'
-#' @seealso [dp_circuit()], [dp_pairwise()], [dp_pathways()], [os_run()]
+#' @seealso [dp_circuit()], [dp_pairwise()], [dp_flux()], [os_run()]
 #'
 #' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
@@ -110,12 +131,19 @@
 #' result <- dp_omni(resistance, radius = 15, seed = 1)
 #' terra::plot(result)
 #' attr(result, "halves")
+#'
+#' # Connectivity between two distributions
+#' origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
+#' destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+#' between <- dp_omni(resistance, radius = 45, source_strength = origin,
+#'                    destination = destination, seed = 1)
+#' terra::plot(between)
 #' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_omni <- function(resistance, radius, source_strength = NULL,
-                    source_threshold = 0.01, radius_units = c("pixels", "km"),
-                    resistance_is = "resistances", normalize = TRUE,
+                    destination = NULL, source_threshold = 0.01,
+                    radius_units = c("pixels", "km"), resistance_is = "resistances", normalize = TRUE,
                     n_draws = 32, n_dipoles = 1e5, seed = NULL) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
@@ -126,8 +154,13 @@ dp_omni <- function(resistance, radius, source_strength = NULL,
   circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   w <- dp_weights(circuit, source_strength, source_threshold, "source_strength")
-  dp_random_map(circuit, w, w, kernel, seed, n_draws, n_dipoles, normalize,
-                mask = w > 0)
+  if (is.null(destination)) {
+    return(dp_random_map(circuit, w, w, kernel, seed, n_draws, n_dipoles,
+                         normalize, mask = w > 0))
+  }
+  w2 <- dp_weights(circuit, destination, source_threshold, "destination")
+  dp_random_map(circuit, w, w2, kernel, seed, n_draws, n_dipoles, normalize,
+                mask = w > 0 | w2 > 0)
 }
 
 
@@ -141,9 +174,9 @@ dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
   res <- dp_random_dipoles(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
                            uniform = normalize)
   if (res$S <= 0) {
-    stop("No pairs of source cells can be drawn: no two source cells are ",
-         "within `radius` of each other in the same connected part of the ",
-         "circuit.", call. = FALSE)
+    stop("No pairs of cells can be drawn: no two source cells (or origin and ",
+         "destination cells) are within `radius` of each other in the same ",
+         "connected part of the circuit.", call. = FALSE)
   }
   scale <- res$S / n_dipoles
   n_half <- c(ceiling(n_draws / 2), floor(n_draws / 2))

@@ -32,7 +32,7 @@ documentation.
 Pairwise mode solves a circuit for every pair of focal nodes, with one unit
 of current flowing from one to the other.
 
-```{r pairwise}
+```{r pairwise, message = FALSE}
 library(terra)
 library(circuitscaper)
 
