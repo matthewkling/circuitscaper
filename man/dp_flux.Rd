@@ -12,7 +12,9 @@ dp_flux(
   source_threshold = 0.01,
   radius_units = c("pixels", "km"),
   resistance_is = "resistances",
-  direction = TRUE
+  normalize = TRUE,
+  direction = TRUE,
+  cell_value = c("absolute", "rms")
 )
 }
 \arguments{
@@ -41,14 +43,29 @@ reference system's units, converted to km, on projected grids.}
 \item{resistance_is}{Character. Whether \code{resistance} holds
 \code{"resistances"} (default) or \code{"conductances"}. Ignored for a circuit.}
 
+\item{normalize}{Logical. Also compute flow potential (the same flow on
+the uniform circuit, conductance 1 on the same cells) and normalized
+current. Default \code{TRUE}.}
+
 \item{direction}{Logical. Also return the components of net flow.
 Default \code{TRUE}.}
+
+\item{cell_value}{Character. How \code{current} sums a cell's links:
+\code{"absolute"} (default), half the sum of absolute current, as in
+Circuitscape's current maps; or \code{"rms"}, the square root of half the sum
+of squared current, as in \code{\link[=dp_omni]{dp_omni()}}.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
 \describe{
 \item{current}{Half the sum of absolute current over a cell's links, as
-in Circuitscape's current maps (without the injection term).}
+in Circuitscape's current maps (without the injection term), or with
+\code{cell_value = "rms"}, the square root of half the sum of squared
+current.}
+\item{flow_potential, normalized_current}{(with \code{normalize}) \code{current}
+on the uniform circuit, summarised the same way, and \code{current}
+divided by it: above 1 where the landscape channels the flow, below 1
+where it impedes it.}
 \item{flow_x, flow_y}{(with \code{direction}) Net flow through the cell
 towards the east and the north, in grid directions: half the sum
 over the cell's links of the current along the link times its unit
@@ -71,15 +88,19 @@ the map shows net movement. For movement between the two distributions
 without direction, where every pair counts whichever way it flows, see
 \code{\link[=dp_omni]{dp_omni()}} with a \code{destination}.
 
-The map is the signed sum over origin–destination pairs of cells within
-\code{radius} of each other,
+Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see \code{\link[=dp_circuit]{dp_circuit()}}). The map is defined per link, as
+the signed sum over origin–destination pairs of cells within \code{radius} of
+each other,
 \deqn{F_e = \frac{1}{W} \sum_{i,j} o_i\, d_j\, k(d_{ij})\, I_e(i,j),}
 where \eqn{o} and \eqn{d} are origin and destination strength, \eqn{k} is
 1 for cells within \code{radius} of each other and 0 otherwise, \eqn{I_e(i,j)}
 is the current through link \eqn{e} when one unit flows from \eqn{i} to
 \eqn{j}, and \eqn{W = \sum_{i,j} o_i d_j k(d_{ij})} makes the pair weights
 sum to one unit of flow. Pairs never span groups of cells that NA cells
-separate (components), since no current passes between them.
+separate (components), since no current passes between them. A cell's
+value combines the links that meet at it, up to 8 (see \code{current} below),
+each link being shared by the two cells it joins.
 
 The sum is linear in the pairs' currents, so it takes a single solve, of
 the injection \eqn{b_i = (o_i\, (Kd)_i - d_i\, (Ko)_i) / W}, where
@@ -102,6 +123,22 @@ however electrically far away it is. (With grounds, as in
 
 Swapping \code{origin} and \code{destination} reverses the flow: the same \code{current},
 with \code{flow_x} and \code{flow_y} negated.
+\subsection{Directional and undirected maps}{
+
+\code{\link[=dp_omni]{dp_omni()}} with a \code{destination} maps the undirected counterpart, from the
+same pairs: their squared currents, so flows in opposite directions don't
+cancel. \code{\link[=dp_directionality]{dp_directionality()}} computes both maps at once, with their
+ratio, which shows where movement between the two distributions is
+one-way and where it runs both ways.
+}
+
+\subsection{Performance}{
+
+The time is mostly factoring the circuit, and with \code{normalize}, its
+uniform twin, which about doubles it; set \code{normalize = FALSE} to skip
+that. Each map then takes one solve. To reuse factorizations across runs,
+pass a circuit from \code{\link[=dp_circuit]{dp_circuit()}}.
+}
 }
 \examples{
 \dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
@@ -119,5 +156,5 @@ attr(near, "in_reach")
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=dp_omni]{dp_omni()}}, \code{\link[=cs_advanced]{cs_advanced()}}
+\code{\link[=dp_omni]{dp_omni()}}, \code{\link[=dp_directionality]{dp_directionality()}}, \code{\link[=cs_advanced]{cs_advanced()}}
 }

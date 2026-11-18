@@ -74,8 +74,9 @@ For `dp_pathways`, i runs over present-habitat weights and j over future-habitat
 ### Kernel sampling
 
 - **Prototype.** Sample i ∝ w, draw a uniform point in a continuous disk of radius R (in km, assuming lon/lat) around i, round to a cell, and accept with probability w_j / max(w). It rejects j = i and out-of-grid or NA cells.
-- **Package.** Implement the kernel as the exact set of cell offsets within distance R, precomputed in map units and handling projected and geographic CRS. Draw a uniform offset, then accept with w_j / max(w). This makes the kernel exactly "cells within R", matching the reference outputs, which use a pixel circle (dr² + dc² ≤ R²).
-- **No limit.** Sample i and j independently ∝ w and reject i = j.
+- **Package.** Implement the kernel as the exact set of cell offsets within distance R, precomputed in map units and handling projected and geographic CRS. This makes the kernel exactly "cells within R", matching the reference outputs, which use a pixel circle (dr² + dc² ≤ R²).
+- **Package sampler (revised, Nov 2026).** The original plan, a uniform kernel offset accepted with w_j / max(w), needs about kernel cells × max(w) / (w within reach) attempts per dipole, which is unbounded when the destination is sparse or barely within reach (≈ 400 attempts per dipole on a 50 × 50 example at radius 45; 3000 at radius 40). The package instead samples exactly in two stages, without rejection: i ∝ w1_i · ((K w2)_i − w2_i), from the per-row prefix sums used for S; then j ∝ w2_j within i's kernel, i excluded, by picking a kernel row by its prefix-sum total and a column by binary search. Each dipole costs O(kernel rows). Same pair distribution q_ij.
+- **No limit.** Sample i ∝ w1_i (W2_c − w2_i), then j ∝ w2 within i's component, i excluded.
 
 ### Flow potential and normalization
 

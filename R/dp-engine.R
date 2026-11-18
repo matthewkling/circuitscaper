@@ -224,15 +224,22 @@ print.dp_circuit <- function(x, ...) {
 #' @return A list: `S`, the sum of w1_i * w2_j * k_ij over those pairs, and
 #'   `cells`, one nodes x 2 matrix per circuit of the per-node sums of
 #'   squared link current over draws (columns: odd draws, even draws).
+#' @param center Optional list with `b`, an injection in node order, and `W`,
+#'   the pair weight it is normalized by (as from `dp_flux_values()`). Each
+#'   dipole is then centered on the mean dipole, `W / S * b`, so the sums
+#'   estimate the variance of the pairs' currents rather than their mean
+#'   square.
 #' @noRd
 dp_random_dipoles <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                              uniform = FALSE, batch = 0L) {
+                              uniform = FALSE, batch = 0L, center = NULL) {
   dp_check_circuit(circuit, uniform)
   env <- circuit$env
   ids <- c(env$id, if (uniform) env$uniform_id)
+  cb <- if (is.null(center)) numeric(0) else as.double(center$b)
+  cw <- if (is.null(center)) 0 else as.double(center$W)
   dp_call("random_dipoles", as.integer(ids), as.double(w1), as.double(w2),
           kernel$dr0, kernel$hw, kernel$rowmap, as.integer(seed),
-          as.integer(n_draws), as.integer(n_dipoles), as.integer(batch))
+          as.integer(n_draws), as.integer(n_dipoles), as.integer(batch), cb, cw)
 }
 
 #' Accumulate Given Injections (Parity Hook)

@@ -18,6 +18,38 @@ test_that("cs_pairwise runs end-to-end", {
   expect_true(is.matrix(result$resistance_matrix))
 })
 
+test_that("cs_pairwise normalizes by a run on the uniform surface", {
+  skip_if_no_julia()
+  skip_if_not_installed("terra")
+
+  res <- terra::rast(system.file("testdata/resistance.asc",
+                                 package = "circuitscaper"))
+  locs <- terra::rast(system.file("testdata/locations.asc",
+                                  package = "circuitscaper"))
+  out <- withr::local_tempdir()
+  result <- cs_pairwise(res, locs, cumulative_only = FALSE, output_dir = out)
+  cm <- result$current_map
+  expect_equal(names(cm)[1:3],
+               c("cumulative_current", "flow_potential", "normalized_current"))
+  expect_true(any(grepl("^current_", names(cm))))
+  expect_true(dir.exists(file.path(out, "flow_potential")))
+
+  plain <- cs_pairwise(res, locs, normalize = FALSE)
+  expect_named(plain$current_map, "cumulative_current")
+  expect_equal(terra::values(cm$cumulative_current),
+               terra::values(plain$current_map$cumulative_current))
+  expect_equal(result$resistance_matrix, plain$resistance_matrix)
+
+  uniform <- terra::mask(res * 0 + 1, res)
+  fp <- cs_pairwise(uniform, locs, normalize = FALSE)$current_map$cumulative_current
+  expect_equal(terra::values(cm$flow_potential, mat = FALSE),
+               terra::values(fp, mat = FALSE), tolerance = 1e-6)
+  f <- terra::values(cm$flow_potential, mat = FALSE)
+  expect_equal(terra::values(cm$normalized_current, mat = FALSE),
+               ifelse(f > 0, terra::values(cm$cumulative_current, mat = FALSE) / f, NA),
+               tolerance = 1e-10)
+})
+
 test_that("cs_pairwise accepts coordinate matrix", {
   skip_if_no_julia()
   skip_if_not_installed("terra")

@@ -97,7 +97,7 @@ helps choose between them.
 | How does current spread from, or converge on, each site? | `cs_one_to_all()`, `cs_all_to_one()` |  |
 | How does movement flow between a source area and a destination? | `cs_advanced()` |  |
 | Where are the corridors and barriers across the whole landscape? | `os_run()` | `dp_omni()` |
-| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )` |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )`, `dp_directionality()` |
 
 Also:
 

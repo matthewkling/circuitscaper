@@ -44,6 +44,10 @@
 #'   * A character file path to a tab-delimited text file with two columns:
 #'     node ID and strength in amps. Nodes not listed default to 1 amp.
 #'   Default `NULL` (all nodes inject 1 amp).
+#' @param normalize Logical. Also compute flow potential and normalized
+#'   current, by running Circuitscape a second time on a uniform surface (see
+#'   Details). Default `TRUE`, as in [os_run()]; this doubles the run time,
+#'   so set it to `FALSE` if you only need the current map and resistances.
 #' @param solver Character. Solver to use: `"cg+amg"` (default) or `"cholmod"`.
 #' @param output_dir Optional character path. If provided, output files persist
 #'   there. Default `NULL` uses a temporary directory that is cleaned up
@@ -62,10 +66,21 @@
 #' matrix can be used as a distance metric in analyses such as isolation by
 #' resistance.
 #'
+#' With `normalize = TRUE`, the analysis is repeated on a uniform surface:
+#' resistance 1 on every cell of the circuit, with the same NA cells, cells
+#' of zero conductance, focal nodes, short-circuit regions, included pairs
+#' and source strengths. Its cumulative current is the flow potential, the
+#' current expected from the layout of the nodes alone, and normalized
+#' current is cumulative current divided by it: above 1 where the landscape
+#' channels current, below 1 where it impedes it, as in [os_run()]. With
+#' `output_dir`, the uniform run's files go in its `flow_potential`
+#' subdirectory.
+#'
 #' @return A named list with:
 #' \describe{
-#'   \item{current_map}{A [terra::SpatRaster]. By default contains a single
-#'     `cumulative_current` layer (current flow summed across all pairs). When
+#'   \item{current_map}{A [terra::SpatRaster]. By default contains a
+#'     `cumulative_current` layer (current flow summed across all pairs), and
+#'     with `normalize`, `flow_potential` and `normalized_current` layers. When
 #'     `cumulative_only = FALSE`, additional per-pair layers are included
 #'     (e.g., `current_1_2`, `current_1_3`). When `write_voltage = TRUE`,
 #'     per-pair voltage layers are included (e.g., `voltage_1_2`,
@@ -102,24 +117,66 @@ cs_pairwise <- function(resistance,
                         write_voltage = FALSE,
                         cumulative_only = TRUE,
                         source_strengths = NULL,
+                        normalize = TRUE,
                         solver = "cg+amg",
                         output_dir = NULL,
                         verbose = FALSE) {
 
-  run_cs_mode("pairwise",
-              resistance = resistance,
-              locations = locations,
-              resistance_is = resistance_is,
-              four_neighbors = four_neighbors,
-              avg_resistances = avg_resistances,
-              short_circuit = short_circuit,
-              included_pairs = included_pairs,
-              write_voltage = write_voltage,
-              cumulative_only = cumulative_only,
-              source_strengths = source_strengths,
-              solver = solver,
-              output_dir = output_dir,
-              verbose = verbose)
+  run <- function(resistance, write_voltage, cumulative_only, output_dir) {
+    run_cs_mode("pairwise",
+                resistance = resistance,
+                locations = locations,
+                resistance_is = resistance_is,
+                four_neighbors = four_neighbors,
+                avg_resistances = avg_resistances,
+                short_circuit = short_circuit,
+                included_pairs = included_pairs,
+                write_voltage = write_voltage,
+                cumulative_only = cumulative_only,
+                source_strengths = source_strengths,
+                solver = solver,
+                output_dir = output_dir,
+                verbose = verbose)
+  }
+  result <- run(resistance, write_voltage, cumulative_only, output_dir)
+  if (isTRUE(normalize)) {
+    uniform <- cs_uniform_surface(resistance, resistance_is)
+    fp_dir <- if (!is.null(output_dir)) file.path(output_dir, "flow_potential")
+    fp <- run(uniform, FALSE, TRUE, fp_dir)
+    result$current_map <- cs_add_normalized(result$current_map,
+                                            fp$current_map[["cumulative_current"]])
+  }
+  result
+}
+
+
+#' A Uniform Surface on the Same Cells
+#'
+#' Resistance 1 on every cell of the circuit: NA cells stay NA and, for
+#' conductances, zero cells (no connection) stay zero.
+#' @noRd
+cs_uniform_surface <- function(resistance, resistance_is) {
+  r <- if (is.character(resistance)) terra::rast(resistance) else resistance
+  if (inherits(r, "RasterLayer")) r <- terra::rast(r)
+  v <- terra::values(r, mat = FALSE)
+  u <- ifelse(is.na(v), NA_real_,
+              ifelse(resistance_is == "conductances" & v == 0, 0, 1))
+  out <- terra::setValues(terra::rast(r), u)
+  names(out) <- "resistance"
+  out
+}
+
+#' Add Flow Potential and Normalized Current After the Cumulative Current
+#' @noRd
+cs_add_normalized <- function(current_map, flow_potential) {
+  cur <- current_map[["cumulative_current"]]
+  names(flow_potential) <- "flow_potential"
+  nc <- terra::ifel(flow_potential > 0, cur / flow_potential, NA)
+  names(nc) <- "normalized_current"
+  rest <- setdiff(names(current_map), "cumulative_current")
+  out <- c(cur, flow_potential, nc)
+  if (length(rest)) out <- c(out, current_map[[rest]])
+  out
 }
 
 
