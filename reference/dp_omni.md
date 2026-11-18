@@ -179,7 +179,7 @@ To reuse factorizations across runs, pass a circuit from
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper::cs_julia_available()
+if (FALSE) { # circuitscaper::cs_julia_available(circuitscape = FALSE)
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 result <- dp_omni(resistance, radius = 15, seed = 1)

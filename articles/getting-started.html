@@ -125,18 +125,26 @@ methods</a>: how to use them, how they work, and how they compare.</li>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>circuitscaper requires Julia (&gt;= 1.10) with the Circuitscape and
-Omniscape packages. You can install everything from R:</p>
+<p>circuitscaper requires Julia (&gt;= 1.10). The <code>cs_*()</code>
+and <code>os_*()</code> functions also need the Circuitscape and
+Omniscape Julia packages; the dipole methods need only Julia. You can
+install everything from R:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"circuitscaper"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/matthewkling/circuitscaper" class="external-link">circuitscaper</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># First time only: install Julia and required packages</span></span>
-<span><span class="fu"><a href="../reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or, if you'll only use the dipole methods: Julia alone, which is</span></span>
+<span><span class="co"># quicker to install and to start</span></span>
+<span><span class="fu"><a href="../reference/cs_install_julia.html">cs_install_julia</a></span><span class="op">(</span>circuitscape <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code> downloads the official Julia release
 for your platform from julialang.org into circuitscaper’s own data
-directory, so it doesn’t touch any other Julia you have installed.</p>
+directory, so it doesn’t touch any other Julia you have installed. You
+can add the Circuitscape and Omniscape packages later by running
+<code><a href="../reference/cs_install_julia.html">cs_install_julia()</a></code> again.</p>
 <p>If you already have Julia installed, <code><a href="../reference/cs_setup.html">cs_setup()</a></code> will
 find it automatically, searching the <code>JULIA_HOME</code> and
 <code>JULIA_BINDIR</code> environment variables, a Julia installed by
@@ -145,9 +153,12 @@ else, you can point to it:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>julia_home <span class="op">=</span> <span class="st">"/path/to/julia/bin"</span><span class="op">)</span></span></code></pre></div>
 <p>Julia starts the first time you call a circuitscaper function, or
-when you call <code><a href="../reference/cs_setup.html">cs_setup()</a></code>. To use several threads, which
-speeds up Omniscape and the dipole methods, call
-<code>cs_setup(threads = )</code> at the start of your session:</p>
+when you call <code><a href="../reference/cs_setup.html">cs_setup()</a></code>, and takes a few seconds. The
+first <code>cs_*()</code> or <code>os_*()</code> call of a session then
+also loads Circuitscape and Omniscape and warms them up, which takes
+longer (often 15 seconds or more); the dipole methods skip that step. To
+use several threads, which speeds up Omniscape and the dipole methods,
+call <code>cs_setup(threads = )</code> at the start of your session:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cs_setup.html">cs_setup</a></span><span class="op">(</span>threads <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 </div>

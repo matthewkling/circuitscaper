@@ -116,7 +116,7 @@ for the estimator, accuracy, reproducibility and performance.
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper::cs_julia_available()
+if (FALSE) { # circuitscaper::cs_julia_available(circuitscape = FALSE)
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 present <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

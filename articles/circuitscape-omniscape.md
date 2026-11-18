@@ -311,10 +311,10 @@ result <- os_run(resistance, radius = 20,
 ```
 
 Julia’s thread count is fixed when Julia starts, so if Julia is already
-running with fewer threads, `cs_setup(threads = 4)` restarts it. That
-takes about as long as the first setup, since Circuitscape and Omniscape
-are loaded and warmed up again. If the running Julia session can’t run
-in parallel,
+running with fewer threads, `cs_setup(threads = 4)` restarts it, and
+Circuitscape and Omniscape are loaded and warmed up again on the next
+`cs_*()` or `os_*()` call. If the running Julia session can’t run in
+parallel,
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
 warns, says how to fix it, and runs serially.
 

@@ -59,19 +59,33 @@ to verify their setup before running analyses.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cs_julia_available</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">cs_julia_available</span><span class="op">(</span>circuitscape <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
+
+
+<dl><dt id="arg-circuitscape">circuitscape<a class="anchor" aria-label="anchor" href="#arg-circuitscape"></a></dt>
+<dd><p>Logical. Also check that the Circuitscape and
+Omniscape Julia packages load, as the <code>cs_*()</code> and <code>os_*()</code> functions
+need. Default <code>TRUE</code>. Use <code>FALSE</code> to check for what the dipole methods
+(<code>dp_*()</code>) need: a Julia that runs and is recent enough.</p></dd>
+
+</dl></div>
+    <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><code>TRUE</code> if Julia is found (in the places <code><a href="cs_setup.html">cs_setup()</a></code> searches) and
-the 'Circuitscape' and 'Omniscape' Julia packages load successfully,
-<code>FALSE</code> otherwise.</p>
+runs, is at least the minimum version, and (with <code>circuitscape = TRUE</code>)
+loads the 'Circuitscape' and 'Omniscape' Julia packages; <code>FALSE</code>
+otherwise.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">cs_julia_available</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
+<span class="r-in"><span><span class="fu">cs_julia_available</span><span class="op">(</span>circuitscape <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

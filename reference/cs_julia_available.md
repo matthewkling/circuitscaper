@@ -9,19 +9,31 @@ analyses.
 ## Usage
 
 ``` r
-cs_julia_available()
+cs_julia_available(circuitscape = TRUE)
 ```
+
+## Arguments
+
+- circuitscape:
+
+  Logical. Also check that the Circuitscape and Omniscape Julia packages
+  load, as the `cs_*()` and `os_*()` functions need. Default `TRUE`. Use
+  `FALSE` to check for what the dipole methods (`dp_*()`) need: a Julia
+  that runs and is recent enough.
 
 ## Value
 
 `TRUE` if Julia is found (in the places
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-searches) and the 'Circuitscape' and 'Omniscape' Julia packages load
-successfully, `FALSE` otherwise.
+searches) and runs, is at least the minimum version, and (with
+`circuitscape = TRUE`) loads the 'Circuitscape' and 'Omniscape' Julia
+packages; `FALSE` otherwise.
 
 ## Examples
 
 ``` r
 cs_julia_available()
+#> [1] FALSE
+cs_julia_available(circuitscape = FALSE)
 #> [1] FALSE
 ```

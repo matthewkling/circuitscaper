@@ -47,7 +47,8 @@
 <h2 class="pkg-version" data-toc-text="development version" id="circuitscaper-development-version">circuitscaper (development version)<a class="anchor" aria-label="anchor" href="#circuitscaper-development-version"></a></h2>
 <div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
-<ul><li>New dipole methods: connectivity from many balanced source-sink pairs (“dipoles”) superposed on one factored circuit, at a cost of one factorization and a few dozen solves whatever the number of pairs.
+<ul><li>
+<p>New dipole methods: connectivity from many balanced source-sink pairs (“dipoles”) superposed on one factored circuit, at a cost of one factorization and a few dozen solves whatever the number of pairs.</p>
 <ul><li>
 <code><a href="../reference/dp_omni.html">dp_omni()</a></code> maps omnidirectional connectivity among habitat, in the role of <code><a href="../reference/os_run.html">os_run()</a></code>, from random-sign dipoles within a radius (in pixels or km): current, flow potential and normalized current, with a built-in estimate of its sampling noise.</li>
 <li>
@@ -58,8 +59,14 @@
 <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> maps the pathways connecting present to future habitat within dispersal reach.</li>
 <li>
 <code><a href="../reference/dp_circuit.html">dp_circuit()</a></code> prepares a circuit whose factorizations several runs can reuse.</li>
-</ul>
-These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>. They are experimental.</li>
+</ul><p>These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>. They are experimental.</p>
+</li>
+<li><p>The dipole methods need only Julia, not the Circuitscape and Omniscape Julia packages. <code>cs_install_julia(circuitscape = FALSE)</code> installs Julia alone, and <code>cs_julia_available(circuitscape = FALSE)</code> checks for it.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="changes-development-version">Changes<a class="anchor" aria-label="anchor" href="#changes-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/cs_setup.html">cs_setup()</a></code> now only starts Julia. Circuitscape and Omniscape are loaded and warmed up on the first <code>cs_*()</code> or <code>os_*()</code> call of a session instead, so a session that only uses the dipole methods starts in a few seconds rather than 15 or more. Circuitscape and Omniscape sessions take the same total time as before.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="documentation-development-version">Documentation<a class="anchor" aria-label="anchor" href="#documentation-development-version"></a></h3>

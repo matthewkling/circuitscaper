@@ -65,7 +65,7 @@ automatically the next time it is used.
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper::cs_julia_available()
+if (FALSE) { # circuitscaper::cs_julia_available(circuitscape = FALSE)
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 circuit <- dp_circuit(resistance)

@@ -347,9 +347,9 @@ at the start of your session:</p>
 <span>                 parallelize <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Julia’s thread count is fixed when Julia starts, so if Julia is
 already running with fewer threads, <code>cs_setup(threads = 4)</code>
-restarts it. That takes about as long as the first setup, since
-Circuitscape and Omniscape are loaded and warmed up again. If the
-running Julia session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code>
+restarts it, and Circuitscape and Omniscape are loaded and warmed up
+again on the next <code>cs_*()</code> or <code>os_*()</code> call. If
+the running Julia session can’t run in parallel, <code><a href="../reference/os_run.html">os_run()</a></code>
 warns, says how to fix it, and runs serially.</p>
 </div>
 </div>

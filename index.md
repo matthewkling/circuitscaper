@@ -40,6 +40,9 @@ install.packages("circuitscaper")
 # 2. Let the package install Julia and the necessary Julia libraries
 library(circuitscaper)
 cs_install_julia()
+
+# (Or, for the dipole methods alone, just Julia)
+# cs_install_julia(circuitscape = FALSE)
 ```
 
 ## Example

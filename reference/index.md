@@ -46,7 +46,7 @@ Experimental; see the Dipole methods article.
 Finding, installing and starting Julia.
 
 - [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
-  : Set Up Julia and Load Circuitscape/Omniscape
+  : Set Up Julia
 - [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
   : Install Julia and Required Packages
 - [`cs_julia_available()`](https://matthewkling.github.io/circuitscaper/reference/cs_julia_available.md)

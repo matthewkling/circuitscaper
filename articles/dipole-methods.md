@@ -369,7 +369,10 @@ synthetic suitability surfaces:
 A first
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
 call on a raster includes building the circuit, so it takes about the
-sum of the two columns. Starting Julia adds about 17 s once per session.
+sum of the two columns. Starting Julia adds a few seconds once per
+session; the dipole methods don’t need the Circuitscape and Omniscape
+packages, so a session that only uses them skips loading and warming
+those up.
 
 For comparison, on the 0.73-million-cell *P. edulis* surface on the same
 machine,

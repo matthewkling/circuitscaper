@@ -44,8 +44,9 @@ Two articles on the package website go further:
 
 ## Installation
 
-circuitscaper requires Julia (\>= 1.10) with the Circuitscape and
-Omniscape packages. You can install everything from R:
+circuitscaper requires Julia (\>= 1.10). The `cs_*()` and `os_*()`
+functions also need the Circuitscape and Omniscape Julia packages; the
+dipole methods need only Julia. You can install everything from R:
 
 ``` r
 
@@ -55,12 +56,19 @@ library(circuitscaper)
 
 # First time only: install Julia and required packages
 cs_install_julia()
+
+# Or, if you'll only use the dipole methods: Julia alone, which is
+# quicker to install and to start
+cs_install_julia(circuitscape = FALSE)
 ```
 
 [`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
 downloads the official Julia release for your platform from
 julialang.org into circuitscaper’s own data directory, so it doesn’t
-touch any other Julia you have installed.
+touch any other Julia you have installed. You can add the Circuitscape
+and Omniscape packages later by running
+[`cs_install_julia()`](https://matthewkling.github.io/circuitscaper/reference/cs_install_julia.md)
+again.
 
 If you already have Julia installed,
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
@@ -76,9 +84,13 @@ cs_setup(julia_home = "/path/to/julia/bin")
 
 Julia starts the first time you call a circuitscaper function, or when
 you call
-[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md).
-To use several threads, which speeds up Omniscape and the dipole
-methods, call `cs_setup(threads = )` at the start of your session:
+[`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md),
+and takes a few seconds. The first `cs_*()` or `os_*()` call of a
+session then also loads Circuitscape and Omniscape and warms them up,
+which takes longer (often 15 seconds or more); the dipole methods skip
+that step. To use several threads, which speeds up Omniscape and the
+dipole methods, call `cs_setup(threads = )` at the start of your
+session:
 
 ``` r
 

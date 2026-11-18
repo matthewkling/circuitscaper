@@ -2,11 +2,13 @@
 
 Downloads and installs Julia, Circuitscape.jl, and Omniscape.jl. This is
 the recommended first step after installing the circuitscaper R package.
+If you only use the dipole methods (`dp_*()`), `circuitscape = FALSE`
+installs Julia alone, which is faster and smaller.
 
 ## Usage
 
 ``` r
-cs_install_julia(force = FALSE, version = "latest")
+cs_install_julia(force = FALSE, version = "latest", circuitscape = TRUE)
 ```
 
 ## Arguments
@@ -21,6 +23,14 @@ cs_install_julia(force = FALSE, version = "latest")
 
   Character. Julia version to install, e.g. `"1.12.1"`. Default
   `"latest"`, the latest stable release. Must be at least 1.10.
+
+- circuitscape:
+
+  Logical. Install the Circuitscape and Omniscape Julia packages, which
+  the `cs_*()` and `os_*()` functions need. Default `TRUE`. If `FALSE`,
+  only Julia (and Tables.jl, which 'JuliaConnectoR' uses) is installed:
+  enough for the dipole methods (`dp_*()`). Run `cs_install_julia()`
+  again later to add the packages.
 
 ## Value
 
@@ -51,5 +61,8 @@ The Julia packages are installed into Julia's default package depot
 ``` r
 if (FALSE) { # \dontrun{
 cs_install_julia()
+
+# Only the dipole methods
+cs_install_julia(circuitscape = FALSE)
 } # }
 ```

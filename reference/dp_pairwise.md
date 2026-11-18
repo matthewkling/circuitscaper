@@ -111,7 +111,7 @@ Reproducibility is as for
 ## Examples
 
 ``` r
-if (FALSE) { # circuitscaper::cs_julia_available()
+if (FALSE) { # circuitscaper::cs_julia_available(circuitscape = FALSE)
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
 set.seed(1)

@@ -7,6 +7,7 @@
 - New dipole methods: connectivity from many balanced source-sink pairs
   (“dipoles”) superposed on one factored circuit, at a cost of one
   factorization and a few dozen solves whatever the number of pairs.
+
   - [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
     maps omnidirectional connectivity among habitat, in the role of
     [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md),
@@ -32,6 +33,20 @@
   results differ from Circuitscape’s and Omniscape’s by design; see
   [`?dp_omni`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
   They are experimental.
+
+- The dipole methods need only Julia, not the Circuitscape and Omniscape
+  Julia packages. `cs_install_julia(circuitscape = FALSE)` installs
+  Julia alone, and `cs_julia_available(circuitscape = FALSE)` checks for
+  it.
+
+### Changes
+
+- [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+  now only starts Julia. Circuitscape and Omniscape are loaded and
+  warmed up on the first `cs_*()` or `os_*()` call of a session instead,
+  so a session that only uses the dipole methods starts in a few seconds
+  rather than 15 or more. Circuitscape and Omniscape sessions take the
+  same total time as before.
 
 ### Documentation
 
