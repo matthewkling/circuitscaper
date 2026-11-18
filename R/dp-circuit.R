@@ -5,8 +5,7 @@
 #' Builds and factors the circuit for a resistance surface once, so that
 #' several dipole-method runs on the same surface (different radii, source
 #' strengths, seeds or methods) can reuse it. Pass the result as the
-#' `resistance` argument of [dp_omni()], [dp_pairwise()], [dp_flux()] or
-#' [dp_pathways()].
+#' `resistance` argument of [dp_omni()], [dp_pairwise()] or [dp_flux()].
 #'
 #' The circuit is Circuitscape's default raster graph: every non-NA cell is
 #' a node, joined to its 8 neighbours by links of conductance

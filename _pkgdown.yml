@@ -26,15 +26,15 @@ reference:
   - os_condition
 - title: Dipole methods
   desc: >
-    circuitscaper's own methods: pairwise, omnidirectional and cross-era
-    connectivity from superposed random dipoles on one factored circuit.
+    circuitscaper's own methods: pairwise and omnidirectional connectivity,
+    and connectivity between two distributions, from superposed dipoles on
+    one factored circuit.
     Experimental; see the Dipole methods article.
   contents:
   - dp_circuit
   - dp_omni
   - dp_pairwise
   - dp_flux
-  - dp_pathways
 - title: Setup
   desc: Finding, installing and starting Julia.
   contents:

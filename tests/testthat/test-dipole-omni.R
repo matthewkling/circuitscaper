@@ -116,6 +116,45 @@ test_that("dp_omni handles km radii on lon/lat grids", {
   expect_true(all(is.finite(terra::values(r$current, mat = FALSE)[!is.na(terra::values(x$conductance))])))
 })
 
+test_that("dp_omni with a destination targets origin-destination pairs without bias", {
+  skip_if_no_julia(circuitscape = FALSE)
+  x <- dipole_test_grid(split = TRUE)
+  fut <- dipole_test_grid(split = TRUE, seed = 7)$suitability
+  circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
+  p <- dp_node_values(circuit, x$suitability)
+  f <- dp_node_values(circuit, fut)
+  p[is.na(p) | p < 0.01] <- 0
+  f[is.na(f) | f < 0.01] <- 0
+  k <- dp_kernel(circuit$env$template, 5, "pixels")
+  gi <- dipole_graph_info(circuit)
+  # Pair weights o_i d_j k_ij over ordered pairs (not symmetric)
+  cell <- circuit$env$cells
+  rr <- (cell - 1) %/% 31
+  cc <- (cell - 1) %% 31
+  P <- outer(p, f) * (outer(rr, rr, "-")^2 + outer(cc, cc, "-")^2 <= 25) *
+    outer(gi$comp, gi$comp, "==")
+  diag(P) <- 0
+  S <- dp_call("pair_sum", circuit$env$id, p, f, k$dr0, k$hw, k$rowmap)
+  expect_equal(S, sum(P), tolerance = 1e-12)
+
+  # Squared current is symmetric in a pair, so the symmetric part of P is
+  # the target's weight
+  exact <- dipole_exact_cells(gi, (P + t(P)) / 2) / 2
+  runs <- sapply(1:12, function(s) {
+    r <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
+                 destination = fut, normalize = FALSE, n_draws = 256,
+                 n_dipoles = 1000, seed = s)
+    dp_node_values(circuit, r)^2
+  })
+  ok <- exact > 0
+  expect_equal(sum(runs[ok, ]) / ncol(runs), sum(exact[ok]), tolerance = 0.01)
+  expect_lt(stats::median(abs(rowMeans(runs)[ok] / exact[ok] - 1)), 0.03)
+
+  r <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
+               destination = fut, seed = 1, n_draws = 8, n_dipoles = 1000)
+  expect_named(r, c("current", "flow_potential", "normalized_current"))
+})
+
 test_that("dp_omni checks its inputs", {
   skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid()

@@ -8,6 +8,7 @@ dp_omni(
   resistance,
   radius,
   source_strength = NULL,
+  destination = NULL,
   source_threshold = 0.01,
   radius_units = c("pixels", "km"),
   resistance_is = "resistances",
@@ -28,10 +29,16 @@ if their centres are at most this far apart. In pixels by default (see
 
 \item{source_strength}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path on the
 same grid: source strength, e.g. habitat suitability. If \code{NULL}
-(default), the conductance surface is used, as in \code{\link[=os_run]{os_run()}}.}
+(default), the conductance surface is used, as in \code{\link[=os_run]{os_run()}}. With a
+\code{destination}, this is the origin strength.}
 
-\item{source_threshold}{Numeric. Cells with source strength below this
-are not sources. Default \code{0.01}.}
+\item{destination}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path on the same
+grid: destination strength, e.g. habitat suitability in another period
+or season. If given, only pairs of an origin and a destination cell
+count. Default \code{NULL}: pairs of cells of one surface.}
+
+\item{source_threshold}{Numeric. Cells with source (or destination)
+strength below this are not sources (or destinations). Default \code{0.01}.}
 
 \item{radius_units}{Character. \code{"pixels"} (default): the radius counts
 cells, so the kernel is the cells with \eqn{dr^2 + dc^2 \le}
@@ -59,8 +66,8 @@ as the \code{"seed"} attribute.}
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}, and with
 \code{normalize}, \code{flow_potential} and \code{normalized_current}. Attributes:
 \code{"halves"}, a data frame comparing the estimates from odd and even
-draws on source cells (Spearman's \eqn{\rho} and the median relative
-difference), and \code{"seed"}.
+draws on source (and destination) cells (Spearman's \eqn{\rho} and
+the median relative difference), and \code{"seed"}.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -70,6 +77,14 @@ Maps omnidirectional connectivity among habitat, in the role of
 \code{\link[=os_run]{os_run()}}, with the random-dipole method: many random source-sink pairs
 superposed on one factored circuit, which takes about \code{n_draws} solves
 whatever the number of pairs.
+
+With a \code{destination}, it maps connectivity between two distributions
+instead: the routes linking origin cells (\code{source_strength}) to
+destination cells within \code{radius}, for example present to future habitat,
+breeding to wintering grounds, or foraging to roosting habitat. The map is
+undirected: every pair counts whichever way it flows, so swapping the two
+surfaces gives the same map. For the net flow from one to the other, with
+its direction, see \code{\link[=dp_flux]{dp_flux()}}.
 
 For each link \eqn{e} of the circuit (see \code{\link[=dp_circuit]{dp_circuit()}}), the method
 estimates
@@ -83,6 +98,14 @@ a link's squared current is the derivative of the pair's effective
 resistance with respect to that link's resistance, so the map is the
 sensitivity of habitat-weighted pairwise resistance to degrading each
 cell.
+
+With a \code{destination}, the pair weights are \eqn{o_i d_j k(d_{ij})}, with
+\eqn{o} the origin (\code{source_strength}) and \eqn{d} the destination
+strength. Since \eqn{I_e(i,j)^2 = I_e(j,i)^2}, only the unordered pairs
+matter, and the map is the same whichever surface is the origin. A cell's
+pair with itself carries no current. Cells in both distributions take
+part at both ends, unlike in \code{\link[=dp_flux]{dp_flux()}}, where their flow cancels. With
+one surface, \eqn{o = d = w}.
 
 Each draw injects \code{n_dipoles} unit dipoles, pairs drawn in proportion to
 \eqn{w_i w_j k(d_{ij})}, each with a random sign, and solves the circuit
@@ -143,9 +166,16 @@ resistance <- terra::rast(system.file("extdata/resistance.tif",
 result <- dp_omni(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "halves")
+
+# Connectivity between two distributions
+origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
+destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+between <- dp_omni(resistance, radius = 45, source_strength = origin,
+                   destination = destination, seed = 1)
+terra::plot(between)
 \dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=dp_circuit]{dp_circuit()}}, \code{\link[=dp_pairwise]{dp_pairwise()}}, \code{\link[=dp_pathways]{dp_pathways()}}, \code{\link[=os_run]{os_run()}}
+\code{\link[=dp_circuit]{dp_circuit()}}, \code{\link[=dp_pairwise]{dp_pairwise()}}, \code{\link[=dp_flux]{dp_flux()}}, \code{\link[=os_run]{os_run()}}
 }
