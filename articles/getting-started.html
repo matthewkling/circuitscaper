@@ -105,11 +105,12 @@ directly.</li>
 <strong>Dipole methods</strong> (<code>dp_*()</code> functions).
 circuitscaper’s own methods, which factor one circuit and solve many
 superposed source–sink pairs (“dipoles”) against it. They cover similar
-questions — pairwise, omnidirectional and cross-era connectivity — much
-faster and with a built-in error estimate, but they compute a related,
-different quantity (squared rather than absolute current) and are
-stochastic. They are <strong>experimental</strong>: new, not yet
-published, and their interface may change.</li>
+questions — pairwise and omnidirectional connectivity, and connectivity
+between two distributions — much faster and with a built-in error
+estimate, but they compute a related, different quantity (squared rather
+than absolute current) and are stochastic. They are
+<strong>experimental</strong>: new, not yet published, and their
+interface may change.</li>
 </ul>
 <p>This vignette covers installation, inputs and how to choose a method.
 Two articles on the package website go further:</p>
@@ -207,9 +208,9 @@ ignored)</li>
 <code><a href="../reference/dp_omni.html">dp_omni()</a></code>) need no focal nodes: every cell can be a source,
 weighted by its <strong>source strength</strong>, such as habitat
 quality or suitability. By default both use the conductance surface (the
-inverse of resistance). The cross-era methods (<code><a href="../reference/dp_flux.html">dp_flux()</a></code>
-and <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code>) take two source-strength surfaces, one
-for the present and one for a future period.</p>
+inverse of resistance). For connectivity between two distributions,
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> and <code>dp_omni(destination = )</code> take two
+surfaces: an origin and a destination.</p>
 </div>
 </div>
 <div class="section level2">
@@ -254,13 +255,13 @@ landscape?</td>
 <td><code><a href="../reference/dp_omni.html">dp_omni()</a></code></td>
 </tr>
 <tr class="odd">
-<td>How could habitat shift between climate eras, and along which
-routes?</td>
+<td>How does movement link two distributions (such as seasonal ranges,
+or present and future habitat), and which way does it flow?</td>
 <td>
-<code><a href="../reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>
-</td>
+<code><a href="../reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>, for
+climate</td>
 <td>
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code>, <code>dp_omni(destination = )</code>
 </td>
 </tr>
 </tbody>
@@ -282,13 +283,16 @@ solved.</p>
 map connectivity continuously across the landscape among all habitat
 within a dispersal radius, to identify corridors and barriers across the
 full extent.</p>
-<p><strong>Cross-era</strong> analyses ask how habitat could shift
-between eras, such as under climate change. <code><a href="../reference/os_condition.html">os_condition()</a></code>
-restricts Omniscape’s connections to sources and targets with compatible
-present and future conditions. <code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow
-from present to future habitat, with direction;
-<code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> maps the routes between present and future
-habitat within dispersal reach.</p>
+<p><strong>Two-distribution</strong> analyses ask how movement links one
+distribution to another: present and future habitat under climate
+change, breeding and wintering ranges, foraging and roosting habitat, or
+source populations and restoration sites. <code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps
+the net flow from origin to destination, with its direction;
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the routes
+between them without direction. For climate change,
+<code><a href="../reference/os_condition.html">os_condition()</a></code> offers a related Omniscape analysis,
+restricting connections to sources and targets with compatible present
+and future conditions.</p>
 <div class="section level3">
 <h3 id="circuitscape-and-omniscape-or-dipole-methods">Circuitscape and Omniscape, or dipole methods?<a class="anchor" aria-label="anchor" href="#circuitscape-and-omniscape-or-dipole-methods"></a>
 </h3>

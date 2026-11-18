@@ -25,12 +25,12 @@ Julia session:
   packages. Results are the same as running those tools directly.
 - **Dipole methods** (`dp_*()` functions). circuitscaper’s own methods,
   which factor one circuit and solve many superposed source–sink pairs
-  (“dipoles”) against it. They cover similar questions — pairwise,
-  omnidirectional and cross-era connectivity — much faster and with a
-  built-in error estimate, but they compute a related, different
-  quantity (squared rather than absolute current) and are stochastic.
-  They are **experimental**: new, not yet published, and their interface
-  may change.
+  (“dipoles”) against it. They cover similar questions — pairwise and
+  omnidirectional connectivity, and connectivity between two
+  distributions — much faster and with a built-in error estimate, but
+  they compute a related, different quantity (squared rather than
+  absolute current) and are stochastic. They are **experimental**: new,
+  not yet published, and their interface may change.
 
 This vignette covers installation, inputs and how to choose a method.
 Two articles on the package website go further:
@@ -141,13 +141,11 @@ and
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md))
 need no focal nodes: every cell can be a source, weighted by its
 **source strength**, such as habitat quality or suitability. By default
-both use the conductance surface (the inverse of resistance). The
-cross-era methods
-([`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-and
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md))
-take two source-strength surfaces, one for the present and one for a
-future period.
+both use the conductance surface (the inverse of resistance). For
+connectivity between two distributions,
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+and `dp_omni(destination = )` take two surfaces: an origin and a
+destination.
 
 ## Choosing a method
 
@@ -159,7 +157,7 @@ Start from the question you’re asking:
 | How does current spread out from, or converge on, each site? | [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md), [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md) |  |
 | How does movement flow between a defined source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
-| How could habitat shift between climate eras, and along which routes? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )` | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md) |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )` |
 
 **Pairwise** analyses treat discrete sites (habitat patches,
 populations) and ask how well they’re connected to each other.
@@ -180,16 +178,18 @@ leaves: explicit source and ground rasters, and one circuit solved.
 continuously across the landscape among all habitat within a dispersal
 radius, to identify corridors and barriers across the full extent.
 
-**Cross-era** analyses ask how habitat could shift between eras, such as
-under climate change.
-[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
-restricts Omniscape’s connections to sources and targets with compatible
-present and future conditions.
+**Two-distribution** analyses ask how movement links one distribution to
+another: present and future habitat under climate change, breeding and
+wintering ranges, foraging and roosting habitat, or source populations
+and restoration sites.
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-maps the net flow from present to future habitat, with direction;
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-maps the routes between present and future habitat within dispersal
-reach.
+maps the net flow from origin to destination, with its direction;
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+with a `destination` maps the routes between them without direction. For
+climate change,
+[`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
+offers a related Omniscape analysis, restricting connections to sources
+and targets with compatible present and future conditions.
 
 ### Circuitscape and Omniscape, or dipole methods?
 

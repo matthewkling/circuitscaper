@@ -10,12 +10,13 @@ under the hood. It offers two families of methods:
   [Omniscape.jl](https://github.com/Circuitscape/Omniscape.jl), with the
   same results as running them directly.
 - **Dipole methods** (`dp_*()`, experimental): circuitscaper’s own
-  methods for pairwise, omnidirectional and cross-era connectivity. They
-  factor one circuit and solve many superposed source–sink pairs against
-  it, so a map takes about 32 solves whatever the number of pairs, and
-  each map comes with an estimate of its own noise. They compute a
-  related but different quantity (squared rather than absolute current)
-  and are not yet published; see the [Dipole
+  methods for pairwise and omnidirectional connectivity, and for
+  connectivity between two distributions. They factor one circuit and
+  solve many superposed source–sink pairs against it, so a map takes
+  about 32 solves whatever the number of pairs, and each map comes with
+  an estimate of its own noise. They compute a related but different
+  quantity (squared rather than absolute current) and are not yet
+  published; see the [Dipole
   methods](https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html)
   article.
 
@@ -91,7 +92,7 @@ helps choose between them.
 | How does current spread from, or converge on, each site? | [`cs_one_to_all()`](https://matthewkling.github.io/circuitscaper/reference/cs_one_to_all.md), [`cs_all_to_one()`](https://matthewkling.github.io/circuitscaper/reference/cs_all_to_one.md) |  |
 | How does movement flow between a source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
-| How could habitat shift between climate eras, and along which routes? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )` | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md) |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )` |
 
 Also:
 
@@ -159,9 +160,9 @@ Moving-window connectivity, run through Omniscape.jl.
 
 ## Dipole methods
 
-circuitscaper’s own methods: pairwise, omnidirectional and cross-era
-connectivity from superposed random dipoles on one factored circuit.
-Experimental; see the Dipole methods article.
+circuitscaper’s own methods: pairwise and omnidirectional connectivity,
+and connectivity between two distributions, from superposed dipoles on
+one factored circuit. Experimental; see the Dipole methods article.
 
 - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
   **\[experimental\]** : Prepare a Circuit for the Dipole Methods
@@ -172,9 +173,7 @@ Experimental; see the Dipole methods article.
   **\[experimental\]** : Pairwise Connectivity Among Focal Nodes From
   Random Dipoles
 - [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-  **\[experimental\]** : Cross-Era Net Flux
-- [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-  **\[experimental\]** : Cross-Era Gross Pathways From Random Dipoles
+  **\[experimental\]** : Directional Flow Between Two Distributions
 
 ## Setup
 

@@ -54,6 +54,7 @@
 <span>  <span class="va">resistance</span>,</span>
 <span>  <span class="va">radius</span>,</span>
 <span>  source_strength <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  destination <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  source_threshold <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  radius_units <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pixels"</span>, <span class="st">"km"</span><span class="op">)</span>,</span>
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
@@ -83,12 +84,20 @@ if their centres are at most this far apart. In pixels by default (see
 <dt id="arg-source-strength">source_strength<a class="anchor" aria-label="anchor" href="#arg-source-strength"></a></dt>
 <dd><p>Optional <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path on the
 same grid: source strength, e.g. habitat suitability. If <code>NULL</code>
-(default), the conductance surface is used, as in <code><a href="os_run.html">os_run()</a></code>.</p></dd>
+(default), the conductance surface is used, as in <code><a href="os_run.html">os_run()</a></code>. With a
+<code>destination</code>, this is the origin strength.</p></dd>
+
+
+<dt id="arg-destination">destination<a class="anchor" aria-label="anchor" href="#arg-destination"></a></dt>
+<dd><p>Optional <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> or file path on the same
+grid: destination strength, e.g. habitat suitability in another period
+or season. If given, only pairs of an origin and a destination cell
+count. Default <code>NULL</code>: pairs of cells of one surface.</p></dd>
 
 
 <dt id="arg-source-threshold">source_threshold<a class="anchor" aria-label="anchor" href="#arg-source-threshold"></a></dt>
-<dd><p>Numeric. Cells with source strength below this
-are not sources. Default <code>0.01</code>.</p></dd>
+<dd><p>Numeric. Cells with source (or destination)
+strength below this are not sources (or destinations). Default <code>0.01</code>.</p></dd>
 
 
 <dt id="arg-radius-units">radius_units<a class="anchor" aria-label="anchor" href="#arg-radius-units"></a></dt>
@@ -130,8 +139,8 @@ as the <code>"seed"</code> attribute.</p></dd>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>current</code>, and with
 <code>normalize</code>, <code>flow_potential</code> and <code>normalized_current</code>. Attributes:
 <code>"halves"</code>, a data frame comparing the estimates from odd and even
-draws on source cells (Spearman's \(\rho\) and the median relative
-difference), and <code>"seed"</code>.</p>
+draws on source (and destination) cells (Spearman's \(\rho\) and
+the median relative difference), and <code>"seed"</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -139,6 +148,13 @@ difference), and <code>"seed"</code>.</p>
 <code><a href="os_run.html">os_run()</a></code>, with the random-dipole method: many random source-sink pairs
 superposed on one factored circuit, which takes about <code>n_draws</code> solves
 whatever the number of pairs.</p>
+<p>With a <code>destination</code>, it maps connectivity between two distributions
+instead: the routes linking origin cells (<code>source_strength</code>) to
+destination cells within <code>radius</code>, for example present to future habitat,
+breeding to wintering grounds, or foraging to roosting habitat. The map is
+undirected: every pair counts whichever way it flows, so swapping the two
+surfaces gives the same map. For the net flow from one to the other, with
+its direction, see <code><a href="dp_flux.html">dp_flux()</a></code>.</p>
 <p>For each link \(e\) of the circuit (see <code><a href="dp_circuit.html">dp_circuit()</a></code>), the method
 estimates
 $$T_e = \sum_{i \ne j} w_i w_j k(d_{ij}) I_e(i,j)^2$$
@@ -151,6 +167,13 @@ a link's squared current is the derivative of the pair's effective
 resistance with respect to that link's resistance, so the map is the
 sensitivity of habitat-weighted pairwise resistance to degrading each
 cell.</p>
+<p>With a <code>destination</code>, the pair weights are \(o_i d_j k(d_{ij})\), with
+\(o\) the origin (<code>source_strength</code>) and \(d\) the destination
+strength. Since \(I_e(i,j)^2 = I_e(j,i)^2\), only the unordered pairs
+matter, and the map is the same whichever surface is the origin. A cell's
+pair with itself carries no current. Cells in both distributions take
+part at both ends, unlike in <code><a href="dp_flux.html">dp_flux()</a></code>, where their flow cancels. With
+one surface, \(o = d = w\).</p>
 <p>Each draw injects <code>n_dipoles</code> unit dipoles, pairs drawn in proportion to
 \(w_i w_j k(d_{ij})\), each with a random sign, and solves the circuit
 once. The random signs make the cross terms between dipoles average out,
@@ -208,7 +231,7 @@ currents summed in parallel over Julia's threads; set the number with
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="dp_circuit.html">dp_circuit()</a></code>, <code><a href="dp_pairwise.html">dp_pairwise()</a></code>, <code><a href="dp_pathways.html">dp_pathways()</a></code>, <code><a href="os_run.html">os_run()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="dp_circuit.html">dp_circuit()</a></code>, <code><a href="dp_pairwise.html">dp_pairwise()</a></code>, <code><a href="dp_flux.html">dp_flux()</a></code>, <code><a href="os_run.html">os_run()</a></code></p></div>
     </div>
 
     <div class="section level2">
@@ -219,6 +242,13 @@ currents summed in parallel over Julia's threads; set the number with
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">dp_omni</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">15</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span>, <span class="st">"halves"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Connectivity between two distributions</span></span></span>
+<span class="r-in"><span><span class="va">origin</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">destination</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/ground.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">between</span> <span class="op">&lt;-</span> <span class="fu">dp_omni</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">45</span>, source_strength <span class="op">=</span> <span class="va">origin</span>,</span></span>
+<span class="r-in"><span>                   destination <span class="op">=</span> <span class="va">destination</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">between</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">DONTSHOW</span><span class="op">(</span><span class="op">{</span><span class="fu">JuliaConnectoR</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html" class="external-link">stopJulia</a></span><span class="op">(</span><span class="op">)</span><span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>

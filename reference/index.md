@@ -24,9 +24,9 @@ Moving-window connectivity, run through Omniscape.jl.
 
 ## Dipole methods
 
-circuitscaper’s own methods: pairwise, omnidirectional and cross-era
-connectivity from superposed random dipoles on one factored circuit.
-Experimental; see the Dipole methods article.
+circuitscaper’s own methods: pairwise and omnidirectional connectivity,
+and connectivity between two distributions, from superposed dipoles on
+one factored circuit. Experimental; see the Dipole methods article.
 
 - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
   **\[experimental\]** : Prepare a Circuit for the Dipole Methods
@@ -37,9 +37,7 @@ Experimental; see the Dipole methods article.
   **\[experimental\]** : Pairwise Connectivity Among Focal Nodes From
   Random Dipoles
 - [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-  **\[experimental\]** : Cross-Era Net Flux
-- [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-  **\[experimental\]** : Cross-Era Gross Pathways From Random Dipoles
+  **\[experimental\]** : Directional Flow Between Two Distributions
 
 ## Setup
 

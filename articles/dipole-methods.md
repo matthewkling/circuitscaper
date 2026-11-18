@@ -1,12 +1,13 @@
 # Dipole methods
 
 The dipole methods are circuitscaper’s own connectivity methods. They
-map pairwise, omnidirectional and cross-era connectivity on the same
-circuits Circuitscape builds, but instead of solving one circuit per
-pair, window or source, they factor the circuit once and solve many
-balanced source–sink pairs (“dipoles”) against it at a time, combined by
-superposition. A map takes one factorization and about 32 solves,
-whatever the number of pairs it covers.
+map pairwise and omnidirectional connectivity, and connectivity between
+two distributions, on the same circuits Circuitscape builds, but instead
+of solving one circuit per pair, window or source, they factor the
+circuit once and solve many balanced source–sink pairs (“dipoles”)
+against it at a time, combined by superposition. A map takes one
+factorization and about 32 solves, whatever the number of pairs it
+covers.
 
 > **Status: experimental.** The dipole methods are new and not yet
 > published. They are tested against exact answers (see
@@ -17,10 +18,9 @@ whatever the number of pairs it covers.
 
 | Function | Maps | Closest established method |
 |----|----|----|
-| [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) | Omnidirectional connectivity among habitat within a dispersal radius | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) |
+| [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) | Omnidirectional connectivity among habitat within a dispersal radius; with a `destination`, the routes linking two distributions | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) |
 | [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md) | Connectivity among every pair of a set of focal nodes | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) (cumulative current) |
-| [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md) | Net flow from present to future habitat, with direction | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) with present sources and future grounds |
-| [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md) | Routes between present and future habitat within dispersal reach | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )` |
+| [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md) | Net flow from an origin to a destination distribution, with direction | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) with sources at the origin and grounds at the destination |
 | [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md) | A factored circuit, to reuse across runs |  |
 
 The first half of this article shows how to use them; the second
@@ -270,35 +270,50 @@ Focal nodes are given as for
 a matrix of coordinates, or a raster of positive integer IDs. Each node
 is one cell.
 
-## Cross-era connectivity
+## Connectivity between two distributions
 
-The two cross-era methods take a present and a future source-strength
-surface, such as habitat suitability now and under a climate scenario.
-Here, the package’s example source and ground layers stand in for
-present and future habitat, at the bottom and top of the landscape:
+Some questions are about movement between two distributions rather than
+within one: from present to future habitat under climate change, between
+breeding and wintering ranges, between foraging and roosting habitat, or
+from source populations to restoration sites. Two maps answer them, both
+taking an origin and a destination surface:
+
+- [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+  maps the **directional** flow from origin to destination: signed
+  current, so flows in opposite directions cancel and the map shows net
+  movement, with its direction (`flow_x`, `flow_y`). It takes a single
+  solve and is exact.
+- [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+  with a `destination` maps the **undirected** routes between them:
+  squared current, so every pair counts whichever way it flows, and
+  swapping origin and destination gives the same map. It uses random
+  dipoles, as with one surface.
+
+Here, the package’s example source and ground layers stand in for the
+two distributions, say a breeding range at the bottom of the landscape
+and a wintering range at the top:
 
 ``` r
 
-present <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
-future <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
-plot(c(present, future), nc = 2, main = c("present", "future"))
+origin <- rast(system.file("extdata/source.tif", package = "circuitscaper"))
+destination <- rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+plot(c(origin, destination), nc = 2, main = c("origin", "destination"))
 ```
 
-![plot of chunk crossera-data](figures/dp-crossera-data-1.png)
+![plot of chunk two-dist-data](figures/dp-two-dist-data-1.png)
 
-plot of chunk crossera-data
+plot of chunk two-dist-data
 
+With no `radius` (the default),
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-maps the net flow of the range shift: present habitat injects one unit
-of current in all, and future habitat withdraws one unit, each cell in
-proportion to its strength. It takes a single solve, and the flow is
-signed, so the result includes its direction (`flow_x`, `flow_y`):
+sends one unit of flow from the origin to the destination, each cell in
+proportion to its strength, wherever it has to go:
 
 ``` r
 
-flux <- dp_flux(circuit, present, future)
+flux <- dp_flux(circuit, origin, destination)
 
-plot(flux$current, main = "Net flux")
+plot(flux$current, main = "Net flow")
 a <- aggregate(flux[[c("flow_x", "flow_y")]], 5, mean, na.rm = TRUE)
 xy <- xyFromCell(a, seq_len(ncell(a)))
 v <- values(a)
@@ -313,25 +328,65 @@ arrows(xy[ok, 1], xy[ok, 2], xy[ok, 1] + s * v[ok, 1], xy[ok, 2] + s * v[ok, 2],
 
 plot of chunk flux
 
-Only the totals at each cell matter, not which present cell pairs with
-which future cell, so net flux has no dispersal limit: it shows how the
-range as a whole must move.
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-asks instead which routes connect present habitat with future habitat
-within dispersal reach: random dipoles, as in
-[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
-with one end in present habitat and the other in future habitat within
-`radius`. It gives magnitude only, without direction.
+With a `radius`, only origin and destination cells within reach of each
+other are paired, so each origin cell sends its flow to the destination
+habitat near it. The `"in_reach"` attribute is the share of all
+origin–destination pairs (weighted by strength) that are within reach:
 
 ``` r
 
-pathways <- dp_pathways(circuit, present, future, radius = 45, seed = 1)
-plot(pathways, nc = 3)
+near <- dp_flux(circuit, origin, destination, radius = 45)
+attr(near, "in_reach")
+#> [1] 0.4468008
 ```
 
-![plot of chunk pathways](figures/dp-pathways-1.png)
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+with a `destination` maps the routes between the two distributions
+within reach, with flow potential and normalized current as for one
+surface:
 
-plot of chunk pathways
+``` r
+
+between <- dp_omni(circuit, radius = 45, source_strength = origin,
+                   destination = destination, seed = 1)
+plot(between, nc = 3)
+```
+
+![plot of chunk between](figures/dp-between-1.png)
+
+plot of chunk between
+
+### Choosing a map
+
+The dipole maps differ along four lines:
+
+- **Directional or undirected.** Directional maps sum signed current, so
+  opposite flows cancel; undirected maps sum squared current, so they
+  don’t.
+- **One surface or two.** Pairs are drawn from one distribution, or from
+  an origin to a destination.
+- **Radius or unconstrained.** Pairs are limited to cells within
+  `radius`, or not.
+- **Distributed or focal.** Every cell of a surface takes part, in
+  proportion to its strength, or only a set of focal nodes.
+
+|  | Undirected | Directional |
+|----|----|----|
+| One surface | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) | (always zero) |
+| Two surfaces | `dp_omni(destination = )` | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md) |
+| Focal nodes | [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md) |  |
+
+A directional map from one surface is always zero: for every pair from
+\\i\\ to \\j\\ there is the same pair from \\j\\ to \\i\\, and their
+currents cancel.
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+and
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
+both take a `radius` (in
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
+the default is no limit);
+[`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)
+pairs all focal nodes.
 
 ## Radius units
 
@@ -508,31 +563,46 @@ reference), the pair \\(i, j)\\ drives \\y_i - y_j\\, and
 
 so the all-pairs sum needs only the \\N\\ solves.
 
-### Cross-era methods
+### Two-distribution methods
+
+Both maps sum over pairs of an origin cell \\i\\ and a destination cell
+\\j\\ with weights \\o_i\\ d_j\\ k(d\_{ij})\\, where \\o\\ and \\d\\ are
+origin and destination strength and \\k\\ is 1 within the radius (or
+everywhere, with no radius) and 0 otherwise, in the same component.
+
+[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
+with a `destination` sums the pairs’ squared currents \\I_e(i,j)^2\\, as
+with one surface but with these weights. The pairing is one-way, but a
+pair’s squared current is the same in both directions, so random signs
+still apply, and the map doesn’t depend on which surface is the origin.
+Cells in both distributions take part at both ends.
 
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
-injects \\b = p / \sum p - f / \sum f\\, for present and future source
-strengths \\p\\ and \\f\\, and solves once. That is the minimum-energy
-flow that turns the present distribution into the future one. The
-withdrawals at future habitat are fixed amounts, not grounds: each
-future cell takes its share however far away it is, whereas with
-grounds, as in
-[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md),
-current drains into whichever future habitat is electrically nearest.
-Where present and future habitat coincide, injection and withdrawal
-cancel, so net flux mostly measures movement from lost to gained
-habitat. Flow must balance within each component, so each component’s
-present and future totals are set equal; the share that would have had
-to cross between components is returned as the `"imbalance"` attribute.
+sums the pairs’ signed currents \\I_e(i,j)\\, divided by the total
+weight \\W = \sum\_{i,j} o_i\\ d_j\\ k(d\_{ij})\\ so that one unit flows
+in all. The sum is linear in the currents, so it is the current from a
+single injection,
 
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)
-is
-[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
-with pair weights \\p_i\\ f_j\\ k(d\_{ij})\\: one end in present habitat
-and the other in future habitat, within the radius. The pairing is
-one-way, but a pair’s squared current is the same in both directions, so
-random signs still apply. Habitat that is suitable in both eras takes
-part at both ends.
+\\ b_i = \frac{o_i\\ (Kd)\_i - d_i\\ (Ko)\_i}{W} , \\
+
+where \\(Kd)\_i\\ is the destination strength within reach of cell \\i\\
+and \\(Ko)\_i\\ the origin strength within reach of it: each origin cell
+sends in proportion to its strength and the destination within its
+reach, and each destination cell receives in proportion to its strength
+and the origin within its reach. The kernel sums take prefix sums along
+the rows of the grid, as for \\S\\. With no radius and one component,
+this is \\b = o / \sum o - d / \sum d\\, the minimum-energy flow that
+turns the origin distribution into the destination one. The withdrawals
+are fixed amounts, not grounds: each destination cell takes its share
+however far away it is, whereas with grounds, as in
+[`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md),
+current drains into whichever destination is electrically nearest. Where
+the two distributions overlap, a cell’s pair with itself counts in \\W\\
+but moves nothing, so flow cancels there and the map mostly shows
+movement from origin-only to destination-only habitat. With several
+components, each carries its share of \\W\\; origin cells with no
+destination within reach send nothing, and \\W / (\sum o \sum d)\\ is
+returned as `"in_reach"`.
 
 ### How the results differ from Circuitscape and Omniscape
 
@@ -596,8 +666,7 @@ The implementation is tested against exact answers:
   attribute; halving it costs 4 times the draws.
 - **No direction** from the random-dipole maps
   ([`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
-  [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md),
-  [`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md)).
+  [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md)).
   [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
   gives direction.
 - **Memory.** A factorization of the whole grid must fit in memory; see
@@ -624,7 +693,8 @@ an edge centrality and estimated with random projections by Li & Zhang
 Fleischer’s (2005) algorithm for current-flow betweenness. What the
 dipole methods add is the application to landscape connectivity:
 habitat-weighted, dispersal-limited pair distributions on raster
-circuits, flow-potential normalization, and the cross-era operations.
+circuits, flow-potential normalization, and the maps between two
+distributions.
 
 ## References
 

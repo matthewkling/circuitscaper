@@ -21,12 +21,6 @@ unit of current flowing from one to the other.
 ``` r
 
 library(terra)
-#> terra 1.9.27
-#> 
-#> Attaching package: 'terra'
-#> The following objects are masked from 'package:testthat':
-#> 
-#>     compare, describe
 library(circuitscaper)
 
 # Resistance surface (higher values = harder to traverse)

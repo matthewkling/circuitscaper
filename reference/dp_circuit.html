@@ -82,8 +82,7 @@ use. Default <code>TRUE</code>. If <code>FALSE</code>, it is built when first ne
     <p>Builds and factors the circuit for a resistance surface once, so that
 several dipole-method runs on the same surface (different radii, source
 strengths, seeds or methods) can reuse it. Pass the result as the
-<code>resistance</code> argument of <code><a href="dp_omni.html">dp_omni()</a></code>, <code><a href="dp_pairwise.html">dp_pairwise()</a></code>, <code><a href="dp_flux.html">dp_flux()</a></code> or
-<code><a href="dp_pathways.html">dp_pathways()</a></code>.</p>
+<code>resistance</code> argument of <code><a href="dp_omni.html">dp_omni()</a></code>, <code><a href="dp_pairwise.html">dp_pairwise()</a></code> or <code><a href="dp_flux.html">dp_flux()</a></code>.</p>
 <p>The circuit is Circuitscape's default raster graph: every non-NA cell is
 a node, joined to its 8 neighbours by links of conductance
 \((c_u + c_v)/2\), divided by \(\sqrt{2}\) on diagonals. Cells with

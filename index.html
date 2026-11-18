@@ -78,7 +78,7 @@
 <li>
 <strong>Circuitscape and Omniscape</strong> (<code>cs_*()</code>, <code>os_*()</code>): the established tools, run through <a href="https://github.com/Circuitscape/Circuitscape.jl" class="external-link">Circuitscape.jl</a> and <a href="https://github.com/Circuitscape/Omniscape.jl" class="external-link">Omniscape.jl</a>, with the same results as running them directly.</li>
 <li>
-<strong>Dipole methods</strong> (<code>dp_*()</code>, experimental): circuitscaper’s own methods for pairwise, omnidirectional and cross-era connectivity. They factor one circuit and solve many superposed source–sink pairs against it, so a map takes about 32 solves whatever the number of pairs, and each map comes with an estimate of its own noise. They compute a related but different quantity (squared rather than absolute current) and are not yet published; see the <a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole methods</a> article.</li>
+<strong>Dipole methods</strong> (<code>dp_*()</code>, experimental): circuitscaper’s own methods for pairwise and omnidirectional connectivity, and for connectivity between two distributions. They factor one circuit and solve many superposed source–sink pairs against it, so a map takes about 32 solves whatever the number of pairs, and each map comes with an estimate of its own noise. They compute a related but different quantity (squared rather than absolute current) and are not yet published; see the <a href="https://matthewkling.github.io/circuitscaper/articles/dipole-methods.html">Dipole methods</a> article.</li>
 </ul>
 <p>Installation of Julia and its packages takes one line, and Julia threads speed up Omniscape and the dipole methods on large landscapes.</p>
 <blockquote>
@@ -166,12 +166,11 @@
 <td><code><a href="reference/dp_omni.html">dp_omni()</a></code></td>
 </tr>
 <tr>
-<td>How could habitat shift between climate eras, and along which routes?</td>
+<td>How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow?</td>
 <td>
-<code><a href="reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>
-</td>
+<code><a href="reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>, for climate</td>
 <td>
-<code><a href="reference/dp_flux.html">dp_flux()</a></code>, <code><a href="reference/dp_pathways.html">dp_pathways()</a></code>
+<code><a href="reference/dp_flux.html">dp_flux()</a></code>, <code>dp_omni(destination = )</code>
 </td>
 </tr>
 </tbody>

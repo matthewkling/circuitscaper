@@ -79,12 +79,13 @@
 <!-- dipole-methods.Rmd is generated from dipole-methods.Rmd.orig, which
 needs Julia: run dev/precompute-articles.R. Edit the .orig file. -->
 <p>The dipole methods are circuitscaper’s own connectivity methods. They
-map pairwise, omnidirectional and cross-era connectivity on the same
-circuits Circuitscape builds, but instead of solving one circuit per
-pair, window or source, they factor the circuit once and solve many
-balanced source–sink pairs (“dipoles”) against it at a time, combined by
-superposition. A map takes one factorization and about 32 solves,
-whatever the number of pairs it covers.</p>
+map pairwise and omnidirectional connectivity, and connectivity between
+two distributions, on the same circuits Circuitscape builds, but instead
+of solving one circuit per pair, window or source, they factor the
+circuit once and solve many balanced source–sink pairs (“dipoles”)
+against it at a time, combined by superposition. A map takes one
+factorization and about 32 solves, whatever the number of pairs it
+covers.</p>
 <blockquote>
 <p><strong>Status: experimental.</strong> The dipole methods are new and
 not yet published. They are tested against exact answers (see <a href="#validation">Validation</a>), but their interface may change, and
@@ -107,7 +108,8 @@ results differ</a>).</p>
 <tr class="odd">
 <td><code><a href="../reference/dp_omni.html">dp_omni()</a></code></td>
 <td>Omnidirectional connectivity among habitat within a dispersal
-radius</td>
+radius; with a <code>destination</code>, the routes linking two
+distributions</td>
 <td><code><a href="../reference/os_run.html">os_run()</a></code></td>
 </tr>
 <tr class="even">
@@ -118,20 +120,13 @@ radius</td>
 </tr>
 <tr class="odd">
 <td><code><a href="../reference/dp_flux.html">dp_flux()</a></code></td>
-<td>Net flow from present to future habitat, with direction</td>
+<td>Net flow from an origin to a destination distribution, with
+direction</td>
 <td>
-<code><a href="../reference/cs_advanced.html">cs_advanced()</a></code> with present sources and future
-grounds</td>
+<code><a href="../reference/cs_advanced.html">cs_advanced()</a></code> with sources at the origin and grounds at
+the destination</td>
 </tr>
 <tr class="even">
-<td><code><a href="../reference/dp_pathways.html">dp_pathways()</a></code></td>
-<td>Routes between present and future habitat within dispersal
-reach</td>
-<td>
-<code><a href="../reference/os_run.html">os_run()</a></code> with <code>os_condition(future = )</code>
-</td>
-</tr>
-<tr class="odd">
 <td><code><a href="../reference/dp_circuit.html">dp_circuit()</a></code></td>
 <td>A factored circuit, to reuse across runs</td>
 <td></td>
@@ -345,28 +340,44 @@ coordinates, or a raster of positive integer IDs. Each node is one
 cell.</p>
 </div>
 <div class="section level2">
-<h2 id="cross-era-connectivity">Cross-era connectivity<a class="anchor" aria-label="anchor" href="#cross-era-connectivity"></a>
+<h2 id="connectivity-between-two-distributions">Connectivity between two distributions<a class="anchor" aria-label="anchor" href="#connectivity-between-two-distributions"></a>
 </h2>
-<p>The two cross-era methods take a present and a future source-strength
-surface, such as habitat suitability now and under a climate scenario.
-Here, the package’s example source and ground layers stand in for
-present and future habitat, at the bottom and top of the landscape:</p>
+<p>Some questions are about movement between two distributions rather
+than within one: from present to future habitat under climate change,
+between breeding and wintering ranges, between foraging and roosting
+habitat, or from source populations to restoration sites. Two maps
+answer them, both taking an origin and a destination surface:</p>
+<ul>
+<li>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the <strong>directional</strong> flow
+from origin to destination: signed current, so flows in opposite
+directions cancel and the map shows net movement, with its direction
+(<code>flow_x</code>, <code>flow_y</code>). It takes a single solve and
+is exact.</li>
+<li>
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the
+<strong>undirected</strong> routes between them: squared current, so
+every pair counts whichever way it flows, and swapping origin and
+destination gives the same map. It uses random dipoles, as with one
+surface.</li>
+</ul>
+<p>Here, the package’s example source and ground layers stand in for the
+two distributions, say a breeding range at the bottom of the landscape
+and a wintering range at the top:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">present</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">future</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/ground.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">present</span>, <span class="va">future</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>, main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"present"</span>, <span class="st">"future"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">origin</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">destination</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/ground.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">origin</span>, <span class="va">destination</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>, main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"origin"</span>, <span class="st">"destination"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figures/dp-crossera-data-1.png" alt="plot of chunk crossera-data"><div class="figcaption">plot of chunk crossera-data</div>
+<img src="figures/dp-two-dist-data-1.png" alt="plot of chunk two-dist-data"><div class="figcaption">plot of chunk two-dist-data</div>
 </div>
-<p><code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow of the range shift: present
-habitat injects one unit of current in all, and future habitat withdraws
-one unit, each cell in proportion to its strength. It takes a single
-solve, and the flow is signed, so the result includes its direction
-(<code>flow_x</code>, <code>flow_y</code>):</p>
+<p>With no <code>radius</code> (the default), <code><a href="../reference/dp_flux.html">dp_flux()</a></code>
+sends one unit of flow from the origin to the destination, each cell in
+proportion to its strength, wherever it has to go:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">flux</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">present</span>, <span class="va">future</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">flux</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">flux</span><span class="op">$</span><span class="va">current</span>, main <span class="op">=</span> <span class="st">"Net flux"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">flux</span><span class="op">$</span><span class="va">current</span>, main <span class="op">=</span> <span class="st">"Net flow"</span><span class="op">)</span></span>
 <span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span><span class="va">flux</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"flow_x"</span>, <span class="st">"flow_y"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span>, <span class="fl">5</span>, <span class="va">mean</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">xy</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/xyCellFrom.html" class="external-link">xyFromCell</a></span><span class="op">(</span><span class="va">a</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">ncell</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">values</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span>
@@ -378,18 +389,73 @@ solve, and the flow is signed, so the result includes its direction
 <div class="float">
 <img src="figures/dp-flux-1.png" alt="plot of chunk flux"><div class="figcaption">plot of chunk flux</div>
 </div>
-<p>Only the totals at each cell matter, not which present cell pairs
-with which future cell, so net flux has no dispersal limit: it shows how
-the range as a whole must move. <code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> asks instead
-which routes connect present habitat with future habitat within
-dispersal reach: random dipoles, as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>, with one
-end in present habitat and the other in future habitat within
-<code>radius</code>. It gives magnitude only, without direction.</p>
+<p>With a <code>radius</code>, only origin and destination cells within
+reach of each other are paired, so each origin cell sends its flow to
+the destination habitat near it. The <code>"in_reach"</code> attribute
+is the share of all origin–destination pairs (weighted by strength) that
+are within reach:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pathways</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_pathways.html">dp_pathways</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">present</span>, <span class="va">future</span>, radius <span class="op">=</span> <span class="fl">45</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pathways</span>, nc <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">near</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span>, radius <span class="op">=</span> <span class="fl">45</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">near</span>, <span class="st">"in_reach"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.4468008</span></span></code></pre></div>
+<p><code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the
+routes between the two distributions within reach, with flow potential
+and normalized current as for one surface:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">between</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">45</span>, source_strength <span class="op">=</span> <span class="va">origin</span>,</span>
+<span>                   destination <span class="op">=</span> <span class="va">destination</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">between</span>, nc <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figures/dp-pathways-1.png" alt="plot of chunk pathways"><div class="figcaption">plot of chunk pathways</div>
+<img src="figures/dp-between-1.png" alt="plot of chunk between"><div class="figcaption">plot of chunk between</div>
+</div>
+<div class="section level3">
+<h3 id="choosing-a-map">Choosing a map<a class="anchor" aria-label="anchor" href="#choosing-a-map"></a>
+</h3>
+<p>The dipole maps differ along four lines:</p>
+<ul>
+<li>
+<strong>Directional or undirected.</strong> Directional maps sum
+signed current, so opposite flows cancel; undirected maps sum squared
+current, so they don’t.</li>
+<li>
+<strong>One surface or two.</strong> Pairs are drawn from one
+distribution, or from an origin to a destination.</li>
+<li>
+<strong>Radius or unconstrained.</strong> Pairs are limited to cells
+within <code>radius</code>, or not.</li>
+<li>
+<strong>Distributed or focal.</strong> Every cell of a surface takes
+part, in proportion to its strength, or only a set of focal nodes.</li>
+</ul>
+<table class="table">
+<thead><tr class="header">
+<th></th>
+<th>Undirected</th>
+<th>Directional</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>One surface</td>
+<td><code><a href="../reference/dp_omni.html">dp_omni()</a></code></td>
+<td>(always zero)</td>
+</tr>
+<tr class="even">
+<td>Two surfaces</td>
+<td><code>dp_omni(destination = )</code></td>
+<td><code><a href="../reference/dp_flux.html">dp_flux()</a></code></td>
+</tr>
+<tr class="odd">
+<td>Focal nodes</td>
+<td><code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>A directional map from one surface is always zero: for every pair
+from <span class="math inline">\(i\)</span> to <span class="math inline">\(j\)</span> there is the same pair from <span class="math inline">\(j\)</span> to <span class="math inline">\(i\)</span>, and their currents cancel.
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code> and <code><a href="../reference/dp_flux.html">dp_flux()</a></code> both take a
+<code>radius</code> (in <code><a href="../reference/dp_flux.html">dp_flux()</a></code>, the default is no
+limit); <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> pairs all focal nodes.</p>
 </div>
 </div>
 <div class="section level2">
@@ -401,7 +467,7 @@ distance in kilometres: great-circle distance between cell centres on
 longitude/latitude grids, where the kernel narrows in degrees of
 longitude towards the poles, or distance in the coordinate system’s
 units on projected grids.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">suitability</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/suitability.tif"</span><span class="op">)</span>   <span class="co"># e.g. lon/lat, 2 km cells</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">50</span>, radius_units <span class="op">=</span> <span class="st">"km"</span>,</span>
 <span>                  source_strength <span class="op">=</span> <span class="va">suitability</span><span class="op">)</span></span></code></pre></div>
@@ -597,27 +663,43 @@ and</p>
 <p>so the all-pairs sum needs only the <span class="math inline">\(N\)</span> solves.</p>
 </div>
 <div class="section level3">
-<h3 id="cross-era-methods">Cross-era methods<a class="anchor" aria-label="anchor" href="#cross-era-methods"></a>
+<h3 id="two-distribution-methods">Two-distribution methods<a class="anchor" aria-label="anchor" href="#two-distribution-methods"></a>
 </h3>
-<p><code><a href="../reference/dp_flux.html">dp_flux()</a></code> injects <span class="math inline">\(b = p /
-\sum p - f / \sum f\)</span>, for present and future source strengths
-<span class="math inline">\(p\)</span> and <span class="math inline">\(f\)</span>, and solves once. That is the
-minimum-energy flow that turns the present distribution into the future
-one. The withdrawals at future habitat are fixed amounts, not grounds:
-each future cell takes its share however far away it is, whereas with
+<p>Both maps sum over pairs of an origin cell <span class="math inline">\(i\)</span> and a destination cell <span class="math inline">\(j\)</span> with weights <span class="math inline">\(o_i\, d_j\, k(d_{ij})\)</span>, where <span class="math inline">\(o\)</span> and <span class="math inline">\(d\)</span> are origin and destination strength and
+<span class="math inline">\(k\)</span> is 1 within the radius (or
+everywhere, with no radius) and 0 otherwise, in the same component.</p>
+<p><code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> sums the
+pairs’ squared currents <span class="math inline">\(I_e(i,j)^2\)</span>,
+as with one surface but with these weights. The pairing is one-way, but
+a pair’s squared current is the same in both directions, so random signs
+still apply, and the map doesn’t depend on which surface is the origin.
+Cells in both distributions take part at both ends.</p>
+<p><code><a href="../reference/dp_flux.html">dp_flux()</a></code> sums the pairs’ signed currents <span class="math inline">\(I_e(i,j)\)</span>, divided by the total weight
+<span class="math inline">\(W = \sum_{i,j} o_i\, d_j\,
+k(d_{ij})\)</span> so that one unit flows in all. The sum is linear in
+the currents, so it is the current from a single injection,</p>
+<p><span class="math display">\[
+b_i = \frac{o_i\, (Kd)_i - d_i\, (Ko)_i}{W} ,
+\]</span></p>
+<p>where <span class="math inline">\((Kd)_i\)</span> is the destination
+strength within reach of cell <span class="math inline">\(i\)</span> and
+<span class="math inline">\((Ko)_i\)</span> the origin strength within
+reach of it: each origin cell sends in proportion to its strength and
+the destination within its reach, and each destination cell receives in
+proportion to its strength and the origin within its reach. The kernel
+sums take prefix sums along the rows of the grid, as for <span class="math inline">\(S\)</span>. With no radius and one component, this
+is <span class="math inline">\(b = o / \sum o - d / \sum d\)</span>, the
+minimum-energy flow that turns the origin distribution into the
+destination one. The withdrawals are fixed amounts, not grounds: each
+destination cell takes its share however far away it is, whereas with
 grounds, as in <code><a href="../reference/cs_advanced.html">cs_advanced()</a></code>, current drains into whichever
-future habitat is electrically nearest. Where present and future habitat
-coincide, injection and withdrawal cancel, so net flux mostly measures
-movement from lost to gained habitat. Flow must balance within each
-component, so each component’s present and future totals are set equal;
-the share that would have had to cross between components is returned as
-the <code>"imbalance"</code> attribute.</p>
-<p><code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> is <code><a href="../reference/dp_omni.html">dp_omni()</a></code> with pair
-weights <span class="math inline">\(p_i\, f_j\, k(d_{ij})\)</span>: one
-end in present habitat and the other in future habitat, within the
-radius. The pairing is one-way, but a pair’s squared current is the same
-in both directions, so random signs still apply. Habitat that is
-suitable in both eras takes part at both ends.</p>
+destination is electrically nearest. Where the two distributions
+overlap, a cell’s pair with itself counts in <span class="math inline">\(W\)</span> but moves nothing, so flow cancels
+there and the map mostly shows movement from origin-only to
+destination-only habitat. With several components, each carries its
+share of <span class="math inline">\(W\)</span>; origin cells with no
+destination within reach send nothing, and <span class="math inline">\(W
+/ (\sum o \sum d)\)</span> is returned as <code>"in_reach"</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="how-the-results-differ-from-circuitscape-and-omniscape">How the results differ from Circuitscape and Omniscape<a class="anchor" aria-label="anchor" href="#how-the-results-differ-from-circuitscape-and-omniscape"></a>
@@ -689,9 +771,8 @@ with published thresholds based on them.</li>
 draws.</li>
 <li>
 <strong>No direction</strong> from the random-dipole maps
-(<code><a href="../reference/dp_omni.html">dp_omni()</a></code>, <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code>,
-<code><a href="../reference/dp_pathways.html">dp_pathways()</a></code>). <code><a href="../reference/dp_flux.html">dp_flux()</a></code> gives
-direction.</li>
+(<code><a href="../reference/dp_omni.html">dp_omni()</a></code>, <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code>).
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> gives direction.</li>
 <li>
 <strong>Memory.</strong> A factorization of the whole grid must fit
 in memory; see <a href="#performance-and-memory">Performance and
@@ -723,7 +804,7 @@ exact focal-node identity is related to Brandes &amp; Fleischer’s (2005)
 algorithm for current-flow betweenness. What the dipole methods add is
 the application to landscape connectivity: habitat-weighted,
 dispersal-limited pair distributions on raster circuits, flow-potential
-normalization, and the cross-era operations.</p>
+normalization, and the maps between two distributions.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

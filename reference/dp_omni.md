@@ -9,6 +9,7 @@ dp_omni(
   resistance,
   radius,
   source_strength = NULL,
+  destination = NULL,
   source_threshold = 0.01,
   radius_units = c("pixels", "km"),
   resistance_is = "resistances",
@@ -44,11 +45,21 @@ dp_omni(
   suitability. If `NULL` (default), the conductance surface is used, as
   in
   [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md).
+  With a `destination`, this is the origin strength.
+
+- destination:
+
+  Optional
+  [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
+  or file path on the same grid: destination strength, e.g. habitat
+  suitability in another period or season. If given, only pairs of an
+  origin and a destination cell count. Default `NULL`: pairs of cells of
+  one surface.
 
 - source_threshold:
 
-  Numeric. Cells with source strength below this are not sources.
-  Default `0.01`.
+  Numeric. Cells with source (or destination) strength below this are
+  not sources (or destinations). Default `0.01`.
 
 - radius_units:
 
@@ -91,8 +102,8 @@ A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 with layers `current`, and with `normalize`, `flow_potential` and
 `normalized_current`. Attributes: `"halves"`, a data frame comparing the
-estimates from odd and even draws on source cells (Spearman's \\\rho\\
-and the median relative difference), and `"seed"`.
+estimates from odd and even draws on source (and destination) cells
+(Spearman's \\\rho\\ and the median relative difference), and `"seed"`.
 
 ## Details
 
@@ -101,6 +112,15 @@ Maps omnidirectional connectivity among habitat, in the role of
 with the random-dipole method: many random source-sink pairs superposed
 on one factored circuit, which takes about `n_draws` solves whatever the
 number of pairs.
+
+With a `destination`, it maps connectivity between two distributions
+instead: the routes linking origin cells (`source_strength`) to
+destination cells within `radius`, for example present to future
+habitat, breeding to wintering grounds, or foraging to roosting habitat.
+The map is undirected: every pair counts whichever way it flows, so
+swapping the two surfaces gives the same map. For the net flow from one
+to the other, with its direction, see
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md).
 
 For each link \\e\\ of the circuit (see
 [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)),
@@ -114,6 +134,15 @@ a link's squared current is the derivative of the pair's effective
 resistance with respect to that link's resistance, so the map is the
 sensitivity of habitat-weighted pairwise resistance to degrading each
 cell.
+
+With a `destination`, the pair weights are \\o_i d_j k(d\_{ij})\\, with
+\\o\\ the origin (`source_strength`) and \\d\\ the destination strength.
+Since \\I_e(i,j)^2 = I_e(j,i)^2\\, only the unordered pairs matter, and
+the map is the same whichever surface is the origin. A cell's pair with
+itself carries no current. Cells in both distributions take part at both
+ends, unlike in
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
+where their flow cancels. With one surface, \\o = d = w\\.
 
 Each draw injects `n_dipoles` unit dipoles, pairs drawn in proportion to
 \\w_i w_j k(d\_{ij})\\, each with a random sign, and solves the circuit
@@ -173,7 +202,7 @@ To reuse factorizations across runs, pass a circuit from
 
 [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md),
 [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md),
-[`dp_pathways()`](https://matthewkling.github.io/circuitscaper/reference/dp_pathways.md),
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md),
 [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md)
 
 ## Examples
@@ -185,6 +214,13 @@ resistance <- terra::rast(system.file("extdata/resistance.tif",
 result <- dp_omni(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "halves")
+
+# Connectivity between two distributions
+origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
+destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+between <- dp_omni(resistance, radius = 45, source_strength = origin,
+                   destination = destination, seed = 1)
+terra::plot(between)
 DONTSHOW({JuliaConnectoR::stopJulia()})
 }
 ```

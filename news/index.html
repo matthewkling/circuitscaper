@@ -50,13 +50,11 @@
 <ul><li>
 <p>New dipole methods: connectivity from many balanced source-sink pairs (“dipoles”) superposed on one factored circuit, at a cost of one factorization and a few dozen solves whatever the number of pairs.</p>
 <ul><li>
-<code><a href="../reference/dp_omni.html">dp_omni()</a></code> maps omnidirectional connectivity among habitat, in the role of <code><a href="../reference/os_run.html">os_run()</a></code>, from random-sign dipoles within a radius (in pixels or km): current, flow potential and normalized current, with a built-in estimate of its sampling noise.</li>
+<code><a href="../reference/dp_omni.html">dp_omni()</a></code> maps omnidirectional connectivity among habitat, in the role of <code><a href="../reference/os_run.html">os_run()</a></code>, from random-sign dipoles within a radius (in pixels or km): current, flow potential and normalized current, with a built-in estimate of its sampling noise. With a <code>destination</code>, it maps the routes linking two distributions, such as present and future habitat, seasonal ranges, or two habitat types, without direction.</li>
 <li>
 <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> maps connectivity among every pair of focal nodes, the squared-current analogue of <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s cumulative map, at a cost independent of the number of nodes, or exactly from one solve per node.</li>
 <li>
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow of a range shift from present to future habitat, with direction, in one solve.</li>
-<li>
-<code><a href="../reference/dp_pathways.html">dp_pathways()</a></code> maps the pathways connecting present to future habitat within dispersal reach.</li>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow from an origin to a destination distribution, with direction, in one solve, among pairs within an optional radius.</li>
 <li>
 <code><a href="../reference/dp_circuit.html">dp_circuit()</a></code> prepares a circuit whose factorizations several runs can reuse.</li>
 </ul><p>These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>. They are experimental.</p>
