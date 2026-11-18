@@ -147,12 +147,13 @@ flow$fill <- col$current[1 + round(255 * v)]
 # plot ----------------------------------------------------------------------------------------
 
 p <- ggplot() +
-      geom_raster(data = flow, aes(X, Y, fill = fill)) +
-      scale_fill_identity() +
+      geom_raster(data = flow, aes(X, Y, fill = rank(current)^2)) +
       coord_equal(xlim = c(-1, 1) * sqrt(3) / 2 * R, ylim = c(-1, 1) * R, expand = FALSE) +
       theme_void() +
       theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0),
-            plot.background = element_blank(), panel.background = element_blank())
+            plot.background = element_blank(), panel.background = element_blank()) +
+      scale_fill_gradientn(colors = viridisLite::magma(11),
+                           values = c(0, .05, .1, .15, .3, .5, .7, .8, .87, .93, 1))
 
 # render, mask to the hexagon, and add a border -----------------------------------------------
 

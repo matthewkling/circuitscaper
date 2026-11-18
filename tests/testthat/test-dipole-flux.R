@@ -23,9 +23,10 @@ flux_pair_weights <- function(circuit, gi, o, d, radius) {
   P
 }
 
-# Per-node half sums of |I| over incident links for injection b, from a dense
-# solve with one node grounded per component
-flux_exact_current <- function(gi, b) {
+# Per-node half sums of |I| over incident links for injection b (with `rms`,
+# the root of half the sum of I^2), from a dense solve with one node
+# grounded per component
+flux_exact_current <- function(gi, b, rms = FALSE) {
   n <- length(gi$comp)
   L <- matrix(0, n, n)
   L[cbind(gi$a, gi$b)] <- -gi$g
@@ -39,10 +40,11 @@ flux_exact_current <- function(gi, b) {
     V[keep] <- solve(L[keep, keep], b[keep])
   }
   I <- abs(gi$g * (V[gi$a] - V[gi$b]))
+  if (rms) I <- I^2
   cells <- numeric(n)
   agg <- rowsum(c(I, I), c(gi$a, gi$b))
   cells[as.integer(rownames(agg))] <- agg[, 1]
-  cells / 2
+  if (rms) sqrt(cells / 2) else cells / 2
 }
 
 flux_test_inputs <- function() {
@@ -77,7 +79,8 @@ test_that("dp_flux matches the prototype's net flux (oracle 5)", {
 
   got <- dp_flux(s$conductance, s$origin, s$destination, source_threshold = 0,
                  resistance_is = "conductances")
-  expect_named(got, c("current", "flow_x", "flow_y"))
+  expect_named(got, c("current", "flow_potential", "normalized_current",
+                     "flow_x", "flow_y"))
   expect_equal(terra::values(got$current, mat = FALSE),
                terra::values(want, mat = FALSE), tolerance = 1e-8)
   expect_equal(attr(got, "in_reach"), 1, tolerance = 1e-12)
@@ -116,6 +119,57 @@ test_that("dp_flux matches a dense solve with a radius", {
   expect_equal(attr(far, "in_reach"), attr(inf, "in_reach"), tolerance = 1e-12)
 })
 
+test_that("dp_flux gives RMS cell values, bounded by the undirected map", {
+  skip_if_no_julia(circuitscape = FALSE)
+  t <- flux_test_inputs()
+  P <- flux_pair_weights(t$circuit, t$gi, t$o, t$d, 5)
+  W <- sum(P)
+  b <- (rowSums(P) - colSums(P)) / W
+  r <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5, cell_value = "rms")
+  rms <- dp_node_values(t$circuit, r$current)
+  expect_equal(rms, flux_exact_current(t$gi, b, rms = TRUE), tolerance = 1e-8)
+  # flow_x and flow_y don't depend on cell_value
+  a <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5)
+  flows <- c("flow_x", "flow_y")
+  expect_equal(terra::values(r[[flows]]), terra::values(a[[flows]]))
+  expect_named(dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5,
+                       cell_value = "rms", normalize = FALSE, direction = FALSE),
+               "current")
+
+  # Exact undirected map (dp_omni with a destination): current^2 is half the
+  # sum over a cell's links of sum_ij P_ij I_e(i, j)^2. The directional RMS
+  # current squared, times W, is at most that.
+  Pu <- P
+  diag(Pu) <- 0
+  undirected <- dipole_exact_cells(t$gi, (Pu + t(Pu)) / 2) / 2
+  ok <- undirected > 1e-12 * max(undirected)
+  ratio <- W * rms[ok]^2 / undirected[ok]
+  expect_true(all(ratio <= 1 + 1e-8))
+
+  # Close to 1 where all pairs flow the same way: origin in the west,
+  # destination in the east
+  tmpl <- terra::rast(nrows = 9, ncols = 24, xmin = 0, xmax = 24, ymin = 0, ymax = 9,
+                      crs = "EPSG:5070")
+  circuit <- dp_circuit(terra::setValues(tmpl, 1), resistance_is = "conductances",
+                        flow_potential = FALSE)
+  col <- (seq_len(terra::ncell(tmpl)) - 1) %% 24 + 1
+  origin <- terra::setValues(tmpl, as.numeric(col <= 2))
+  destination <- terra::setValues(tmpl, as.numeric(col >= 23))
+  gi <- dipole_graph_info(circuit)
+  o <- dp_node_values(circuit, origin)
+  d <- dp_node_values(circuit, destination)
+  P <- flux_pair_weights(circuit, gi, o, d, Inf)
+  r <- dp_flux(circuit, origin, destination, cell_value = "rms")
+  rms <- dp_node_values(circuit, r$current)
+  undirected <- dipole_exact_cells(gi, (P + t(P)) / 2) / 2
+  ratio <- sum(P) * rms^2 / undirected
+  mid <- col[circuit$env$cells] %in% 8:17
+  expect_true(all(ratio <= 1 + 1e-8))
+  expect_gt(min(ratio[mid]), 0.9)
+  expect_error(dp_flux(t$circuit, t$x$suitability, t$dest, cell_value = "sum"),
+               "should be one of")
+})
+
 test_that("swapping origin and destination reverses the flow", {
   skip_if_no_julia(circuitscape = FALSE)
   t <- flux_test_inputs()
@@ -144,7 +198,10 @@ test_that("dp_flux gives the direction of flow", {
   fy <- terra::as.matrix(r$flow_y, wide = TRUE)
   expect_equal(fy[1:7, ], -fy[15:9, ], tolerance = 1e-8)
   expect_named(dp_flux(cond, origin, destination, resistance_is = "conductances",
-                       direction = FALSE), "current")
+                       direction = FALSE),
+               c("current", "flow_potential", "normalized_current"))
+  expect_named(dp_flux(cond, origin, destination, resistance_is = "conductances",
+                       normalize = FALSE), c("current", "flow_x", "flow_y"))
   # Out of reach
   expect_error(dp_flux(cond, origin, destination, radius = 20,
                        resistance_is = "conductances"), "within `radius`")
@@ -181,4 +238,20 @@ test_that("dp_flux weights each component by its origin-destination pairs", {
   cur_left <- terra::values(only_left$current, mat = FALSE)
   expect_equal(cur[left], share * cur_left[left], tolerance = 1e-8)
   expect_true(all(cur_left[!left & !is.na(cur_left)] == 0))
+})
+
+test_that("dp_flux's flow potential is the same flow on the uniform circuit", {
+  skip_if_no_julia(circuitscape = FALSE)
+  t <- flux_test_inputs()
+  uniform <- terra::mask(t$x$conductance * 0 + 1, t$x$conductance)
+  for (cv in c("absolute", "rms")) {
+    r <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 6, cell_value = cv)
+    u <- dp_flux(uniform, t$x$suitability, t$dest, radius = 6, cell_value = cv,
+                 resistance_is = "conductances", normalize = FALSE)
+    fp <- terra::values(r$flow_potential, mat = FALSE)
+    expect_equal(fp, terra::values(u$current, mat = FALSE), tolerance = 1e-8)
+    cur <- terra::values(r$current, mat = FALSE)
+    expect_equal(terra::values(r$normalized_current, mat = FALSE),
+                 ifelse(fp > 0, cur / fp, NA), tolerance = 1e-12)
+  }
 })

@@ -11,15 +11,19 @@
 #' [dp_omni()] with a `destination`.
 #'
 #' @details
-#' The map is the signed sum over origin–destination pairs of cells within
-#' `radius` of each other,
+#' Current flows along the circuit's links: the resistors joining each cell
+#' to its 8 neighbours (see [dp_circuit()]). The map is defined per link, as
+#' the signed sum over origin–destination pairs of cells within `radius` of
+#' each other,
 #' \deqn{F_e = \frac{1}{W} \sum_{i,j} o_i\, d_j\, k(d_{ij})\, I_e(i,j),}
 #' where \eqn{o} and \eqn{d} are origin and destination strength, \eqn{k} is
 #' 1 for cells within `radius` of each other and 0 otherwise, \eqn{I_e(i,j)}
 #' is the current through link \eqn{e} when one unit flows from \eqn{i} to
 #' \eqn{j}, and \eqn{W = \sum_{i,j} o_i d_j k(d_{ij})} makes the pair weights
 #' sum to one unit of flow. Pairs never span groups of cells that NA cells
-#' separate (components), since no current passes between them.
+#' separate (components), since no current passes between them. A cell's
+#' value combines the links that meet at it, up to 8 (see `current` below),
+#' each link being shared by the two cells it joins.
 #'
 #' The sum is linear in the pairs' currents, so it takes a single solve, of
 #' the injection \eqn{b_i = (o_i\, (Kd)_i - d_i\, (Ko)_i) / W}, where
@@ -43,6 +47,19 @@
 #' Swapping `origin` and `destination` reverses the flow: the same `current`,
 #' with `flow_x` and `flow_y` negated.
 #'
+#' ## Directional and undirected maps
+#' [dp_omni()] with a `destination` maps the undirected counterpart, from the
+#' same pairs: their squared currents, so flows in opposite directions don't
+#' cancel. [dp_directionality()] computes both maps at once, with their
+#' ratio, which shows where movement between the two distributions is
+#' one-way and where it runs both ways.
+#'
+#' ## Performance
+#' The time is mostly factoring the circuit, and with `normalize`, its
+#' uniform twin, which about doubles it; set `normalize = FALSE` to skip
+#' that. Each map then takes one solve. To reuse factorizations across runs,
+#' pass a circuit from [dp_circuit()].
+#'
 #' @inheritParams dp_omni
 #' @param origin,destination [terra::SpatRaster]s or file paths on the same
 #'   grid as `resistance`: origin and destination strength, e.g. habitat
@@ -52,13 +69,26 @@
 #'   default (see `radius_units`). Default `Inf`, no distance limit.
 #' @param source_threshold Numeric. Cells with origin or destination strength
 #'   below this are not origins or destinations. Default `0.01`.
+#' @param normalize Logical. Also compute flow potential (the same flow on
+#'   the uniform circuit, conductance 1 on the same cells) and normalized
+#'   current. Default `TRUE`.
 #' @param direction Logical. Also return the components of net flow.
 #'   Default `TRUE`.
+#' @param cell_value Character. How `current` sums a cell's links:
+#'   `"absolute"` (default), half the sum of absolute current, as in
+#'   Circuitscape's current maps; or `"rms"`, the square root of half the sum
+#'   of squared current, as in [dp_omni()].
 #'
 #' @return A [terra::SpatRaster] with layers:
 #' \describe{
 #'   \item{current}{Half the sum of absolute current over a cell's links, as
-#'     in Circuitscape's current maps (without the injection term).}
+#'     in Circuitscape's current maps (without the injection term), or with
+#'     `cell_value = "rms"`, the square root of half the sum of squared
+#'     current.}
+#'   \item{flow_potential, normalized_current}{(with `normalize`) `current`
+#'     on the uniform circuit, summarised the same way, and `current`
+#'     divided by it: above 1 where the landscape channels the flow, below 1
+#'     where it impedes it.}
 #'   \item{flow_x, flow_y}{(with `direction`) Net flow through the cell
 #'     towards the east and the north, in grid directions: half the sum
 #'     over the cell's links of the current along the link times its unit
@@ -69,7 +99,7 @@
 #' component, and so carried by the map. A small share means most of the
 #' origin has no destination within reach.
 #'
-#' @seealso [dp_omni()], [cs_advanced()]
+#' @seealso [dp_omni()], [dp_directionality()], [cs_advanced()]
 #'
 #' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
@@ -87,26 +117,54 @@
 #' @export
 dp_flux <- function(resistance, origin, destination, radius = Inf,
                     source_threshold = 0.01, radius_units = c("pixels", "km"),
-                    resistance_is = "resistances", direction = TRUE) {
+                    resistance_is = "resistances", normalize = TRUE,
+                    direction = TRUE, cell_value = c("absolute", "rms")) {
   radius_units <- match.arg(radius_units)
-  circuit <- dp_as_circuit(resistance, resistance_is)
+  cell_value <- match.arg(cell_value)
+  normalize <- isTRUE(normalize)
+  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   o <- dp_weights(circuit, origin, source_threshold, "origin")
   d <- dp_weights(circuit, destination, source_threshold, "destination")
+  f <- dp_flux_values(circuit, o, d, kernel, normalize, cell_value)
+
+  v <- cbind(current = f$current)
+  if (normalize) v <- cbind(v, flow_potential = f$fp, normalized_current = f$nc)
+  if (isTRUE(direction)) v <- cbind(v, flow_x = f$flow[, 1], flow_y = f$flow[, 2])
+  out <- dp_to_raster(circuit, v, colnames(v))
+  attr(out, "in_reach") <- f$in_reach
+  out
+}
+
+
+#' Directional Flow Values in Node Order
+#'
+#' Solves the flux injection on the circuit and, with `normalize`, on its
+#' uniform twin. Returns per-node `current` (summarised by `cell_value`),
+#' `flow` (x and y), and with `normalize`, `fp` and `nc`; the injection `b`,
+#' the total pair weight `W` and `in_reach`. With `check = FALSE`, returns
+#' `NULL` instead of an error when no pairs are within reach.
+#' @noRd
+dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
+                           check = TRUE) {
   inj <- dp_call("flux_injection", circuit$env$id, o, d, kernel$dr0, kernel$hw,
                  kernel$rowmap)
   if (inj$in_reach <= 0) {
+    if (!check) return(NULL)
     stop("No origin and destination cells are within `radius` of each other ",
          "in the same connected part of the circuit, so there is no flow.",
          call. = FALSE)
   }
-
-  cells <- dp_call("flux", circuit$env$id, as.double(inj$b))
-  out <- if (isTRUE(direction)) {
-    dp_to_raster(circuit, 0.5 * cells[, c(1, 3, 4)], c("current", "flow_x", "flow_y"))
-  } else {
-    dp_to_raster(circuit, 0.5 * cells[, 1], "current")
+  b <- as.double(inj$b)
+  summarise <- function(cells) {
+    if (cell_value == "rms") sqrt(0.5 * cells[, 2]) else 0.5 * cells[, 1]
   }
-  attr(out, "in_reach") <- inj$in_reach
+  cells <- dp_call("flux", circuit$env$id, b)
+  out <- list(current = summarise(cells), flow = 0.5 * cells[, 3:4, drop = FALSE],
+              b = b, W = inj$W, in_reach = inj$in_reach)
+  if (normalize) {
+    out$fp <- summarise(dp_call("flux", circuit$env$uniform_id, b))
+    out$nc <- ifelse(out$fp > 0, out$current / out$fp, NA_real_)
+  }
   out
 }

@@ -178,3 +178,15 @@ test_that("count_focal_nodes ignores NA and zero", {
 
   expect_equal(count_focal_nodes(r, "unused"), 2)
 })
+
+test_that("cs_uniform_surface keeps the circuit's cells", {
+  r <- terra::rast(nrows = 2, ncols = 3, vals = c(5, NA, 0, 2, 1000, 0.5))
+  u <- cs_uniform_surface(r, "resistances")
+  expect_equal(terra::values(u, mat = FALSE), c(1, NA, 1, 1, 1, 1))
+  u <- cs_uniform_surface(r, "conductances")
+  expect_equal(terra::values(u, mat = FALSE), c(1, NA, 0, 1, 1, 1))
+  path <- withr::local_tempfile(fileext = ".tif")
+  terra::writeRaster(r, path)
+  expect_equal(terra::values(cs_uniform_surface(path, "conductances"), mat = FALSE),
+               c(1, NA, 0, 1, 1, 1))
+})

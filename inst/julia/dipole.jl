@@ -218,22 +218,15 @@ end
 # A set of cell offsets (dr, dc) around a source cell. For each row offset
 # dr = dr0 + d - 1 the column offsets are one run, -hw[d, kr] .. hw[d, kr]
 # (none if hw < 0). The kernel may vary by the source cell's grid row:
-# kr = rowmap[row]. Offsets are proposed uniformly from 1:kmax, the size of
-# the largest row kernel, and proposals beyond a row's own count rejected,
-# so every pair within the kernel is proposed with the same probability.
+# kr = rowmap[row].
 struct Kernel
     dr0::Int
     hw::Matrix{Int}          # row offsets x kernel rows
     rowmap::Vector{Int}      # grid row -> kernel row
-    cum::Matrix{Int}         # cumulative offset counts, same layout as hw
-    kmax::Int
 end
 
-function Kernel(dr0::Integer, hw::AbstractMatrix{<:Real}, rowmap::AbstractVector{<:Real})
-    hw = Matrix{Int}(round.(Int, hw))
-    cum = cumsum(max.(2 .* hw .+ 1, 0), dims = 1)
-    Kernel(Int(dr0), hw, Vector{Int}(round.(Int, rowmap)), cum, maximum(cum[end, :]))
-end
+Kernel(dr0::Integer, hw::AbstractMatrix{<:Real}, rowmap::AbstractVector{<:Real}) =
+    Kernel(Int(dr0), Matrix{Int}(round.(Int, hw)), Vector{Int}(round.(Int, rowmap)))
 
 # A disk of `radius` pixels: dr^2 + dc^2 <= radius^2
 function pixel_kernel(radius::Real, nr::Int)
@@ -256,107 +249,7 @@ function isqrt_floor(x::Real)
 end
 
 
-# Sampling ---------------------------------------------------------------------
-
-# Dipole endpoints (i, j) drawn with probability proportional to
-# w1_i * w2_j * k_ij over ordered pairs with i != j in the same component.
-# i is drawn in proportion to w1; j either in proportion to w2 (no kernel)
-# or as a kernel offset from i, accepted with probability w2_j / max(w2).
-struct Sampler
-    graph::Graph
-    w1::Vector{Float64}
-    w2::Vector{Float64}
-    src::Vector{Int}
-    cum1::Vector{Float64}
-    dst::Vector{Int}
-    cum2::Vector{Float64}
-    w2max::Float64
-    kernel::Union{Nothing, Kernel}
-end
-
-function Sampler(gr::Graph, w1::AbstractVector{<:Real}, w2::AbstractVector{<:Real},
-                 kernel::Union{Nothing, Kernel})
-    w1 = Vector{Float64}(w1)
-    w2 = Vector{Float64}(w2)
-    src = findall(>(0), w1)
-    dst = findall(>(0), w2)
-    Sampler(gr, w1, w2, src, cumsum(w1[src]), dst, cumsum(w2[dst]),
-            isempty(dst) ? 0.0 : maximum(w2[dst]), kernel)
-end
-
-pick(rng, nodes, cum) = nodes[min(searchsortedfirst(cum, rand(rng) * cum[end]), length(nodes))]
-
-function draw_pair(rng::AbstractRNG, s::Sampler)
-    gr = s.graph
-    K = s.kernel
-    while true
-        i = pick(rng, s.src, s.cum1)
-        if K === nothing
-            j = pick(rng, s.dst, s.cum2)
-        else
-            kr = K.rowmap[gr.node_r[i]]
-            u = rand(rng, 1:K.kmax)
-            cum = view(K.cum, :, kr)
-            u > cum[end] && continue
-            d = searchsortedfirst(cum, u)
-            prev = d > 1 ? cum[d - 1] : 0
-            r = gr.node_r[i] + K.dr0 + d - 1
-            c = gr.node_c[i] + (u - prev - 1) - K.hw[d, kr]
-            (1 <= r <= gr.nr && 1 <= c <= gr.nc) || continue
-            j = gr.id[r, c]
-            j == 0 && continue
-            rand(rng) * s.w2max < s.w2[j] || continue
-        end
-        (j == i || gr.comp[j] != gr.comp[i]) && continue
-        return i, j
-    end
-end
-
-# Each draw is its own random stream, seeded by (seed, draw), so a draw's
-# injection doesn't depend on batching or threads
-draw_rng(seed::Integer, draw::Integer) = Xoshiro(UInt64[seed, draw])
-
-random_sign(rng::AbstractRNG) = rand(rng, Bool) ? 1.0 : -1.0
-
-# Fill B's columns with draws `draws`: m dipoles each, weighted by
-# `weight(rng)` (random signs; another distribution, e.g. Cauchy for
-# absolute current, plugs in here)
-function injections!(B::Matrix{Float64}, s::Sampler, seed::Integer, draws::AbstractVector{<:Integer},
-                     m::Integer; weight::W = random_sign) where {W}
-    fill!(B, 0.0)
-    @threads for k in eachindex(draws)
-        rng = draw_rng(seed, draws[k])
-        for _ in 1:m
-            i, j = draw_pair(rng, s)
-            sg = weight(rng)
-            @inbounds B[i, k] += sg
-            @inbounds B[j, k] -= sg
-        end
-    end
-    B
-end
-
-# S: the sum of w1_i * w2_j * k_ij over exactly the ordered pairs the
-# sampler can produce (i != j, same component)
-function pair_sum(s::Sampler)
-    gr = s.graph
-    self = sum(s.w1[i] * s.w2[i] for i in eachindex(s.w1); init = 0.0)
-    total = 0.0
-    if s.kernel === nothing
-        W1 = zeros(gr.ncomp)
-        W2 = zeros(gr.ncomp)
-        for i in eachindex(s.w1)
-            W1[gr.comp[i]] += s.w1[i]
-            W2[gr.comp[i]] += s.w2[i]
-        end
-        total = sum(W1 .* W2)
-    else
-        for nodes in component_members(gr)
-            total += kernel_pair_sum(s, nodes)
-        end
-    end
-    max(total - self, 0.0)
-end
+# Window sums ------------------------------------------------------------------
 
 # Node numbers in each component
 function component_members(gr::Graph)
@@ -408,6 +301,197 @@ function window_sum(ws::WindowSums, K::Kernel, gr::Graph, i::Int)
     acc
 end
 
+# Sampling ---------------------------------------------------------------------
+
+# Dipole endpoints (i, j) drawn exactly with probability proportional to
+# w1_i * w2_j * k_ij over ordered pairs with i != j in the same component, in
+# two stages and without rejection. i is drawn in proportion to
+# w1_i * (Kw2_i - w2_i), its share of the pair weight. Then j is drawn in
+# proportion to w2_j among the cells in i's kernel (or, with no kernel, i's
+# component), i itself left out: with a kernel, a kernel row by its sum of
+# w2, from per-row prefix sums, then a column by binary search. Each dipole
+# costs O(kernel rows), however w2 is spread.
+struct Sampler
+    graph::Graph
+    w1::Vector{Float64}
+    w2::Vector{Float64}
+    kernel::Union{Nothing, Kernel}
+    src::Vector{Int}                            # nodes i with q_i > 0
+    cum1::Vector{Float64}                       # cumulative q over src
+    ws::Vector{Union{Nothing, WindowSums}}      # kernel: per component, of w2
+    dst::Vector{Vector{Int}}                    # no kernel: per component, w2 > 0
+    cum2::Vector{Vector{Float64}}               # no kernel: cumulative w2 over dst
+    pos2::Vector{Int}                           # no kernel: node -> index in dst
+end
+
+function Sampler(gr::Graph, w1::AbstractVector{<:Real}, w2::AbstractVector{<:Real},
+                 kernel::Union{Nothing, Kernel})
+    w1 = Vector{Float64}(w1)
+    w2 = Vector{Float64}(w2)
+    n = nnodes(gr)
+    members = component_members(gr)
+    q = zeros(n)
+    ws = Vector{Union{Nothing, WindowSums}}(nothing, gr.ncomp)
+    dst = [Int[] for _ in 1:gr.ncomp]
+    cum2 = [Float64[] for _ in 1:gr.ncomp]
+    pos2 = zeros(Int, n)
+    # Each i's weight of other cells in reach; tiny residues of rounding in
+    # the prefix sums count as none
+    others(total, i) = (t = total - w2[i]; t > 1e-12 * total ? t : 0.0)
+    for (c, nodes) in enumerate(members)
+        any(i -> w1[i] > 0, nodes) && any(i -> w2[i] > 0, nodes) || continue
+        if kernel === nothing
+            dst[c] = filter(i -> w2[i] > 0, nodes)
+            cum2[c] = cumsum(w2[dst[c]])
+            for (k, i) in enumerate(dst[c])
+                pos2[i] = k
+            end
+            tot = cum2[c][end]
+            for i in nodes
+                w1[i] > 0 && (q[i] = w1[i] * others(tot, i))
+            end
+        else
+            ws[c] = WindowSums(gr, w2, nodes)
+            wc = ws[c]
+            @threads for i in nodes
+                w1[i] > 0 && (q[i] = w1[i] * others(window_sum(wc, kernel, gr, i), i))
+            end
+        end
+    end
+    src = findall(>(0), q)
+    Sampler(gr, w1, w2, kernel, src, cumsum(q[src]), ws, dst, cum2, pos2)
+end
+
+pick(rng, nodes, cum) = nodes[min(searchsortedfirst(cum, rand(rng) * cum[end]), length(nodes))]
+
+# Stage 2: j in proportion to w2 among the cells in i's kernel, without i.
+# Returns 0 if rounding leaves nothing to draw (the caller draws again).
+function draw_destination(rng::AbstractRNG, s::Sampler, i::Int)
+    gr = s.graph
+    if s.kernel === nothing
+        c = gr.comp[i]
+        cum = s.cum2[c]
+        isempty(cum) && return 0
+        wi = s.pos2[i] > 0 ? s.w2[i] : 0.0
+        u = rand(rng) * (cum[end] - wi)
+        if s.pos2[i] > 0
+            before = s.pos2[i] > 1 ? cum[s.pos2[i] - 1] : 0.0
+            u >= before && (u += wi)
+        end
+        k = min(searchsortedlast(cum, u) + 1, length(cum))
+        return s.dst[c][k]
+    end
+    ws = s.ws[gr.comp[i]]
+    ws === nothing && return 0
+    K = s.kernel
+    ri = gr.node_r[i]
+    ci = gr.node_c[i]
+    kr = K.rowmap[ri]
+    P = ws.P
+    total = 0.0
+    for d in axes(K.hw, 1)
+        h = K.hw[d, kr]
+        h < 0 && continue
+        r = ri + K.dr0 + d - 1
+        ws.r0 <= r <= ws.r1 || continue
+        lo = max(ci - h, ws.c0)
+        hi = min(ci + h, ws.c1)
+        lo > hi && continue
+        total += P[hi - ws.c0 + 2, r - ws.r0 + 1] - P[lo - ws.c0 + 1, r - ws.r0 + 1]
+    end
+    u = rand(rng) * (total - s.w2[i])
+    for d in axes(K.hw, 1)
+        h = K.hw[d, kr]
+        h < 0 && continue
+        r = ri + K.dr0 + d - 1
+        ws.r0 <= r <= ws.r1 || continue
+        lo = max(ci - h, ws.c0)
+        hi = min(ci + h, ws.c1)
+        lo > hi && continue
+        rr = r - ws.r0 + 1
+        base = P[lo - ws.c0 + 1, rr]
+        rs = P[hi - ws.c0 + 2, rr] - base
+        own = r == ri
+        own && (rs -= s.w2[i])
+        if u < rs
+            t = base + u
+            # Skip i's own cell: past it, shift the target by its weight
+            own && t >= P[ci - ws.c0 + 1, rr] && (t += s.w2[i])
+            v = view(P, (lo - ws.c0 + 2):(hi - ws.c0 + 2), rr)
+            col = min(lo + searchsortedlast(v, t), hi)
+            return gr.id[r, col]
+        end
+        u -= rs
+    end
+    0
+end
+
+function draw_pair(rng::AbstractRNG, s::Sampler)
+    while true
+        i = pick(rng, s.src, s.cum1)
+        j = draw_destination(rng, s, i)
+        (j == 0 || j == i || s.w2[j] <= 0 || s.graph.comp[j] != s.graph.comp[i]) && continue
+        return i, j
+    end
+end
+
+# Each draw is its own random stream, seeded by (seed, draw), so a draw's
+# injection doesn't depend on batching or threads
+draw_rng(seed::Integer, draw::Integer) = Xoshiro(UInt64[seed, draw])
+
+random_sign(rng::AbstractRNG) = rand(rng, Bool) ? 1.0 : -1.0
+
+# Fill B's columns with draws `draws`: m dipoles each, weighted by
+# `weight(rng)` (random signs; another distribution, e.g. Cauchy for
+# absolute current, plugs in here). With `center` (the mean dipole, a node
+# vector), each dipole is centered: a draw's column is
+# sum_d s_d (dipole_d - center), so its squared current estimates the
+# dipoles' variance instead of their mean square.
+function injections!(B::Matrix{Float64}, s::Sampler, seed::Integer, draws::AbstractVector{<:Integer},
+                     m::Integer; weight::W = random_sign,
+                     center::Union{Nothing, Vector{Float64}} = nothing) where {W}
+    fill!(B, 0.0)
+    @threads for k in eachindex(draws)
+        rng = draw_rng(seed, draws[k])
+        tot = 0.0
+        for _ in 1:m
+            i, j = draw_pair(rng, s)
+            sg = weight(rng)
+            tot += sg
+            @inbounds B[i, k] += sg
+            @inbounds B[j, k] -= sg
+        end
+        if center !== nothing
+            @inbounds for i in eachindex(center)
+                B[i, k] -= tot * center[i]
+            end
+        end
+    end
+    B
+end
+
+# S: the sum of w1_i * w2_j * k_ij over exactly the ordered pairs the
+# sampler can produce (i != j, same component)
+function pair_sum(s::Sampler)
+    gr = s.graph
+    self = sum(s.w1[i] * s.w2[i] for i in eachindex(s.w1); init = 0.0)
+    total = 0.0
+    if s.kernel === nothing
+        W1 = zeros(gr.ncomp)
+        W2 = zeros(gr.ncomp)
+        for i in eachindex(s.w1)
+            W1[gr.comp[i]] += s.w1[i]
+            W2[gr.comp[i]] += s.w2[i]
+        end
+        total = sum(W1 .* W2)
+    else
+        for nodes in component_members(gr)
+            total += kernel_pair_sum(s, nodes)
+        end
+    end
+    max(total - self, 0.0)
+end
+
 # One component's sum over i of w1_i * (sum of w2 over i's kernel)
 function kernel_pair_sum(s::Sampler, nodes::Vector{Int})
     gr = s.graph
@@ -455,12 +539,13 @@ end
 # LinkSums per circuit; all circuits see the same injections.
 function run_dipoles(circs::Vector{Circuit}, s::Sampler, seed::Integer, n_draws::Integer,
                      m::Integer; batch::Int = default_batch(nnodes(s.graph)), f = abs2,
-                     weight = random_sign)
+                     weight = random_sign, center = nothing)
     n = nnodes(s.graph)
     accs = [LinkSums(nlinks(c.graph)) for c in circs]
     for s0 in 1:batch:n_draws
         draws = s0:min(n_draws, s0 + batch - 1)
-        B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m; weight = weight)
+        B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m;
+                        weight = weight, center = center)
         for (c, acc) in zip(circs, accs)
             accumulate!(acc, c, B, s0; f = f)
         end
@@ -498,21 +583,26 @@ function focal_injections!(B::Matrix{Float64}, groups::Vector{Vector{Int}}, seed
     B
 end
 
-function pairwise_random(id::Real, nodes, seed::Real, n_draws::Real, batch::Real)
-    c = circuit(id)
-    gr = c.graph
+# Solved against each of the circuits `ids` (all on the same graph, e.g. a
+# circuit and its uniform twin), with the same injections. Returns per
+# circuit the per-node sums (nodes x 2: odd draws, even draws).
+function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real)
+    circs = [circuit(id) for id in asvec(ids)]
+    gr = first(circs).graph
     groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
-    isempty(groups) && return (n_pairs = 0, cells = zeros(0, 2))
+    isempty(groups) && return (n_pairs = 0, cells = Matrix{Float64}[])
     b = batch > 0 ? Int(batch) : default_batch(nnodes(gr))
-    acc = LinkSums(nlinks(gr))
+    accs = [LinkSums(nlinks(gr)) for _ in circs]
     for s0 in 1:b:Int(n_draws)
         draws = s0:min(Int(n_draws), s0 + b - 1)
         B = focal_injections!(Matrix{Float64}(undef, nnodes(gr), length(draws)), groups,
                               Int(seed), draws)
-        accumulate!(acc, c, B, s0)
+        for (c, acc) in zip(circs, accs)
+            accumulate!(acc, c, B, s0)
+        end
     end
     (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
-     cells = node_sums(gr, acc.s))
+     cells = [node_sums(gr, acc.s) for acc in accs])
 end
 
 # Exact sum over pairs of focal nodes of squared link current, from one
@@ -580,10 +670,10 @@ function flux_injection(gr::Graph, o::Vector{Float64}, d::Vector{Float64},
         neg[gr.comp[i]] += wd[i]
     end
     W = sum(pos)
-    W > 0 || return (b = zeros(nnodes(gr)), in_reach = 0.0)
+    W > 0 || return (b = zeros(nnodes(gr)), W = 0.0, in_reach = 0.0)
     b = [(inj[i] - (neg[gr.comp[i]] > 0 ? wd[i] * pos[gr.comp[i]] / neg[gr.comp[i]] : 0.0)) / W
          for i in eachindex(inj)]
-    (b = b, in_reach = W / (sum(o) * sum(d)))
+    (b = b, W = W, in_reach = W / (sum(o) * sum(d)))
 end
 
 flux_injection(id::Real, o, d, dr0, hw, rowmap) =
@@ -665,15 +755,23 @@ sampler(id::Real, w1, w2, dr0, hw, rowmap) =
 # Random-sign dipoles drawn from (w1, w2, kernel), solved against the given
 # circuits (all on the same graph). Returns S and, per circuit, the per-node
 # sums of the per-link sums (nodes x 2: odd draws, even draws).
+#
+# With a non-empty `center_b` (an injection summing pair weights to `center_w`,
+# e.g. flux_injection's b and W), dipoles are centered on their mean,
+# center_w / S * center_b: the sums then estimate the variance of the pairs'
+# currents, and R adds the mean's exact squared current back.
 function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws::Real,
-                        n_dipoles::Real, batch::Real)
+                        n_dipoles::Real, batch::Real, center_b = Float64[], center_w::Real = 0.0)
     circs = [circuit(id) for id in asvec(ids)]
     s = sampler(first(asvec(ids)), w1, w2, dr0, hw, rowmap)
     S = pair_sum(s)
     # No pairs can be drawn; R reports it
     S > 0 || return (S = 0.0, cells = Matrix{Float64}[])
     b = batch > 0 ? Int(batch) : default_batch(nnodes(s.graph))
-    accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b)
+    cb = Vector{Float64}(asvec(center_b))
+    center = isempty(cb) ? nothing : (center_w / S) .* cb
+    accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b,
+                       center = center)
     (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)])
 end
 
@@ -694,6 +792,19 @@ function injection_matrix(id::Real, w1, w2, dr0, hw, rowmap, seed::Real, n_draws
     s = sampler(id, w1, w2, dr0, hw, rowmap)
     injections!(Matrix{Float64}(undef, nnodes(s.graph), Int(n_draws)), s, Int(seed),
                 1:Int(n_draws), Int(n_dipoles))
+end
+
+# n pairs (i, j) drawn by the sampler, one stream, for tests
+function sample_pairs(id::Real, w1, w2, dr0, hw, rowmap, seed::Real, n::Real)
+    s = sampler(id, w1, w2, dr0, hw, rowmap)
+    rng = draw_rng(Int(seed), 1)
+    out = Matrix{Int}(undef, Int(n), 2)
+    for k in 1:Int(n)
+        i, j = draw_pair(rng, s)
+        out[k, 1] = i
+        out[k, 2] = j
+    end
+    out
 end
 
 # Graph details, for tests

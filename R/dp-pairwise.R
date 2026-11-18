@@ -7,7 +7,9 @@
 #' a cost that doesn't grow with the number of nodes.
 #'
 #' @details
-#' For each link \eqn{e} of the circuit (see [dp_circuit()]), the target is
+#' Current flows along the circuit's links: the resistors joining each cell
+#' to its 8 neighbours (see [dp_circuit()]). For each link \eqn{e}, the
+#' target is
 #' \eqn{\sum_{i<j} I_e(i,j)^2}, over unordered pairs of focal nodes, where
 #' \eqn{I_e(i,j)} is the current through \eqn{e} when one unit flows from
 #' node \eqn{i} to node \eqn{j}. A cell's value is
@@ -29,6 +31,11 @@
 #' Unlike Circuitscape's cell maps, no current is added at focal nodes for
 #' the current injected there.
 #'
+#' Flow potential is the same quantity on the uniform circuit (with the same
+#' draws, for `method = "random"`), and normalized current is current
+#' divided by it, as in [dp_omni()]. Normalizing takes a second
+#' factorization and, for `method = "exact"`, a second set of solves.
+#'
 #' Reproducibility is as for [dp_omni()].
 #'
 #' @inheritParams dp_omni
@@ -40,10 +47,15 @@
 #'   supported.
 #' @param method Character. `"random"` (default) for random dipoles, or
 #'   `"exact"` for the exact sum from one solve per node.
+#' @param normalize Logical. Also compute flow potential (the same pairs on
+#'   the uniform circuit, conductance 1 on the same cells) and normalized
+#'   current. Default `TRUE`.
 #' @param n_draws Integer. Number of draws (solves) for `method = "random"`.
 #'   Default `32`.
 #'
-#' @return A [terra::SpatRaster] with one layer, `current`. Attributes:
+#' @return A [terra::SpatRaster] with layers `current`, and with
+#'   `normalize`, `flow_potential` and `normalized_current`, as in
+#'   [dp_omni()]. Attributes:
 #'   `"n_pairs"`, the number of pairs counted; for `method = "random"`, also
 #'   `"halves"` (see [dp_omni()]) and `"seed"`.
 #'
@@ -56,33 +68,50 @@
 #' nodes <- terra::spatSample(resistance, 30, xy = TRUE)[, 1:2]
 #' result <- dp_pairwise(resistance, nodes, seed = 1)
 #' exact <- dp_pairwise(resistance, nodes, method = "exact")
-#' terra::plot(c(result, exact))
+#' terra::plot(c(result$normalized_current, exact$normalized_current))
 #' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
 dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
-                        resistance_is = "resistances", n_draws = 32, seed = NULL) {
+                        resistance_is = "resistances", normalize = TRUE,
+                        n_draws = 32, seed = NULL) {
   method <- match.arg(method)
-  circuit <- dp_as_circuit(resistance, resistance_is)
+  normalize <- isTRUE(normalize)
+  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   nodes <- dp_focal_nodes(circuit, locations)
   env <- circuit$env
 
   if (method == "exact") {
     res <- dp_call("pairwise_exact", env$id, nodes, 0L)
     dp_check_pairs(res$n_pairs)
-    out <- dp_to_raster(circuit, sqrt(0.5 * res$cells[, 1]), "current")
+    v <- list(cur2 = 0.5 * res$cells[, 1])
+    if (normalize) v$fp2 <- 0.5 * dp_call("pairwise_exact", env$uniform_id, nodes, 0L)$cells[, 1]
+    ratio <- function(a, b) ifelse(b > 0, sqrt(a / b), NA_real_)
+    values <- cbind(current = sqrt(v$cur2))
+    if (normalize) {
+      values <- cbind(values, flow_potential = sqrt(v$fp2),
+                      normalized_current = ratio(v$cur2, v$fp2))
+    }
+    out <- dp_to_raster(circuit, values, colnames(values))
   } else {
     n_draws <- dp_count(n_draws, "n_draws", min = 2)
     seed <- dp_seed(seed)
-    res <- dp_call("pairwise_random", env$id, nodes, seed, n_draws, 0L)
+    ids <- c(env$id, if (normalize) env$uniform_id)
+    res <- dp_call("pairwise_random", as.integer(ids), nodes, seed, n_draws, 0L)
     dp_check_pairs(res$n_pairs)
     n_half <- c(ceiling(n_draws / 2), floor(n_draws / 2))
-    out <- dp_to_raster(circuit, sqrt(0.5 * rowSums(res$cells) / n_draws), "current")
-    halves <- dp_halves(sqrt(0.5 * res$cells[, 1] / n_half[1]),
-                        sqrt(0.5 * res$cells[, 2] / n_half[2]),
-                        rep(TRUE, nrow(res$cells)))
-    rownames(halves) <- "current"
-    attr(out, "halves") <- halves
+    sq <- function(cells) 0.5 * rowSums(cells) / n_draws
+    halves <- function(cells) {
+      cbind(0.5 * cells[, 1] / n_half[1], 0.5 * cells[, 2] / n_half[2])
+    }
+    v <- list(cur2 = sq(res$cells[[1]]), cur2_half = halves(res$cells[[1]]))
+    if (normalize) {
+      v$fp2 <- sq(res$cells[[2]])
+      v$fp2_half <- halves(res$cells[[2]])
+    }
+    m <- dp_random_layers(v, normalize, rep(TRUE, length(v$cur2)))
+    out <- dp_to_raster(circuit, m$values, colnames(m$values))
+    attr(out, "halves") <- m$halves
     attr(out, "seed") <- seed
   }
   attr(out, "n_pairs") <- res$n_pairs

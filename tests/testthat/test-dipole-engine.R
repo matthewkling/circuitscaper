@@ -153,3 +153,61 @@ test_that("the estimator converges to the exact target, no limit (oracle 1)", {
   skip_if_no_julia(circuitscape = FALSE)
   exact_check(radius = Inf)
 })
+
+test_that("the sampler draws pairs in proportion to w1_i w2_j k_ij", {
+  skip_if_no_julia(circuitscape = FALSE)
+  x <- dipole_test_grid(split = TRUE)
+  w2r <- dipole_test_grid(split = TRUE, seed = 7)$suitability
+  circuit <- new_dp_circuit(x$conductance, uniform = FALSE)
+  gi <- dipole_graph_info(circuit)
+  w1 <- dp_node_values(circuit, x$suitability)
+  w2 <- dp_node_values(circuit, w2r)
+  w1[is.na(w1)] <- 0
+  w2[is.na(w2)] <- 0
+  nc <- terra::ncol(x$conductance)
+  cell <- circuit$env$cells
+  r <- (cell - 1) %/% nc + 1
+  c <- (cell - 1) %% nc + 1
+  # Kernel membership from the kernel's own offsets
+  in_kernel <- function(k) {
+    if (is.null(k$hw) || length(k$hw) == 0) return(matrix(TRUE, length(r), length(r)))
+    dr <- outer(r, r, function(a, b) b - a)
+    dc <- abs(outer(c, c, function(a, b) b - a))
+    d <- dr - k$dr0 + 1
+    ok <- d >= 1 & d <= nrow(k$hw)
+    h <- matrix(-1, length(r), length(r))
+    kr <- k$rowmap[r]
+    h[ok] <- k$hw[cbind(d[ok], kr[row(d)[ok]])]
+    ok & dc <= h
+  }
+  kernels <- list(pixels = dp_kernel(circuit$env$template, 2.5, "pixels"),
+                  km = dp_kernel(circuit$env$template, 3, "km"),
+                  none = dp_kernel(circuit$env$template, Inf, "pixels"))
+  n <- 2e5
+  for (nm in names(kernels)) {
+    k <- kernels[[nm]]
+    P <- outer(w1, w2) * in_kernel(k) * outer(gi$comp, gi$comp, "==")
+    diag(P) <- 0
+    S <- dp_call("pair_sum", circuit$env$id, w1, w2, k$dr0, k$hw, k$rowmap)
+    expect_equal(S, sum(P), tolerance = 1e-12, label = paste(nm, "S"))
+    pairs <- dp_call("sample_pairs", circuit$env$id, w1, w2, k$dr0, k$hw, k$rowmap, 3L,
+                     as.integer(n))
+    # Only pairs with positive weight: within the kernel, same component, i != j
+    expect_true(all(P[pairs] > 0), label = paste(nm, "support"))
+    # Marginals of i and j, and the distribution of offsets, match P / S
+    z <- function(obs, p) {
+      e <- n * p
+      max(abs(obs[e > 0] - e[e > 0]) / sqrt(e[e > 0]))
+    }
+    nn <- length(w1)
+    expect_lt(z(tabulate(pairs[, 1], nn), rowSums(P) / S), 5, label = paste(nm, "i"))
+    expect_lt(z(tabulate(pairs[, 2], nn), colSums(P) / S), 5, label = paste(nm, "j"))
+    if (nm != "none") {
+      off <- function(i, j) paste(r[j] - r[i], c[j] - c[i])
+      ij <- which(P > 0, arr.ind = TRUE)
+      e <- tapply(P[ij], off(ij[, 1], ij[, 2]), sum) / S
+      obs <- table(factor(off(pairs[, 1], pairs[, 2]), levels = names(e)))
+      expect_lt(z(as.vector(obs), as.vector(e)), 5, label = paste(nm, "offsets"))
+    }
+  }
+})

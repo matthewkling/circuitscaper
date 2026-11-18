@@ -9,6 +9,7 @@ dp_pairwise(
   locations,
   method = c("random", "exact"),
   resistance_is = "resistances",
+  normalize = TRUE,
   n_draws = 32,
   seed = NULL
 )
@@ -31,6 +32,10 @@ supported.}
 \item{resistance_is}{Character. Whether \code{resistance} holds
 \code{"resistances"} (default) or \code{"conductances"}. Ignored for a circuit.}
 
+\item{normalize}{Logical. Also compute flow potential (the same pairs on
+the uniform circuit, conductance 1 on the same cells) and normalized
+current. Default \code{TRUE}.}
+
 \item{n_draws}{Integer. Number of draws (solves) for \code{method = "random"}.
 Default \code{32}.}
 
@@ -40,7 +45,9 @@ Default \code{32}.}
 as the \code{"seed"} attribute.}
 }
 \value{
-A \link[terra:SpatRaster]{terra::SpatRaster} with one layer, \code{current}. Attributes:
+A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}, and with
+\code{normalize}, \code{flow_potential} and \code{normalized_current}, as in
+\code{\link[=dp_omni]{dp_omni()}}. Attributes:
 \code{"n_pairs"}, the number of pairs counted; for \code{method = "random"}, also
 \code{"halves"} (see \code{\link[=dp_omni]{dp_omni()}}) and \code{"seed"}.
 }
@@ -52,7 +59,9 @@ Maps connectivity among every pair of a set of focal nodes, the
 squared-current analogue of \code{\link[=cs_pairwise]{cs_pairwise()}}'s cumulative current map, at
 a cost that doesn't grow with the number of nodes.
 
-For each link \eqn{e} of the circuit (see \code{\link[=dp_circuit]{dp_circuit()}}), the target is
+Current flows along the circuit's links: the resistors joining each cell
+to its 8 neighbours (see \code{\link[=dp_circuit]{dp_circuit()}}). For each link \eqn{e}, the
+target is
 \eqn{\sum_{i<j} I_e(i,j)^2}, over unordered pairs of focal nodes, where
 \eqn{I_e(i,j)} is the current through \eqn{e} when one unit flows from
 node \eqn{i} to node \eqn{j}. A cell's value is
@@ -74,6 +83,11 @@ link, with \eqn{y_i} its current when node \eqn{i} is the source.
 Unlike Circuitscape's cell maps, no current is added at focal nodes for
 the current injected there.
 
+Flow potential is the same quantity on the uniform circuit (with the same
+draws, for \code{method = "random"}), and normalized current is current
+divided by it, as in \code{\link[=dp_omni]{dp_omni()}}. Normalizing takes a second
+factorization and, for \code{method = "exact"}, a second set of solves.
+
 Reproducibility is as for \code{\link[=dp_omni]{dp_omni()}}.
 }
 \examples{
@@ -84,7 +98,7 @@ set.seed(1)
 nodes <- terra::spatSample(resistance, 30, xy = TRUE)[, 1:2]
 result <- dp_pairwise(resistance, nodes, seed = 1)
 exact <- dp_pairwise(resistance, nodes, method = "exact")
-terra::plot(c(result, exact))
+terra::plot(c(result$normalized_current, exact$normalized_current))
 \dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }

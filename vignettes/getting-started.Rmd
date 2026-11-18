@@ -137,8 +137,8 @@ The omnidirectional methods (`os_run()` and `dp_omni()`) need no focal
 nodes: every cell can be a source, weighted by its **source strength**, such
 as habitat quality or suitability. By default both use the conductance
 surface (the inverse of resistance). For connectivity between two
-distributions, `dp_flux()` and `dp_omni(destination = )` take two
-surfaces: an origin and a destination.
+distributions, `dp_flux()`, `dp_omni(destination = )` and
+`dp_directionality()` take two surfaces: an origin and a destination.
 
 ## Choosing a method
 
@@ -150,7 +150,7 @@ Start from the question you're asking:
 | How does current spread out from, or converge on, each site? | `cs_one_to_all()`, `cs_all_to_one()` | |
 | How does movement flow between a defined source area and a destination? | `cs_advanced()` | |
 | Where are the corridors and barriers across the whole landscape? | `os_run()` | `dp_omni()` |
-| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )` |
+| How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )`, `dp_directionality()` |
 
 **Pairwise** analyses treat discrete sites (habitat patches, populations) and
 ask how well they're connected to each other. `cs_pairwise()` also returns
@@ -174,7 +174,9 @@ another: present and future habitat under climate change, breeding and
 wintering ranges, foraging and roosting habitat, or source populations and
 restoration sites. `dp_flux()` maps the net flow from origin to
 destination, with its direction; `dp_omni()` with a `destination` maps the
-routes between them without direction. For climate change,
+routes between them without direction; and `dp_directionality()` maps
+both, with their ratio, showing where movement is one-way and where it
+runs both ways. For climate change,
 `os_condition()` offers a related Omniscape analysis, restricting
 connections to sources and targets with compatible present and future
 conditions.

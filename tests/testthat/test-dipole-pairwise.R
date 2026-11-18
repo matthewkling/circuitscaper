@@ -25,9 +25,20 @@ test_that("exact pairwise matches a dense brute force, across components", {
   # dipole_exact_cells sums over ordered pairs; dp_pairwise over unordered,
   # and reports sqrt(half the sum over a cell's links)
   want <- dipole_exact_cells(gi, P) / 4
-  got <- dp_node_values(circuit, ex)^2
+  got <- dp_node_values(circuit, ex$current)^2
   expect_equal(got, want, tolerance = 1e-8)
   expect_equal(attr(ex, "n_pairs"), sum(P[upper.tri(P)]))
+
+  # Flow potential is the same on the uniform circuit
+  uniform <- terra::mask(x$conductance * 0 + 1, x$conductance)
+  u <- dp_pairwise(uniform, xy, method = "exact", resistance_is = "conductances",
+                   normalize = FALSE)
+  expect_named(u, "current")
+  fp <- terra::values(ex$flow_potential, mat = FALSE)
+  expect_equal(fp, terra::values(u$current, mat = FALSE), tolerance = 1e-8)
+  cur <- terra::values(ex$current, mat = FALSE)
+  expect_equal(terra::values(ex$normalized_current, mat = FALSE),
+               ifelse(fp > 0, cur / fp, NA), tolerance = 1e-12)
 })
 
 test_that("random pairwise is unbiased and matches exact (oracle 4)", {
@@ -36,17 +47,26 @@ test_that("random pairwise is unbiased and matches exact (oracle 4)", {
   circuit <- dp_circuit(ref$conductance, resistance_is = "conductances")
   for (n in c(25, 200)) {
     xy <- terra::xyFromCell(ref, focal_cells(ref$conductance, n, seed = n))
-    ex <- terra::values(dp_pairwise(circuit, xy, method = "exact"), mat = FALSE)
-    rd <- terra::values(dp_pairwise(circuit, xy, seed = 1), mat = FALSE)
+    ex <- dp_pairwise(circuit, xy, method = "exact")
+    r1 <- dp_pairwise(circuit, xy, seed = 1)
+    # Normalized current too
+    expect_gt(stats::cor(terra::values(ex$normalized_current, mat = FALSE),
+                         terra::values(r1$normalized_current, mat = FALSE),
+                         method = "spearman", use = "complete.obs"), 0.95)
+    ex <- terra::values(ex$current, mat = FALSE)
+    rd <- terra::values(r1$current, mat = FALSE)
     # 0.987-0.992 at 32 draws on this small crop (0.999 on the 0.73 M-cell
     # surface, whose values span a far wider range), rising with draws
     expect_gt(stats::cor(ex, rd, method = "spearman"), 0.98)
-    rd <- terra::values(dp_pairwise(circuit, xy, n_draws = 512, seed = 1), mat = FALSE)
+    rd <- terra::values(dp_pairwise(circuit, xy, n_draws = 512, seed = 1,
+                                    normalize = FALSE), mat = FALSE)
     expect_gt(stats::cor(ex, rd, method = "spearman"), 0.998)
   }
   xy <- terra::xyFromCell(ref, focal_cells(ref$conductance, 25))
-  ex <- terra::values(dp_pairwise(circuit, xy, method = "exact"), mat = FALSE)^2
-  rd <- terra::values(dp_pairwise(circuit, xy, n_draws = 2048, seed = 2), mat = FALSE)^2
+  ex <- terra::values(dp_pairwise(circuit, xy, method = "exact", normalize = FALSE),
+                      mat = FALSE)^2
+  rd <- terra::values(dp_pairwise(circuit, xy, n_draws = 2048, seed = 2, normalize = FALSE),
+                      mat = FALSE)^2
   expect_equal(sum(rd), sum(ex), tolerance = 0.03)
   expect_lt(stats::median(abs(rd / ex - 1)), 0.06)
 })
@@ -62,8 +82,12 @@ test_that("dp_pairwise takes rasters of IDs and checks its nodes", {
   b <- dp_pairwise(circuit, terra::xyFromCell(ids, cells[c(4, 2, 6, 1, 5, 3)]),
                    seed = 5, n_draws = 8)
   expect_identical(terra::values(a), terra::values(b))
-  expect_named(a, "current")
-  expect_equal(rownames(attr(a, "halves")), "current")
+  expect_named(a, c("current", "flow_potential", "normalized_current"))
+  expect_equal(rownames(attr(a, "halves")), c("current", "normalized_current"))
+  a0 <- dp_pairwise(circuit, ids, seed = 5, n_draws = 8, normalize = FALSE)
+  expect_named(a0, "current")
+  expect_equal(terra::values(a0$current), terra::values(a$current))
+  expect_named(dp_pairwise(circuit, ids, method = "exact", normalize = FALSE), "current")
 
   dup <- ids
   dup[cells[1:2]] <- 1

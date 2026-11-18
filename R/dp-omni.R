@@ -16,14 +16,17 @@
 #' its direction, see [dp_flux()].
 #'
 #' @details
-#' For each link \eqn{e} of the circuit (see [dp_circuit()]), the method
-#' estimates
+#' Current flows along the circuit's links: the resistors joining each cell
+#' to its 8 neighbours (see [dp_circuit()]). For each link \eqn{e}, the
+#' method estimates
 #' \deqn{T_e = \sum_{i \ne j} w_i w_j k(d_{ij}) I_e(i,j)^2}
 #' over ordered pairs of cells, where \eqn{w} is source strength, \eqn{k} is
 #' 1 for cells within `radius` of each other and 0 otherwise, and
 #' \eqn{I_e(i,j)} is the current through \eqn{e} when one unit flows from
-#' \eqn{i} to \eqn{j} on the whole circuit. A cell's current is
-#' \eqn{\sqrt{\frac{1}{2}\sum_{e \ni \mathrm{cell}} T_e}}. For a unit flow,
+#' \eqn{i} to \eqn{j} on the whole circuit. A cell's current combines the
+#' links that meet at it, up to 8:
+#' \eqn{\sqrt{\frac{1}{2}\sum_{e \ni \mathrm{cell}} T_e}}, where the half
+#' is because each link is shared by the two cells it joins. For a unit flow,
 #' a link's squared current is the derivative of the pair's effective
 #' resistance with respect to that link's resistance, so the map is the
 #' sensitivity of habitat-weighted pairwise resistance to degrading each
@@ -36,6 +39,15 @@
 #' pair with itself carries no current. Cells in both distributions take
 #' part at both ends, unlike in [dp_flux()], where their flow cancels. With
 #' one surface, \eqn{o = d = w}.
+#'
+#' With two surfaces, the pairs have a mean dipole, whose current (the
+#' directional map of [dp_flux()]) is solved exactly. Each draw's dipoles
+#' are centered on it, so the draws estimate only the variance of the pairs'
+#' currents, and the mean's exact squared current is added back. The
+#' estimate is still unbiased, but where the pairs' currents mostly agree in
+#' direction its noise is much smaller: by a factor of about \eqn{1 - R},
+#' with \eqn{R} as in [dp_directionality()]. With one surface, the mean
+#' dipole is zero.
 #'
 #' Each draw injects `n_dipoles` unit dipoles, pairs drawn in proportion to
 #' \eqn{w_i w_j k(d_{ij})}, each with a random sign, and solves the circuit
@@ -159,20 +171,28 @@ dp_omni <- function(resistance, radius, source_strength = NULL,
                          normalize, mask = w > 0))
   }
   w2 <- dp_weights(circuit, destination, source_threshold, "destination")
+  center <- dp_flux_values(circuit, w, w2, kernel, normalize, "rms", check = FALSE)
   dp_random_map(circuit, w, w2, kernel, seed, n_draws, n_dipoles, normalize,
-                mask = w > 0 | w2 > 0)
+                mask = w > 0 | w2 > 0, center = center)
 }
 
 
-#' Map From Random-Sign Dipoles
+#' Squared Cell Currents From Random-Sign Dipoles
 #'
-#' Runs the draws and turns the per-node sums into RMS cell values, scaled
-#' by S / M, with the halves diagnostic over `mask`.
+#' Runs the draws and scales the per-node sums by S / M. Returns per-node
+#' squared current `cur2` (half the sum over a node's links), its odd- and
+#' even-draw estimates `cur2_half` (two columns), and with `normalize`, the
+#' same for flow potential (`fp2`, `fp2_half`).
+#'
+#' With `center`, from `dp_flux_values(cell_value = "rms")` for the same
+#' pairs, the dipoles are centered on their mean, so the draws estimate the
+#' variance of the pairs' currents, and the mean's exact squared current is
+#' added back: \eqn{W^2 / S} times the flux map's squared RMS current.
 #' @noRd
-dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                          normalize, mask) {
+dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
+                             normalize, center = NULL) {
   res <- dp_random_dipoles(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                           uniform = normalize)
+                           uniform = normalize, center = center)
   if (res$S <= 0) {
     stop("No pairs of cells can be drawn: no two source cells (or origin and ",
          "destination cells) are within `radius` of each other in the same ",
@@ -180,29 +200,62 @@ dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
   }
   scale <- res$S / n_dipoles
   n_half <- c(ceiling(n_draws / 2), floor(n_draws / 2))
-  rms <- function(cells) sqrt(0.5 * scale * rowSums(cells) / n_draws)
-  half <- function(cells, p) 0.5 * scale * cells[, p] / n_half[p]
-
-  cur <- rms(res$cells[[1]])
-  halves <- dp_halves(sqrt(half(res$cells[[1]], 1)), sqrt(half(res$cells[[1]], 2)), mask)
-  if (!normalize) {
-    out <- dp_to_raster(circuit, cur, "current")
-    rownames(halves) <- "current"
-  } else {
-    fp <- rms(res$cells[[2]])
-    nc <- ifelse(fp > 0, cur / fp, NA_real_)
-    out <- dp_to_raster(circuit, cbind(cur, fp, nc),
-                        c("current", "flow_potential", "normalized_current"))
-    h0 <- lapply(1:2, function(p) half(res$cells[[2]], p))
-    h <- lapply(1:2, function(p) {
-      ifelse(h0[[p]] > 0, sqrt(half(res$cells[[1]], p) / h0[[p]]), NA_real_)
-    })
-    halves <- rbind(halves, dp_halves(h[[1]], h[[2]], mask))
-    rownames(halves) <- c("current", "normalized_current")
+  sq <- function(cells) 0.5 * scale * rowSums(cells) / n_draws
+  halves <- function(cells) {
+    cbind(0.5 * scale * cells[, 1] / n_half[1], 0.5 * scale * cells[, 2] / n_half[2])
   }
-  attr(out, "halves") <- halves
+  out <- list(cur2 = sq(res$cells[[1]]), cur2_half = halves(res$cells[[1]]))
+  if (normalize) {
+    out$fp2 <- sq(res$cells[[2]])
+    out$fp2_half <- halves(res$cells[[2]])
+  }
+  if (!is.null(center)) {
+    k <- center$W^2 / res$S
+    out$cur2 <- out$cur2 + k * center$current^2
+    out$cur2_half <- out$cur2_half + k * center$current^2
+    if (normalize) {
+      out$fp2 <- out$fp2 + k * center$fp^2
+      out$fp2_half <- out$fp2_half + k * center$fp^2
+    }
+  }
+  out
+}
+
+#' Map From Random-Sign Dipoles
+#'
+#' RMS cell values from `dp_random_values()`, as a raster with the halves
+#' diagnostic over `mask`.
+#' @noRd
+dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
+                          normalize, mask, center = NULL) {
+  v <- dp_random_values(circuit, w1, w2, kernel, seed, n_draws, n_dipoles, normalize,
+                        center)
+  m <- dp_random_layers(v, normalize, mask)
+  out <- dp_to_raster(circuit, m$values, colnames(m$values))
+  attr(out, "halves") <- m$halves
   attr(out, "seed") <- seed
   out
+}
+
+#' Current, Flow Potential and Normalized Current From Squared Values
+#'
+#' Returns `values`, a matrix with columns `current` and, with `normalize`,
+#' `flow_potential` and `normalized_current`; and `halves`, the halves
+#' diagnostic for current and normalized current.
+#' @noRd
+dp_random_layers <- function(v, normalize, mask) {
+  ratio <- function(a, b) ifelse(b > 0, sqrt(a / b), NA_real_)
+  values <- cbind(current = sqrt(v$cur2))
+  halves <- dp_halves(sqrt(v$cur2_half[, 1]), sqrt(v$cur2_half[, 2]), mask)
+  rownames(halves) <- "current"
+  if (normalize) {
+    values <- cbind(values, flow_potential = sqrt(v$fp2),
+                    normalized_current = ratio(v$cur2, v$fp2))
+    halves <- rbind(halves, dp_halves(ratio(v$cur2_half[, 1], v$fp2_half[, 1]),
+                                      ratio(v$cur2_half[, 2], v$fp2_half[, 2]), mask))
+    rownames(halves) <- c("current", "normalized_current")
+  }
+  list(values = values, halves = halves)
 }
 
 #' Agreement Between the Odd- and Even-Draw Estimates of a Map
