@@ -61,7 +61,8 @@
 <span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>  n_dipoles <span class="op">=</span> <span class="fl">1e+05</span>,</span>
-<span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  power <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -126,6 +127,11 @@ cells). Default <code>TRUE</code>.</p></dd>
 <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> also makes runs reproducible. The seed used is returned
 as the <code>"seed"</code> attribute.</p></dd>
 
+
+<dt id="arg-power">power<a class="anchor" aria-label="anchor" href="#arg-power"></a></dt>
+<dd><p>Logical. Also map the power dissipated (see "Power" in
+<code><a href="dp_omni.html">dp_omni()</a></code>), and with <code>normalize</code>, normalized power. Default <code>FALSE</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -140,6 +146,10 @@ as the <code>"seed"</code> attribute.</p></dd>
 <dd><p>(with <code>normalize</code>)
 As <code><a href="dp_flux.html">dp_flux()</a></code>'s <code>flow_potential</code> and <code>normalized_current</code>.</p></dd>
 
+<dt>flux_power, flux_normalized_power</dt>
+<dd><p>(with <code>power</code>; the second also
+needs <code>normalize</code>) As <code><a href="dp_flux.html">dp_flux()</a></code>'s <code>power</code> and <code>normalized_power</code>.</p></dd>
+
 <dt>flow_x, flow_y</dt>
 <dd><p>Net flow through the cell towards the east and the
 north, as from <code><a href="dp_flux.html">dp_flux()</a></code>.</p></dd>
@@ -151,6 +161,10 @@ north, as from <code><a href="dp_flux.html">dp_flux()</a></code>.</p></dd>
 <dt>omni_flow_potential, omni_normalized_current</dt>
 <dd><p>(with <code>normalize</code>)
 As <code><a href="dp_omni.html">dp_omni()</a></code>'s <code>flow_potential</code> and <code>normalized_current</code>.</p></dd>
+
+<dt>omni_power, omni_normalized_power</dt>
+<dd><p>(with <code>power</code>; the second also
+needs <code>normalize</code>) As <code><a href="dp_omni.html">dp_omni()</a></code>'s <code>power</code> and <code>normalized_power</code>.</p></dd>
 
 
 </dl><p>Attributes: <code>"halves"</code>, comparing the estimates from odd and even draws

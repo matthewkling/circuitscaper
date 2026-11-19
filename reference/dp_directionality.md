@@ -16,7 +16,8 @@ dp_directionality(
   normalize = TRUE,
   n_draws = 32,
   n_dipoles = 1e+05,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 ```
 
@@ -85,6 +86,12 @@ dp_directionality(
   [`set.seed()`](https://rdrr.io/r/base/Random.html) also makes runs
   reproducible. The seed used is returned as the `"seed"` attribute.
 
+- power:
+
+  Logical. Also map the power dissipated (see "Power" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)),
+  and with `normalize`, normalized power. Default `FALSE`.
+
 ## Value
 
 A
@@ -106,6 +113,12 @@ with layers:
   [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)'s
   `flow_potential` and `normalized_current`.
 
+- flux_power, flux_normalized_power:
+
+  (with `power`; the second also needs `normalize`) As
+  [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)'s
+  `power` and `normalized_power`.
+
 - flow_x, flow_y:
 
   Net flow through the cell towards the east and the north, as from
@@ -121,6 +134,12 @@ with layers:
   (with `normalize`) As
   [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)'s
   `flow_potential` and `normalized_current`.
+
+- omni_power, omni_normalized_power:
+
+  (with `power`; the second also needs `normalize`) As
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)'s
+  `power` and `normalized_power`.
 
 Attributes: `"halves"`, comparing the estimates from odd and even draws
 on origin and destination cells, as in

@@ -12,7 +12,8 @@ dp_pairwise(
   resistance_is = "resistances",
   normalize = TRUE,
   n_draws = 32,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 ```
 
@@ -64,15 +65,24 @@ dp_pairwise(
   [`set.seed()`](https://rdrr.io/r/base/Random.html) also makes runs
   reproducible. The seed used is returned as the `"seed"` attribute.
 
+- power:
+
+  Logical. Also map the power dissipated (see "Power" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)),
+  and with `normalize`, normalized power. Default `FALSE`.
+
 ## Value
 
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-with layers `current`, and with `normalize`, `flow_potential` and
-`normalized_current`, as in
+with layers `current`; with `normalize`, `flow_potential` and
+`normalized_current`; with `power`, `power`; and with both,
+`normalized_power`, as in
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
-Attributes: `"n_pairs"`, the number of pairs counted; for
-`method = "random"`, also `"halves"` (see
+With `method = "exact"`, `power` sums to the pairs' total effective
+resistance, the power each pair's unit current dissipates. Attributes:
+`"n_pairs"`, the number of pairs counted; for `method = "random"`, also
+`"halves"` (see
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md))
 and `"seed"`.
 

@@ -243,6 +243,27 @@ instance, when <code><a href="../reference/cs_setup.html">cs_setup()</a></code> 
 circuit is rebuilt the next time it is used.</p>
 </div>
 <div class="section level2">
+<h2 id="power-and-choke-points">Power and choke points<a class="anchor" aria-label="anchor" href="#power-and-choke-points"></a>
+</h2>
+<p>Current shows where movement concentrates. Power, squared current
+times resistance, shows where it is forced through resistance: choke
+points. Set <code>power = TRUE</code> for a <code>power</code> layer,
+and with <code>normalize = TRUE</code>, a <code>normalized_power</code>
+layer. Each link’s power uses that link’s resistance, which depends on
+both cells it joins, so this is more accurate than squaring a current
+map and multiplying by each cell’s resistance, especially where high-
+and low-resistance cells meet. It comes from the same draws, so it costs
+no extra solves. Power spans orders of magnitude where resistance does,
+so it is easiest to see on a log scale:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">10</span>, seed <span class="op">=</span> <span class="fl">1</span>, power <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">p</span><span class="op">$</span><span class="va">current</span>, <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"power"</span>, <span class="st">"normalized_power"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"current"</span>, <span class="st">"log10 power"</span>, <span class="st">"log10 normalized power"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figures/dp-power-1.png" alt="plot of chunk power"><div class="figcaption">plot of chunk power</div>
+</div>
+</div>
+<div class="section level2">
 <h2 id="accuracy-and-reproducibility">Accuracy and reproducibility<a class="anchor" aria-label="anchor" href="#accuracy-and-reproducibility"></a>
 </h2>
 <p>The maps are estimates with some sampling noise, which falls as <span class="math inline">\(1/\sqrt{\texttt{n\_draws}}\)</span>. Each result
@@ -254,7 +275,7 @@ noise is <span class="math inline">\(\sqrt{2}\)</span> times the full
 map’s, and the difference between two halves is <span class="math inline">\(\sqrt{2}\)</span> times a half’s: the full map’s
 typical relative error is about half the halves’ median relative
 difference.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span>, <span class="st">"halves"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                     spearman median_rel_diff</span></span>
 <span><span class="co">#&gt; current            0.9772751       0.1313614</span></span>
@@ -273,7 +294,7 @@ the noise: a draw’s noise is set by the random signs, not by how many
 dipoles it holds. Values don’t depend on <code>n_dipoles</code> either,
 so runs with different settings are comparable.</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8</span>, <span class="fl">32</span>, <span class="fl">128</span><span class="op">)</span></span>
 <span><span class="va">noise</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/transpose.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">draws</span>, <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">10</span>, n_draws <span class="op">=</span> <span class="va">n</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="st">"halves"</span><span class="op">)</span><span class="op">$</span><span class="va">median_rel_diff</span></span>
@@ -309,7 +330,7 @@ grows with the square of the number of nodes; <code><a href="../reference/dp_pai
 solves 32 circuits whatever the number of nodes, each one carrying every
 pair with a random weight. With <code>method = "exact"</code>, it
 computes the exact answer instead from one solve per node.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">nodes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/sample.html" class="external-link">spatSample</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="fl">30</span>, xy <span class="op">=</span> <span class="cn">TRUE</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span></span>
 <span></span>
@@ -323,7 +344,7 @@ computes the exact answer instead from one solve per node.</p>
 <div class="float">
 <img src="figures/dp-pairwise-1.png" alt="plot of chunk pairwise"><div class="figcaption">plot of chunk pairwise</div>
 </div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>random_vs_exact <span class="op">=</span> <span class="fu">rho</span><span class="op">(</span><span class="va">random</span><span class="op">$</span><span class="va">current</span>, <span class="va">exact</span><span class="op">$</span><span class="va">current</span><span class="op">)</span>,</span>
 <span>  exact_vs_circuitscape <span class="op">=</span> <span class="fu">rho</span><span class="op">(</span><span class="va">exact</span><span class="op">$</span><span class="va">current</span>, <span class="va">cs</span><span class="op">$</span><span class="va">current_map</span><span class="op">$</span><span class="va">cumulative_current</span><span class="op">)</span>,</span>
@@ -369,7 +390,7 @@ as habitat, and a range on it that shifts north: the same habitat, under
 a climatic envelope centered 14 cells further north. The two
 distributions overlap in the middle of the landscape, as present and
 future ranges, or two seasonal ranges, often do:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">habitat</span> <span class="op">&lt;-</span> <span class="va">resistance</span> <span class="op">==</span> <span class="fl">1</span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/init.html" class="external-link">init</a></span><span class="op">(</span><span class="va">resistance</span>, <span class="st">"y"</span><span class="op">)</span></span>
 <span><span class="va">origin</span> <span class="op">&lt;-</span> <span class="va">habitat</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="op">(</span><span class="op">(</span><span class="va">y</span> <span class="op">-</span> <span class="fl">18</span><span class="op">)</span> <span class="op">/</span> <span class="fl">8</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
@@ -381,7 +402,7 @@ future ranges, or two seasonal ranges, often do:</p>
 <p>With no <code>radius</code> (the default), <code><a href="../reference/dp_flux.html">dp_flux()</a></code>
 sends one unit of flow from the origin to the destination, each cell in
 proportion to its strength, wherever it has to go:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">flux</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">flux</span><span class="op">$</span><span class="va">current</span>, main <span class="op">=</span> <span class="st">"Net flow"</span><span class="op">)</span></span>
@@ -407,7 +428,7 @@ share of all origin–destination pairs (weighted by strength) that are
 within reach. It shrinks as the domain grows relative to the radius,
 even where each origin cell has destination habitat nearby, so use the
 first two to ask whether most of the origin can reach a destination:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">near</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span>, radius <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attributes.html" class="external-link">attributes</a></span><span class="op">(</span><span class="va">near</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"origin_in_reach"</span>, <span class="st">"destination_in_reach"</span>,</span>
 <span>                          <span class="st">"pair_weight_in_reach"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
@@ -416,7 +437,7 @@ first two to ask whether most of the origin can reach a destination:</p>
 <p><code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the
 routes between the two distributions within reach, with flow potential
 and normalized current as for one surface:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">between</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, source_strength <span class="op">=</span> <span class="va">origin</span>,</span>
 <span>                   destination <span class="op">=</span> <span class="va">destination</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">between</span>, nc <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
@@ -432,7 +453,7 @@ way, and near 0 where flows in opposite directions cancel, so it shows
 where movement between the two distributions is one-way and where it
 runs both ways. Here, movement is most one-way along the corridor
 between the two ranges, and least where they overlap:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">both</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_directionality.html">dp_directionality</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span>, radius <span class="op">=</span> <span class="fl">15</span>,</span>
 <span>                          normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">both</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"flux_current"</span>, <span class="st">"omni_current"</span>, <span class="st">"directionality"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span>, nc <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
@@ -502,7 +523,7 @@ distance in kilometres: great-circle distance between cell centres on
 longitude/latitude grids, where the kernel narrows in degrees of
 longitude towards the poles, or distance in the coordinate system’s
 units on projected grids.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">suitability</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/suitability.tif"</span><span class="op">)</span>   <span class="co"># e.g. lon/lat, 2 km cells</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">50</span>, radius_units <span class="op">=</span> <span class="st">"km"</span>,</span>
 <span>                  source_strength <span class="op">=</span> <span class="va">suitability</span><span class="op">)</span></span></code></pre></div>
@@ -679,6 +700,13 @@ circuit (conductance 1 on the same cells), with the same dipoles, and
 <code>normalized_current</code> is current divided by flow potential.
 Reusing the dipoles cancels much of the sampling noise in the ratio,
 which is why normalized current is less noisy than current.</p>
+<p>With <code>power = TRUE</code>, a link’s power is its summed squared
+current times its resistance, <span class="math inline">\(1/g_e\)</span>, and a cell’s <code>power</code> is
+half the sum over its links, so the cells sum to the circuit’s total.
+<code>normalized_power</code> divides it by the power on the uniform
+circuit, whose links have resistance 1 (or <span class="math inline">\(\sqrt{2}\)</span> on diagonals). It therefore has
+the units of resistance, unlike normalized current, and is best compared
+within a surface.</p>
 </div>
 <div class="section level3">
 <h3 id="focal-nodes-1">Focal nodes<a class="anchor" aria-label="anchor" href="#focal-nodes-1"></a>

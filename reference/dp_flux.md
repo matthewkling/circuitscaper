@@ -15,7 +15,8 @@ dp_flux(
   resistance_is = "resistances",
   normalize = TRUE,
   direction = TRUE,
-  cell_value = c("absolute", "rms")
+  cell_value = c("absolute", "rms"),
+  power = FALSE
 )
 ```
 
@@ -80,6 +81,12 @@ dp_flux(
   or `"rms"`, the square root of half the sum of squared current, as in
   [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
 
+- power:
+
+  Logical. Also map the power dissipated (see "Power" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)),
+  and with `normalize`, normalized power. Default `FALSE`.
+
 ## Value
 
 A
@@ -100,6 +107,15 @@ with layers:
   (with `normalize`) `current` on the uniform circuit, summarised the
   same way, and `current` divided by it: above 1 where the landscape
   channels the flow, below 1 where it impedes it.
+
+- power, normalized_power:
+
+  (with `power`; `normalized_power` also needs `normalize`) The power
+  the flow dissipates: half the sum over a cell's links of squared
+  current times the link's resistance, so cells sum to the total (see
+  "Power" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md));
+  and power divided by the power on the uniform circuit.
 
 - flow_x, flow_y:
 

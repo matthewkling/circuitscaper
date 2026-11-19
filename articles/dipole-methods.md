@@ -152,6 +152,29 @@ instance, when
 raises the thread count), the circuit is rebuilt the next time it is
 used.
 
+## Power and choke points
+
+Current shows where movement concentrates. Power, squared current times
+resistance, shows where it is forced through resistance: choke points.
+Set `power = TRUE` for a `power` layer, and with `normalize = TRUE`, a
+`normalized_power` layer. Each link’s power uses that link’s resistance,
+which depends on both cells it joins, so this is more accurate than
+squaring a current map and multiplying by each cell’s resistance,
+especially where high- and low-resistance cells meet. It comes from the
+same draws, so it costs no extra solves. Power spans orders of magnitude
+where resistance does, so it is easiest to see on a log scale:
+
+``` r
+
+p <- dp_omni(circuit, radius = 10, seed = 1, power = TRUE)
+plot(c(p$current, log10(p[[c("power", "normalized_power")]])), nc = 3,
+     main = c("current", "log10 power", "log10 normalized power"))
+```
+
+![plot of chunk power](figures/dp-power-1.png)
+
+plot of chunk power
+
 ## Accuracy and reproducibility
 
 The maps are estimates with some sampling noise, which falls as
@@ -588,6 +611,14 @@ sampler can produce, within each component.
 `normalized_current` is current divided by flow potential. Reusing the
 dipoles cancels much of the sampling noise in the ratio, which is why
 normalized current is less noisy than current.
+
+With `power = TRUE`, a link’s power is its summed squared current times
+its resistance, \\1/g_e\\, and a cell’s `power` is half the sum over its
+links, so the cells sum to the circuit’s total. `normalized_power`
+divides it by the power on the uniform circuit, whose links have
+resistance 1 (or \\\sqrt{2}\\ on diagonals). It therefore has the units
+of resistance, unlike normalized current, and is best compared within a
+surface.
 
 ### Focal nodes
 

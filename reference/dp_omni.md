@@ -16,7 +16,8 @@ dp_omni(
   normalize = TRUE,
   n_draws = 32,
   n_dipoles = 1e+05,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 ```
 
@@ -96,14 +97,21 @@ dp_omni(
   [`set.seed()`](https://rdrr.io/r/base/Random.html) also makes runs
   reproducible. The seed used is returned as the `"seed"` attribute.
 
+- power:
+
+  Logical. Also map the power dissipated (see "Power" in `dp_omni()`),
+  and with `normalize`, normalized power. Default `FALSE`.
+
 ## Value
 
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
-with layers `current`, and with `normalize`, `flow_potential` and
-`normalized_current`. Attributes: `"halves"`, a data frame comparing the
+with layers `current`; with `normalize`, `flow_potential` and
+`normalized_current`; with `power`, `power`; and with both,
+`normalized_power`. Attributes: `"halves"`, a data frame comparing the
 estimates from odd and even draws on source (and destination) cells
-(Spearman's \\\rho\\ and the median relative difference), and `"seed"`.
+(Spearman's \\\rho\\ and the median relative difference), for `current`
+and the normalized and power layers; and `"seed"`.
 
 ## Details
 
@@ -184,6 +192,32 @@ rather than a window around each target. Current maps typically agree
 closely (Spearman's \\\rho \approx\\ 0.95–0.99), normalized current less
 so (\\\rho \approx\\ 0.85). No current is added at endpoints for the
 injected current itself, unlike Circuitscape's cell maps.
+
+### Power
+
+With `power = TRUE`, the result also maps the power dissipated, which
+picks out choke points: places where current is forced through
+resistance. A link's power is its squared current (summed over pairs, as
+for `current`) times its resistance, \\1 / g_e\\. A cell's `power` is
+half the sum over its links, so each link's power is shared between the
+two cells it joins, and the cells sum to the circuit's total. It comes
+from the same per-link sums as `current`, so it costs no extra solves,
+and its estimate is unbiased with about twice the relative noise of
+`current`.
+
+This is not `current` squared times the cell's resistance. A link's
+resistance depends on both cells it joins (with Circuitscape's averaged
+conductances, it approaches twice the lower of the two resistances where
+they differ widely), and diagonal links' resistance is \\\sqrt{2}\\
+times larger. Squaring a current map and multiplying by resistance
+overstates power on high-resistance cells next to low-resistance ones,
+where choke points often are.
+
+With `normalize`, `normalized_power` is power divided by the power of
+the same pairs on the uniform circuit. Unlike normalized current, it has
+the units of resistance (the uniform circuit's links have resistance 1),
+so compare it within a surface rather than across surfaces in different
+units.
 
 ### Accuracy
 

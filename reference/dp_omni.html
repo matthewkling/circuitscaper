@@ -61,7 +61,8 @@
 <span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>  n_dipoles <span class="op">=</span> <span class="fl">1e+05</span>,</span>
-<span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  power <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -133,14 +134,21 @@ current. Default <code>TRUE</code>.</p></dd>
 <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> also makes runs reproducible. The seed used is returned
 as the <code>"seed"</code> attribute.</p></dd>
 
+
+<dt id="arg-power">power<a class="anchor" aria-label="anchor" href="#arg-power"></a></dt>
+<dd><p>Logical. Also map the power dissipated (see "Power" in
+<code>dp_omni()</code>), and with <code>normalize</code>, normalized power. Default <code>FALSE</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>current</code>, and with
-<code>normalize</code>, <code>flow_potential</code> and <code>normalized_current</code>. Attributes:
-<code>"halves"</code>, a data frame comparing the estimates from odd and even
-draws on source (and destination) cells (Spearman's \(\rho\) and
-the median relative difference), and <code>"seed"</code>.</p>
+    <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>current</code>; with <code>normalize</code>,
+<code>flow_potential</code> and <code>normalized_current</code>; with <code>power</code>, <code>power</code>; and
+with both, <code>normalized_power</code>. Attributes: <code>"halves"</code>, a data frame
+comparing the estimates from odd and even draws on source (and
+destination) cells (Spearman's \(\rho\) and the median relative
+difference), for <code>current</code> and the normalized and power layers; and
+<code>"seed"</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -206,6 +214,33 @@ target. Current maps typically agree closely (Spearman's
 \(\rho \approx\) 0.95–0.99), normalized current less so
 (\(\rho \approx\) 0.85). No current is added at endpoints for the
 injected current itself, unlike Circuitscape's cell maps.</p><div class="section">
+<h3 id="power">Power<a class="anchor" aria-label="anchor" href="#power"></a></h3>
+
+
+<p>With <code>power = TRUE</code>, the result also maps the power dissipated, which
+picks out choke points: places where current is forced through
+resistance. A link's power is its squared current (summed over pairs, as
+for <code>current</code>) times its resistance, \(1 / g_e\). A cell's <code>power</code> is
+half the sum over its links, so each link's power is shared between the
+two cells it joins, and the cells sum to the circuit's total. It comes
+from the same per-link sums as <code>current</code>, so it costs no extra solves,
+and its estimate is unbiased with about twice the relative noise of
+<code>current</code>.</p>
+<p>This is not <code>current</code> squared times the cell's resistance. A link's
+resistance depends on both cells it joins (with Circuitscape's averaged
+conductances, it approaches twice the lower of the two resistances where
+they differ widely), and diagonal links' resistance is \(\sqrt{2}\)
+times larger. Squaring a current map and multiplying by resistance
+overstates power on high-resistance cells next to low-resistance ones,
+where choke points often are.</p>
+<p>With <code>normalize</code>, <code>normalized_power</code> is power divided by the power of
+the same pairs on the uniform circuit. Unlike normalized current, it has
+the units of resistance (the uniform circuit's links have resistance 1),
+so compare it within a surface rather than across surfaces in different
+units.</p>
+</div>
+
+<div class="section">
 <h3 id="accuracy">Accuracy<a class="anchor" aria-label="anchor" href="#accuracy"></a></h3>
 
 

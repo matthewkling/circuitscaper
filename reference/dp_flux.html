@@ -60,7 +60,8 @@
 <span>  resistance_is <span class="op">=</span> <span class="st">"resistances"</span>,</span>
 <span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  direction <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  cell_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"absolute"</span>, <span class="st">"rms"</span><span class="op">)</span></span>
+<span>  cell_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"absolute"</span>, <span class="st">"rms"</span><span class="op">)</span>,</span>
+<span>  power <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -122,6 +123,11 @@ Default <code>TRUE</code>.</p></dd>
 Circuitscape's current maps; or <code>"rms"</code>, the square root of half the sum
 of squared current, as in <code><a href="dp_omni.html">dp_omni()</a></code>.</p></dd>
 
+
+<dt id="arg-power">power<a class="anchor" aria-label="anchor" href="#arg-power"></a></dt>
+<dd><p>Logical. Also map the power dissipated (see "Power" in
+<code><a href="dp_omni.html">dp_omni()</a></code>), and with <code>normalize</code>, normalized power. Default <code>FALSE</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -138,6 +144,13 @@ all leaving along its links, has <code>current</code> 1/2 rather than 1.</p></dd
 on the uniform circuit, summarised the same way, and <code>current</code>
 divided by it: above 1 where the landscape channels the flow, below 1
 where it impedes it.</p></dd>
+
+<dt>power, normalized_power</dt>
+<dd><p>(with <code>power</code>; <code>normalized_power</code> also
+needs <code>normalize</code>) The power the flow dissipates: half the sum over a
+cell's links of squared current times the link's resistance, so
+cells sum to the total (see "Power" in <code><a href="dp_omni.html">dp_omni()</a></code>); and power
+divided by the power on the uniform circuit.</p></dd>
 
 <dt>flow_x, flow_y</dt>
 <dd><p>(with <code>direction</code>) Net flow through the cell
