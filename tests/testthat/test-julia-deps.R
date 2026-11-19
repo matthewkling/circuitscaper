@@ -95,22 +95,101 @@ test_that("load_circuitscape() loads once, and says how to install what's missin
   expect_length(.cs_env$loaded_packages, 0)
 })
 
-test_that("cs_julia_available(circuitscape = FALSE) needs only a recent Julia", {
+test_that("cs_julia_available(circuitscape = FALSE) needs only a recent Julia that starts", {
   local_mocked_bindings(find_julia_bin = function(...) NULL)
   expect_false(cs_julia_available(circuitscape = FALSE))
 
+  ran <- NULL
+  started <- FALSE
   local_mocked_bindings(
-    find_julia_bin = function(...) "/fake/julia",
-    julia_version = function(bin) package_version("1.9.4")
+    find_julia_bin = function(...) "/fake/shim/julia",
+    julia_version = function(bin) package_version("1.9.4"),
+    julia_bindir = function(bin, ...) {
+      started <<- TRUE
+      "/fake/real/bin"
+    },
+    julia_runs = function(bin, code, timeout) {
+      ran <<- c(bin, code)
+      TRUE
+    }
   )
   expect_false(cs_julia_available(circuitscape = FALSE))
+  expect_false(started)
 
-  # A recent Julia is enough; the packages aren't checked
-  local_mocked_bindings(
-    julia_version = function(bin) package_version("1.12.1"),
-    local_clean_library_path = function(...) stop("packages were checked")
-  )
+  # A recent Julia that starts is enough; the packages aren't checked
+  local_mocked_bindings(julia_version = function(bin) package_version("1.12.1"))
   expect_true(cs_julia_available(circuitscape = FALSE))
+  expect_true(started)
+  expect_null(ran)
+  # The packages are checked with Julia's own executable, not the shim
+  expect_true(cs_julia_available())
+  expect_equal(ran[1], file.path("/fake/real/bin", julia_exe()))
+  expect_match(ran[2], "using Circuitscape, Omniscape")
+
+  # A Julia that reports its version but can't start (e.g. a missing system
+  # image) is not available
+  local_mocked_bindings(julia_bindir = function(bin, ...) NULL)
+  expect_false(cs_julia_available(circuitscape = FALSE))
+  expect_false(cs_julia_available())
+})
+
+test_that("julia_bindir() asks Julia for its directory, with JULIA_BINDIR unset", {
+  skip_on_os("windows")
+  real <- withr::local_tempfile(pattern = "real_")
+  dir.create(real)
+  file.create(file.path(real, julia_exe()))
+  fake <- withr::local_tempfile()
+  # Like Julia, reports JULIA_BINDIR if it's set, so a set one is caught
+  writeLines(c("#!/bin/sh",
+               "[ -n \"$JULIA_BINDIR\" ] && { echo \"$JULIA_BINDIR\"; exit 0; }",
+               "echo \"$FAKE_OUT\"", "exit $FAKE_STATUS"), fake)
+  Sys.chmod(fake, "0755")
+  withr::local_envvar(FAKE_OUT = real, FAKE_STATUS = "0", JULIA_BINDIR = "/elsewhere")
+  expect_equal(julia_bindir(fake, timeout = 10), normalizePath(real))
+  expect_equal(Sys.getenv("JULIA_BINDIR"), "/elsewhere")
+  # A directory with no Julia in it, a failed start, no Julia at all
+  withr::local_envvar(FAKE_OUT = tempdir())
+  expect_null(julia_bindir(fake, timeout = 10))
+  withr::local_envvar(FAKE_OUT = real, FAKE_STATUS = "1")
+  expect_null(julia_bindir(fake, timeout = 10))
+  expect_null(julia_bindir(file.path(tempdir(), "no-such-julia"), timeout = 10))
+})
+
+test_that("julia_bindir() sees through a launcher to Julia's own directory", {
+  skip_on_os("windows")
+  julia <- find_julia_bin(login_shell = FALSE)
+  skip_if(is.null(julia), "No Julia found")
+  real <- julia_bindir(julia)
+  skip_if(is.null(real), "Julia doesn't start")
+  # A launcher in another directory that runs the real Julia, as Chocolatey's
+  # shims do. Pointing JULIA_BINDIR at the launcher's directory breaks Julia.
+  shim_dir <- withr::local_tempfile(pattern = "shim_")
+  dir.create(shim_dir)
+  shim <- file.path(shim_dir, "julia")
+  writeLines(c("#!/bin/sh", paste0("exec ", shQuote(file.path(real, "julia")), " \"$@\"")),
+             shim)
+  Sys.chmod(shim, "0755")
+  expect_equal(julia_bindir(shim), real)
+  local_clean_library_path()
+  withr::local_envvar(JULIA_BINDIR = shim_dir)
+  out <- suppressWarnings(system2(shim, c("--startup-file=no", "-e", shQuote("println(true)")),
+                                  stdout = TRUE, stderr = FALSE))
+  expect_false(any(trimws(out) == "true"))
+})
+
+test_that("julia_runs() is FALSE when Julia fails, errors or prints something else", {
+  skip_on_os("windows")
+  sh <- Sys.which("sh")
+  skip_if(!nzchar(sh))
+  fake <- withr::local_tempfile()
+  writeLines(c("#!/bin/sh", "echo \"$FAKE_OUT\"", "exit $FAKE_STATUS"), fake)
+  Sys.chmod(fake, "0755")
+  withr::local_envvar(FAKE_OUT = "true", FAKE_STATUS = "0")
+  expect_true(julia_runs(fake, "println(true)", timeout = 10))
+  withr::local_envvar(FAKE_OUT = "ERROR: could not load library", FAKE_STATUS = "1")
+  expect_false(julia_runs(fake, "println(true)", timeout = 10))
+  expect_false(julia_runs(file.path(tempdir(), "no-such-julia"), "println(true)",
+                          timeout = 10))
 })
 
 test_that("cs_install_julia(circuitscape = FALSE) installs and loads no packages but Tables", {

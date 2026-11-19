@@ -59,9 +59,11 @@ of squared current, as in \code{\link[=dp_omni]{dp_omni()}}.}
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
 \describe{
 \item{current}{Half the sum of absolute current over a cell's links, as
-in Circuitscape's current maps (without the injection term), or with
-\code{cell_value = "rms"}, the square root of half the sum of squared
-current.}
+in Circuitscape's current maps, or with \code{cell_value = "rms"}, the
+square root of half the sum of squared current. Unlike Circuitscape,
+it leaves out the current injected or withdrawn at the cell itself, so
+origin and destination cells read lower: a cell that injects one unit,
+all leaving along its links, has \code{current} 1/2 rather than 1.}
 \item{flow_potential, normalized_current}{(with \code{normalize}) \code{current}
 on the uniform circuit, summarised the same way, and \code{current}
 divided by it: above 1 where the landscape channels the flow, below 1
@@ -71,10 +73,25 @@ towards the east and the north, in grid directions: half the sum
 over the cell's links of the current along the link times its unit
 direction.}
 }
-Attribute \code{"in_reach"}: the share of all origin–destination pair weight,
-\eqn{W / (\sum o \sum d)}, that is within \code{radius} and in the same
-component, and so carried by the map. A small share means most of the
-origin has no destination within reach.
+Three attributes say how much of the two distributions the map covers,
+each between 0 and 1:
+\describe{
+\item{\code{"origin_in_reach"}}{The share of origin strength on cells with
+any destination strength within \code{radius} and in the same component.
+This is the one that says whether most of the origin has a destination
+within reach: origin cells without one send nothing. A cell that is
+both origin and destination counts as reached, although its pair with
+itself moves nothing.}
+\item{\code{"destination_in_reach"}}{The same for destination strength: the
+share on cells with any origin strength within reach.}
+\item{\code{"pair_weight_in_reach"}}{The share of all origin–destination pair
+weight, \eqn{W / (\sum o \sum d)}, that is within \code{radius} and in the
+same component, and so carried by the map. It depends on the size of
+the domain relative to \code{radius}: where the distributions span many
+radii, most pairs are out of reach and the share is small, however
+closely the two distributions overlap. With \code{radius = Inf} and one
+component, it is 1.}
+}
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -151,7 +168,8 @@ terra::plot(result)
 
 # Only pairs within 45 cells of each other
 near <- dp_flux(resistance, origin, destination, radius = 45)
-attr(near, "in_reach")
+attr(near, "origin_in_reach")
+attr(near, "pair_weight_in_reach")
 \dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}
 }

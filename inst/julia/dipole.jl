@@ -658,11 +658,17 @@ end
 # moves nothing). With no kernel and one component this is o/sum(o) - d/sum(d).
 # K is symmetric, so b sums to zero in each component; the withdrawals are
 # rescaled to make that exact despite rounding at the kernel's edge.
-# `in_reach` is W over the pair weight with no limits, sum(o) * sum(d).
+# Coverage: `pair_weight_in_reach` is W over the pair weight with no limits,
+# sum(o) * sum(d); `origin_in_reach` is the share of origin weight on cells
+# with any destination weight in reach, (K d)_i > 0, and
+# `destination_in_reach` the same for destinations. A window of zeros sums to
+# exactly 0 (its prefix sums are equal), so "> 0" is exact.
 function flux_injection(gr::Graph, o::Vector{Float64}, d::Vector{Float64},
                         K::Union{Nothing, Kernel})
-    inj = o .* kernel_sums(gr, d, K)
-    wd = d .* kernel_sums(gr, o, K)
+    Kd = kernel_sums(gr, d, K)
+    Ko = kernel_sums(gr, o, K)
+    inj = o .* Kd
+    wd = d .* Ko
     pos = zeros(gr.ncomp)
     neg = zeros(gr.ncomp)
     for i in eachindex(inj)
@@ -670,10 +676,13 @@ function flux_injection(gr::Graph, o::Vector{Float64}, d::Vector{Float64},
         neg[gr.comp[i]] += wd[i]
     end
     W = sum(pos)
-    W > 0 || return (b = zeros(nnodes(gr)), W = 0.0, in_reach = 0.0)
+    reached(w, Kw) = sum(w[i] for i in eachindex(w) if Kw[i] > 0; init = 0.0) / sum(w)
+    cover = (pair_weight_in_reach = W / (sum(o) * sum(d)),
+             origin_in_reach = reached(o, Kd), destination_in_reach = reached(d, Ko))
+    W > 0 || return (b = zeros(nnodes(gr)), W = 0.0, cover...)
     b = [(inj[i] - (neg[gr.comp[i]] > 0 ? wd[i] * pos[gr.comp[i]] / neg[gr.comp[i]] : 0.0)) / W
          for i in eachindex(inj)]
-    (b = b, W = W, in_reach = W / (sum(o) * sum(d)))
+    (b = b, W = W, cover...)
 end
 
 flux_injection(id::Real, o, d, dr0, hw, rowmap) =

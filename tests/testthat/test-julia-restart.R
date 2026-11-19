@@ -122,7 +122,9 @@ test_that("the dipole methods run without loading Circuitscape or Omniscape", {
   expect_false(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
   expect_length(.cs_env$loaded_packages, 0)
 
-  # A Circuitscape run in the same Julia loads them then
+  # A Circuitscape run in the same Julia loads them then, if installed
+  # (checked in a separate Julia, so they aren't loaded here)
+  skip_if_not(cs_julia_available(), "Circuitscape/Omniscape not installed")
   sites <- matrix(c(10, 40, 40, 10), ncol = 2, byrow = TRUE)
   expect_message(cs_pairwise(r, sites), "Loading Circuitscape and Omniscape")
   expect_true(isTRUE(jl_eval("isdefined(Main, :Omniscape)")))
