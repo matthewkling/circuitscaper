@@ -28,11 +28,55 @@ jl_string <- function(x) {
 }
 
 
+#' Julia's Own Binary Directory
+#'
+#' Asks Julia for `Sys.BINDIR`, the directory of the real executable, which
+#' differs from `dirname(julia_bin)` when `julia_bin` is a shim or launcher
+#' (e.g. Chocolatey's) that runs Julia from elsewhere. `JULIA_BINDIR` must be
+#' that directory: Julia also reads it, to find its system image, so pointing
+#' it at a shim's directory stops Julia from starting. `JULIA_BINDIR` is
+#' unset while asking, so Julia reports its own.
+#'
+#' @param julia_bin Path to the Julia executable.
+#' @param timeout Seconds to wait.
+#' @return The directory, or `NULL` if Julia doesn't start or reports a
+#'   directory without a Julia executable in it.
+#' @noRd
+julia_bindir <- function(julia_bin, timeout = 60) {
+  local_clean_library_path()
+  local_unset_bindir()
+  out <- tryCatch(
+    suppressWarnings(system2(
+      julia_bin, c("--startup-file=no", "-e", shQuote("print(Sys.BINDIR)", type = "cmd")),
+      stdout = TRUE, stderr = FALSE, timeout = timeout
+    )),
+    error = function(e) character(0)
+  )
+  if (!is.null(attr(out, "status")) || length(out) == 0) return(NULL)
+  dir <- trimws(out[length(out)])
+  if (!nzchar(dir) || !file.exists(file.path(dir, julia_exe()))) return(NULL)
+  normalizePath(dir, mustWork = FALSE)
+}
+
+
+#' Unset `JULIA_BINDIR` Until the Calling Function Exits
+#' @noRd
+local_unset_bindir <- function(envir = parent.frame()) {
+  old <- Sys.getenv("JULIA_BINDIR", unset = NA)
+  Sys.unsetenv("JULIA_BINDIR")
+  do.call(on.exit, list(substitute(
+    if (!is.na(old)) Sys.setenv(JULIA_BINDIR = old), list(old = old)),
+    add = TRUE), envir = envir)
+  invisible()
+}
+
+
 #' Start Julia
 #'
 #' Points 'JuliaConnectoR' at the Julia that `find_julia_bin()` found (via
-#' `JULIA_BINDIR`, which 'JuliaConnectoR' reads when it starts Julia) and
-#' starts it. 'JuliaConnectoR' starts Julia lazily, on the first evaluation;
+#' `JULIA_BINDIR`, which 'JuliaConnectoR' reads when it starts Julia, set to
+#' Julia's own binary directory; see `julia_bindir()`) and starts it.
+#' 'JuliaConnectoR' starts Julia lazily, on the first evaluation;
 #' if Julia is already running (e.g., another package started it), this
 #' connects to that Julia instead, which [cs_setup()] then checks.
 #'
@@ -43,7 +87,8 @@ jl_string <- function(x) {
 #' @return `TRUE` invisibly.
 #' @noRd
 start_julia <- function(julia_bin, quiet = TRUE, julia_home = NULL) {
-  Sys.setenv(JULIA_BINDIR = dirname(julia_bin))
+  bindir <- julia_bindir(julia_bin)
+  Sys.setenv(JULIA_BINDIR = if (is.null(bindir)) dirname(julia_bin) else bindir)
   start <- function() jl_eval("nothing")
   tryCatch(
     if (quiet) suppressMessages(start()) else start(),

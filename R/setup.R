@@ -479,14 +479,15 @@ cs_julia_available <- function(circuitscape = TRUE) {
       if (is.null(julia_bin)) return(FALSE)
       v <- julia_version(julia_bin)
       if (is.null(v) || v < min_julia_version()) return(FALSE)
-      if (!isTRUE(circuitscape)) {
-            # `julia --version` succeeds even when Julia can't start (e.g. a
-            # missing system image), so start it
-            return(julia_runs(julia_bin, "println(true)", timeout = 60))
-      }
+      # `julia --version` succeeds even when Julia can't start (e.g. a
+      # missing system image), so start it, as cs_setup() would: from its own
+      # binary directory
+      bindir <- julia_bindir(julia_bin)
+      if (is.null(bindir)) return(FALSE)
+      if (!isTRUE(circuitscape)) return(TRUE)
       # generous: the first load after an install precompiles
-      julia_runs(julia_bin, "using Circuitscape, Omniscape; println(true)",
-                 timeout = 600)
+      julia_runs(file.path(bindir, julia_exe()),
+                 "using Circuitscape, Omniscape; println(true)", timeout = 600)
 }
 
 
@@ -499,6 +500,7 @@ cs_julia_available <- function(circuitscape = TRUE) {
 #' @noRd
 julia_runs <- function(julia_bin, code, timeout) {
       local_clean_library_path()
+      local_unset_bindir()
       tryCatch({
             out <- suppressWarnings(system2(
                   julia_bin,

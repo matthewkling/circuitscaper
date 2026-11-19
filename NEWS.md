@@ -71,6 +71,12 @@
 
 ## Bug fixes
 
+* `cs_setup()` now starts Julia when the Julia it finds is a shim or
+  launcher in another directory, such as Chocolatey's on Windows. It pointed
+  'JuliaConnectoR' at the shim's directory, which Julia also uses to find
+  its system image, so Julia failed to start ("could not load library
+  ...sys.dll"). It now asks Julia for its own directory first.
+
 * `cs_install_julia(force = TRUE)` now updates Circuitscape.jl and
   Omniscape.jl even when a new release needs newer versions of their own
   dependencies. It previously held those dependencies fixed, so, for
