@@ -14,7 +14,8 @@ dp_flux(
   resistance_is = "resistances",
   normalize = TRUE,
   direction = TRUE,
-  cell_value = c("absolute", "rms")
+  cell_value = c("absolute", "rms"),
+  power = FALSE
 )
 }
 \arguments{
@@ -54,6 +55,9 @@ Default \code{TRUE}.}
 \code{"absolute"} (default), half the sum of absolute current, as in
 Circuitscape's current maps; or \code{"rms"}, the square root of half the sum
 of squared current, as in \code{\link[=dp_omni]{dp_omni()}}.}
+
+\item{power}{Logical. Also map the power dissipated (see "Power" in
+\code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
@@ -68,6 +72,11 @@ all leaving along its links, has \code{current} 1/2 rather than 1.}
 on the uniform circuit, summarised the same way, and \code{current}
 divided by it: above 1 where the landscape channels the flow, below 1
 where it impedes it.}
+\item{power, normalized_power}{(with \code{power}; \code{normalized_power} also
+needs \code{normalize}) The power the flow dissipates: half the sum over a
+cell's links of squared current times the link's resistance, so
+cells sum to the total (see "Power" in \code{\link[=dp_omni]{dp_omni()}}); and power
+divided by the power on the uniform circuit.}
 \item{flow_x, flow_y}{(with \code{direction}) Net flow through the cell
 towards the east and the north, in grid directions: half the sum
 over the cell's links of the current along the link times its unit

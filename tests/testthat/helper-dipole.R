@@ -39,7 +39,9 @@ dipole_test_grid <- function(nr = 23, nc = 31, split = FALSE, seed = 42) {
 # from a dense solve with one node grounded per connected component (exact
 # for balanced injections). P is nodes x nodes; g, a, b, comp describe the
 # graph, as from CircuitscaperDipole.graph_info.
-dipole_exact_cells <- function(gi, P) {
+# Per-node sums over incident links of the summed squared current over pairs,
+# each link's term times `weight` (1 / gi$g for power)
+dipole_exact_cells <- function(gi, P, weight = 1) {
   n <- length(gi$comp)
   L <- matrix(0, n, n)
   L[cbind(gi$a, gi$b)] <- -gi$g
@@ -55,7 +57,8 @@ dipole_exact_cells <- function(gi, P) {
   # sum over ordered pairs of P_ij (y_i - y_j)^2 = 2 y' (D - P) y, P symmetric
   C <- 2 * (diag(rowSums(P)) - P)
   Y <- gi$g * (X[gi$a, , drop = FALSE] - X[gi$b, , drop = FALSE])
-  Te <- rowSums((Y %*% C) * Y)
+  # weight = 1 / gi$g gives power instead of squared current
+  Te <- rowSums((Y %*% C) * Y) * weight
   cells <- numeric(n)
   agg <- rowsum(c(Te, Te), c(gi$a, gi$b))
   cells[as.integer(rownames(agg))] <- agg[, 1]

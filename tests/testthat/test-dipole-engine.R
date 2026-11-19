@@ -123,11 +123,13 @@ exact_check <- function(radius) {
   runs <- lapply(1:16, function(seed) {
     r <- dp_random_dipoles(circuit, w, w, k, seed = seed, n_draws = n_draws,
                            n_dipoles = m, uniform = TRUE)
-    lapply(r$cells, function(cl) r$S / m * rowSums(cl) / n_draws)
+    lapply(c(r$cells, r$power), function(cl) r$S / m * rowSums(cl) / n_draws)
   })
-  for (u in 1:2) {
-    gi <- dipole_graph_info(circuit, uniform = u == 2)
-    exact <- dipole_exact_cells(gi, dipole_pair_weights(circuit, gi, w, radius))
+  # Squared current, then power, on the circuit and its uniform twin
+  for (u in 1:4) {
+    gi <- dipole_graph_info(circuit, uniform = u %in% c(2, 4))
+    weight <- if (u > 2) 1 / gi$g else 1
+    exact <- dipole_exact_cells(gi, dipole_pair_weights(circuit, gi, w, radius), weight)
     est <- sapply(runs, `[[`, u)
     ok <- exact > 0
     mu <- rowMeans(est)[ok]

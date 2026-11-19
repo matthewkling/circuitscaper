@@ -15,7 +15,8 @@ dp_omni(
   normalize = TRUE,
   n_draws = 32,
   n_dipoles = 1e+05,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 }
 \arguments{
@@ -61,13 +62,18 @@ current. Default \code{TRUE}.}
 (default), one is drawn from R's random number generator, so
 \code{\link[=set.seed]{set.seed()}} also makes runs reproducible. The seed used is returned
 as the \code{"seed"} attribute.}
+
+\item{power}{Logical. Also map the power dissipated (see "Power" in
+\code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}, and with
-\code{normalize}, \code{flow_potential} and \code{normalized_current}. Attributes:
-\code{"halves"}, a data frame comparing the estimates from odd and even
-draws on source (and destination) cells (Spearman's \eqn{\rho} and
-the median relative difference), and \code{"seed"}.
+A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}; with \code{normalize},
+\code{flow_potential} and \code{normalized_current}; with \code{power}, \code{power}; and
+with both, \code{normalized_power}. Attributes: \code{"halves"}, a data frame
+comparing the estimates from odd and even draws on source (and
+destination) cells (Spearman's \eqn{\rho} and the median relative
+difference), for \code{current} and the normalized and power layers; and
+\code{"seed"}.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -143,6 +149,33 @@ target. Current maps typically agree closely (Spearman's
 \eqn{\rho \approx} 0.95--0.99), normalized current less so
 (\eqn{\rho \approx} 0.85). No current is added at endpoints for the
 injected current itself, unlike Circuitscape's cell maps.
+\subsection{Power}{
+
+With \code{power = TRUE}, the result also maps the power dissipated, which
+picks out choke points: places where current is forced through
+resistance. A link's power is its squared current (summed over pairs, as
+for \code{current}) times its resistance, \eqn{1 / g_e}. A cell's \code{power} is
+half the sum over its links, so each link's power is shared between the
+two cells it joins, and the cells sum to the circuit's total. It comes
+from the same per-link sums as \code{current}, so it costs no extra solves,
+and its estimate is unbiased with about twice the relative noise of
+\code{current}.
+
+This is not \code{current} squared times the cell's resistance. A link's
+resistance depends on both cells it joins (with Circuitscape's averaged
+conductances, it approaches twice the lower of the two resistances where
+they differ widely), and diagonal links' resistance is \eqn{\sqrt{2}}
+times larger. Squaring a current map and multiplying by resistance
+overstates power on high-resistance cells next to low-resistance ones,
+where choke points often are.
+
+With \code{normalize}, \code{normalized_power} is power divided by the power of
+the same pairs on the uniform circuit. Unlike normalized current, it has
+the units of resistance (the uniform circuit's links have resistance 1),
+so compare it within a surface rather than across surfaces in different
+units.
+}
+
 \subsection{Accuracy}{
 
 Each draw contributes noise with a relative standard deviation of about

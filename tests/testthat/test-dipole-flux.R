@@ -26,7 +26,7 @@ flux_pair_weights <- function(circuit, gi, o, d, radius) {
 # Per-node half sums of |I| over incident links for injection b (with `rms`,
 # the root of half the sum of I^2), from a dense solve with one node
 # grounded per component
-flux_exact_current <- function(gi, b, rms = FALSE) {
+flux_exact_current <- function(gi, b, rms = FALSE, power = FALSE) {
   n <- length(gi$comp)
   L <- matrix(0, n, n)
   L[cbind(gi$a, gi$b)] <- -gi$g
@@ -40,11 +40,15 @@ flux_exact_current <- function(gi, b, rms = FALSE) {
     V[keep] <- solve(L[keep, keep], b[keep])
   }
   I <- abs(gi$g * (V[gi$a] - V[gi$b]))
-  if (rms) I <- I^2
+  if (rms || power) I <- I^2
+  if (power) I <- I / gi$g
   cells <- numeric(n)
   agg <- rowsum(c(I, I), c(gi$a, gi$b))
   cells[as.integer(rownames(agg))] <- agg[, 1]
-  if (rms) sqrt(cells / 2) else cells / 2
+  out <- if (rms) sqrt(cells / 2) else cells / 2
+  # With `power`, the power dissipated in all, b'V, as an attribute
+  if (power) attr(out, "total") <- sum(b * V)
+  out
 }
 
 flux_test_inputs <- function() {
@@ -334,4 +338,33 @@ test_that("dp_flux reports how much of each distribution is within reach", {
   cond <- terra::setValues(tmpl, 1)
   cv <- coverage(run(cond, layer(tmpl, 1:3), layer(tmpl, 18:20), radius = Inf))
   expect_equal(unname(cv), c(1, 1, 1), tolerance = 1e-12)
+})
+
+test_that("dp_flux maps the power the flow dissipates", {
+  skip_if_no_julia(circuitscape = FALSE)
+  t <- flux_test_inputs()
+  P <- flux_pair_weights(t$circuit, t$gi, t$o, t$d, 5)
+  b <- (rowSums(P) - colSums(P)) / sum(P)
+  want <- flux_exact_current(t$gi, b, power = TRUE)
+  r <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5, power = TRUE,
+               normalize = FALSE)
+  expect_named(r, c("current", "power", "flow_x", "flow_y"))
+  got <- dp_node_values(t$circuit, r$power)
+  expect_equal(got, as.vector(want), tolerance = 1e-8)
+  # Cells share each link's power, so they sum to the power dissipated
+  expect_equal(sum(got), attr(want, "total"), tolerance = 1e-8)
+  # Power doesn't change the other layers
+  r0 <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5, normalize = FALSE)
+  expect_identical(terra::values(r[[c("current", "flow_x", "flow_y")]]),
+                   terra::values(r0))
+
+  # Normalized: divided by the power on the uniform circuit
+  circuit <- dp_circuit(t$x$conductance, resistance_is = "conductances")
+  rn <- dp_flux(circuit, t$x$suitability, t$dest, radius = 5, power = TRUE)
+  expect_named(rn, c("current", "flow_potential", "normalized_current", "power",
+                     "normalized_power", "flow_x", "flow_y"))
+  gu <- dipole_graph_info(circuit, uniform = TRUE)
+  fpp <- as.vector(flux_exact_current(gu, b, power = TRUE))
+  expect_equal(dp_node_values(circuit, rn$normalized_power),
+               ifelse(fpp > 0, got / fpp, NA), tolerance = 1e-8)
 })

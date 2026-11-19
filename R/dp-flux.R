@@ -91,6 +91,11 @@
 #'     on the uniform circuit, summarised the same way, and `current`
 #'     divided by it: above 1 where the landscape channels the flow, below 1
 #'     where it impedes it.}
+#'   \item{power, normalized_power}{(with `power`; `normalized_power` also
+#'     needs `normalize`) The power the flow dissipates: half the sum over a
+#'     cell's links of squared current times the link's resistance, so
+#'     cells sum to the total (see "Power" in [dp_omni()]); and power
+#'     divided by the power on the uniform circuit.}
 #'   \item{flow_x, flow_y}{(with `direction`) Net flow through the cell
 #'     towards the east and the north, in grid directions: half the sum
 #'     over the cell's links of the current along the link times its unit
@@ -136,10 +141,12 @@
 dp_flux <- function(resistance, origin, destination, radius = Inf,
                     source_threshold = 0.01, radius_units = c("pixels", "km"),
                     resistance_is = "resistances", normalize = TRUE,
-                    direction = TRUE, cell_value = c("absolute", "rms")) {
+                    direction = TRUE, cell_value = c("absolute", "rms"),
+                    power = FALSE) {
   radius_units <- match.arg(radius_units)
   cell_value <- match.arg(cell_value)
   normalize <- isTRUE(normalize)
+  power <- isTRUE(power)
   circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   o <- dp_weights(circuit, origin, source_threshold, "origin")
@@ -148,6 +155,10 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
 
   v <- cbind(current = f$current)
   if (normalize) v <- cbind(v, flow_potential = f$fp, normalized_current = f$nc)
+  if (power) {
+    v <- cbind(v, power = f$power)
+    if (normalize) v <- cbind(v, normalized_power = f$np)
+  }
   if (isTRUE(direction)) v <- cbind(v, flow_x = f$flow[, 1], flow_y = f$flow[, 2])
   out <- dp_to_raster(circuit, v, colnames(v))
   dp_set_coverage(out, f)
@@ -158,7 +169,9 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
 #'
 #' Solves the flux injection on the circuit and, with `normalize`, on its
 #' uniform twin. Returns per-node `current` (summarised by `cell_value`),
-#' `flow` (x and y), and with `normalize`, `fp` and `nc`; the injection `b`,
+#' `flow` (x and y) and `power`, and with `normalize`, `fp`, `nc`,
+#' `fp_power` (power on the uniform twin) and `np` (normalized power); the
+#' injection `b`,
 #' the total pair weight `W` and the coverage shares (see `dp_set_coverage()`).
 #' With `check = FALSE`, returns
 #' `NULL` instead of an error when no pairs are within reach.
@@ -179,13 +192,16 @@ dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
   }
   cells <- dp_call("flux", circuit$env$id, b)
   out <- list(current = summarise(cells), flow = 0.5 * cells[, 3:4, drop = FALSE],
-              b = b, W = inj$W,
+              power = 0.5 * cells[, 5], b = b, W = inj$W,
               coverage = c(origin_in_reach = inj$origin_in_reach,
                            destination_in_reach = inj$destination_in_reach,
                            pair_weight_in_reach = inj$pair_weight_in_reach))
   if (normalize) {
-    out$fp <- summarise(dp_call("flux", circuit$env$uniform_id, b))
+    ucells <- dp_call("flux", circuit$env$uniform_id, b)
+    out$fp <- summarise(ucells)
     out$nc <- ifelse(out$fp > 0, out$current / out$fp, NA_real_)
+    out$fp_power <- 0.5 * ucells[, 5]
+    out$np <- ifelse(out$fp_power > 0, out$power / out$fp_power, NA_real_)
   }
   out
 }
