@@ -37,7 +37,8 @@
 
 * The dipole methods need only Julia, not the Circuitscape and Omniscape
   Julia packages. `cs_install_julia(circuitscape = FALSE)` installs Julia
-  alone, and `cs_julia_available(circuitscape = FALSE)` checks for it.
+  alone, and `cs_julia_available(circuitscape = FALSE)` checks that a
+  recent enough Julia is found and starts.
 
 ## Changes
 

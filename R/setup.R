@@ -479,16 +479,32 @@ cs_julia_available <- function(circuitscape = TRUE) {
       if (is.null(julia_bin)) return(FALSE)
       v <- julia_version(julia_bin)
       if (is.null(v) || v < min_julia_version()) return(FALSE)
-      if (!isTRUE(circuitscape)) return(TRUE)
+      if (!isTRUE(circuitscape)) {
+            # `julia --version` succeeds even when Julia can't start (e.g. a
+            # missing system image), so start it
+            return(julia_runs(julia_bin, "println(true)", timeout = 60))
+      }
+      # generous: the first load after an install precompiles
+      julia_runs(julia_bin, "using Circuitscape, Omniscape; println(true)",
+                 timeout = 600)
+}
+
+
+#' Run Julia Code in a Fresh Julia Process
+#'
+#' @param julia_bin Path to the Julia executable.
+#' @param code Julia code that prints `true` on success.
+#' @param timeout Seconds to wait.
+#' @return `TRUE` if Julia ran and printed `true`, `FALSE` otherwise.
+#' @noRd
+julia_runs <- function(julia_bin, code, timeout) {
       local_clean_library_path()
       tryCatch({
-            out <- system2(
+            out <- suppressWarnings(system2(
                   julia_bin,
-                  c("--startup-file=no", "-e", '"using Circuitscape, Omniscape; println(true)"'),
-                  stdout = TRUE, stderr = FALSE,
-                  # generous: the first load after an install precompiles
-                  timeout = 600
-            )
+                  c("--startup-file=no", "-e", shQuote(code, type = "cmd")),
+                  stdout = TRUE, stderr = FALSE, timeout = timeout
+            ))
             any(trimws(out) == "true")
       }, error = function(e) FALSE)
 }

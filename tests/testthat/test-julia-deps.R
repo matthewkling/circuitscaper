@@ -95,22 +95,49 @@ test_that("load_circuitscape() loads once, and says how to install what's missin
   expect_length(.cs_env$loaded_packages, 0)
 })
 
-test_that("cs_julia_available(circuitscape = FALSE) needs only a recent Julia", {
+test_that("cs_julia_available(circuitscape = FALSE) needs only a recent Julia that starts", {
   local_mocked_bindings(find_julia_bin = function(...) NULL)
   expect_false(cs_julia_available(circuitscape = FALSE))
 
+  ran <- NULL
   local_mocked_bindings(
     find_julia_bin = function(...) "/fake/julia",
-    julia_version = function(bin) package_version("1.9.4")
+    julia_version = function(bin) package_version("1.9.4"),
+    julia_runs = function(bin, code, timeout) {
+      ran <<- code
+      TRUE
+    }
   )
   expect_false(cs_julia_available(circuitscape = FALSE))
+  expect_null(ran)
 
   # A recent Julia is enough; the packages aren't checked
-  local_mocked_bindings(
-    julia_version = function(bin) package_version("1.12.1"),
-    local_clean_library_path = function(...) stop("packages were checked")
-  )
+  local_mocked_bindings(julia_version = function(bin) package_version("1.12.1"))
   expect_true(cs_julia_available(circuitscape = FALSE))
+  expect_false(grepl("Circuitscape", ran))
+  expect_true(cs_julia_available())
+  expect_match(ran, "using Circuitscape, Omniscape")
+
+  # A Julia that reports its version but can't start (e.g. a missing system
+  # image) is not available
+  local_mocked_bindings(julia_runs = function(bin, code, timeout) FALSE)
+  expect_false(cs_julia_available(circuitscape = FALSE))
+  expect_false(cs_julia_available())
+})
+
+test_that("julia_runs() is FALSE when Julia fails, errors or prints something else", {
+  skip_on_os("windows")
+  sh <- Sys.which("sh")
+  skip_if(!nzchar(sh))
+  fake <- withr::local_tempfile()
+  writeLines(c("#!/bin/sh", "echo \"$FAKE_OUT\"", "exit $FAKE_STATUS"), fake)
+  Sys.chmod(fake, "0755")
+  withr::local_envvar(FAKE_OUT = "true", FAKE_STATUS = "0")
+  expect_true(julia_runs(fake, "println(true)", timeout = 10))
+  withr::local_envvar(FAKE_OUT = "ERROR: could not load library", FAKE_STATUS = "1")
+  expect_false(julia_runs(fake, "println(true)", timeout = 10))
+  expect_false(julia_runs(file.path(tempdir(), "no-such-julia"), "println(true)",
+                          timeout = 10))
 })
 
 test_that("cs_install_julia(circuitscape = FALSE) installs and loads no packages but Tables", {
