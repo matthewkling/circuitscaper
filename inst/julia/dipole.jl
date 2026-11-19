@@ -15,6 +15,19 @@ const SESSION = string(rand(RandomDevice(), UInt64); base = 16)
 # low-conductance cells; 1e-12 matches Circuitscape.
 const GROUND_FLOOR = 1e-12
 
+# Progress: `progress` is `nothing` or a callback from R, called as
+# progress(message, amount) on the main task only (never inside @threads):
+# amount 0 announces a step, amount > 0 completes it. It only reports, so
+# results don't depend on it.
+tick(progress::Nothing, message::AbstractString, amount::Real) = nothing
+function tick(progress, message::AbstractString, amount::Real)
+    progress(String(message), Float64(amount))
+    nothing
+end
+
+# "draws 1-32 of 64": the draws (or pairs) of one batch
+span(r::AbstractRange, n::Integer) = string(first(r), "-", last(r), " of ", n)
+
 
 # Graph ------------------------------------------------------------------------
 
@@ -542,21 +555,32 @@ end
 
 # Random-sign dipoles from `s`, solved against each circuit. Returns one
 # LinkSums per circuit; all circuits see the same injections.
+#
+# With `progress`, each batch is 1 + length(circs) steps: sampling its
+# injections, then solving them against each circuit.
 function run_dipoles(circs::Vector{Circuit}, s::Sampler, seed::Integer, n_draws::Integer,
                      m::Integer; batch::Int = default_batch(nnodes(s.graph)), f = abs2,
-                     weight = random_sign, center = nothing)
+                     weight = random_sign, center = nothing, progress = nothing)
     n = nnodes(s.graph)
     accs = [LinkSums(nlinks(c.graph)) for c in circs]
     for s0 in 1:batch:n_draws
         draws = s0:min(n_draws, s0 + batch - 1)
+        tick(progress, "Sampling dipoles: draws " * span(draws, n_draws), 0)
         B = injections!(Matrix{Float64}(undef, n, length(draws)), s, seed, draws, m;
                         weight = weight, center = center)
-        for (c, acc) in zip(circs, accs)
+        tick(progress, "", 1)
+        for (k, (c, acc)) in enumerate(zip(circs, accs))
+            tick(progress, solve_message(k, length(circs), "draws " * span(draws, n_draws)), 0)
             accumulate!(acc, c, B, s0; f = f)
+            tick(progress, "", 1)
         end
     end
     accs
 end
+
+# Callers pass a circuit, then optionally its uniform twin
+solve_message(k::Integer, n::Integer, what::AbstractString) =
+    string("Solving ", k == 2 ? "flow potential" : "current", ": ", what)
 
 
 # Focal nodes ------------------------------------------------------------------
@@ -592,7 +616,8 @@ end
 # circuit and its uniform twin), with the same injections. Returns per
 # circuit the per-node sums of squared current and of power (nodes x 2: odd
 # draws, even draws).
-function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real)
+function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real,
+                         progress = nothing)
     circs = [circuit(id) for id in asvec(ids)]
     gr = first(circs).graph
     groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
@@ -601,10 +626,14 @@ function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real)
     accs = [LinkSums(nlinks(gr)) for _ in circs]
     for s0 in 1:b:Int(n_draws)
         draws = s0:min(Int(n_draws), s0 + b - 1)
+        tick(progress, "Sampling pair weights: draws " * span(draws, Int(n_draws)), 0)
         B = focal_injections!(Matrix{Float64}(undef, nnodes(gr), length(draws)), groups,
                               Int(seed), draws)
-        for (c, acc) in zip(circs, accs)
+        tick(progress, "", 1)
+        for (k, (c, acc)) in enumerate(zip(circs, accs))
+            tick(progress, solve_message(k, length(circs), "draws " * span(draws, Int(n_draws))), 0)
             accumulate!(acc, c, B, s0)
+            tick(progress, "", 1)
         end
     end
     (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
@@ -616,8 +645,10 @@ end
 # solve per node: with y_i a link's current for unit flow from node i to its
 # component's first node, sum_{i<j} (y_i - y_j)^2 = N sum y_i^2 - (sum y_i)^2.
 # Returns per-node sums over incident links (nodes x 1), of squared current
-# and of power.
-function pairwise_exact(id::Real, nodes, batch::Real)
+# and of power. With `progress`, the whole solve is one step, in fractions
+# per batch; `uniform` only labels it.
+function pairwise_exact(id::Real, nodes, batch::Real, progress = nothing,
+                        uniform::Bool = false)
     c = circuit(id)
     gr = c.graph
     groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
@@ -631,8 +662,12 @@ function pairwise_exact(id::Real, nodes, batch::Real)
     a, bb, g = gr.a, gr.b, c.g
     sy = zeros(nlinks(gr))
     sy2 = zeros(nlinks(gr))
+    nb = cld(length(jobs), b)
     for s0 in 1:b:length(jobs)
-        part = jobs[s0:min(length(jobs), s0 + b - 1)]
+        span_jobs = s0:min(length(jobs), s0 + b - 1)
+        tick(progress, solve_message(uniform ? 2 : 1, 2,
+                                     "solves " * span(span_jobs, length(jobs))), 0)
+        part = jobs[span_jobs]
         B = zeros(nnodes(gr), length(part))
         for (k, (v, ref)) in enumerate(part)
             B[v, k] = 1.0
@@ -650,6 +685,7 @@ function pairwise_exact(id::Real, nodes, batch::Real)
             sy[e] += t1
             sy2[e] += t2
         end
+        tick(progress, "", 1 / nb)
     end
     x = [max(n_comp[gr.comp[a[e]]] * sy2[e] - sy[e]^2, 0.0) for e in eachindex(a)]
     (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
@@ -750,15 +786,24 @@ end
 
 # Build the circuit on the valid cells of `cond` (and its uniform twin).
 # Returns handles and sizes.
-function prepare(cond::AbstractMatrix{<:Real}, valid::AbstractMatrix{Bool}, uniform::Bool)
+# With `progress`, each factorization is a step.
+function prepare(cond::AbstractMatrix{<:Real}, valid::AbstractMatrix{Bool}, uniform::Bool,
+                 progress = nothing)
     gr = Graph(valid)
     nnodes(gr) > 0 || error("the conductance surface has no valid cells")
+    tick(progress, "Factoring the circuit", 0)
     id = register!(Circuit(gr, cond))
-    uid = uniform ? register!(uniform_circuit(gr)) : 0
+    tick(progress, "", 1)
+    uid = uniform ? prepare_uniform(id, progress) : 0
     (id = id, uniform_id = uid, n_nodes = nnodes(gr), n_links = nlinks(gr), n_components = gr.ncomp)
 end
 
-prepare_uniform(id::Real) = register!(uniform_circuit(circuit(id).graph))
+function prepare_uniform(id::Real, progress = nothing)
+    tick(progress, "Factoring the uniform circuit (for flow potential)", 0)
+    uid = register!(uniform_circuit(circuit(id).graph))
+    tick(progress, "", 1)
+    uid
+end
 
 # Kernel from R's description (see Kernel); an empty hw means no distance limit
 make_kernel(dr0::Real, hw, rowmap) =
@@ -780,7 +825,8 @@ sampler(id::Real, w1, w2, dr0, hw, rowmap) =
 # center_w / S * center_b: the sums then estimate the variance of the pairs'
 # currents, and R adds the mean's exact squared current back.
 function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws::Real,
-                        n_dipoles::Real, batch::Real, center_b = Float64[], center_w::Real = 0.0)
+                        n_dipoles::Real, batch::Real, center_b = Float64[], center_w::Real = 0.0,
+                        progress = nothing)
     circs = [circuit(id) for id in asvec(ids)]
     s = sampler(first(asvec(ids)), w1, w2, dr0, hw, rowmap)
     S = pair_sum(s)
@@ -790,10 +836,14 @@ function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws:
     cb = Vector{Float64}(asvec(center_b))
     center = isempty(cb) ? nothing : (center_w / S) .* cb
     accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b,
-                       center = center)
+                       center = center, progress = progress)
     (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)],
      power = [power_sums(c, a.s) for (c, a) in zip(circs, accs)])
 end
+
+# Columns per solve, as random_dipoles and pairwise_* choose them, for R to
+# count progress steps
+batch_size(n_nodes::Real, batch::Real) = batch > 0 ? Int(batch) : default_batch(Int(n_nodes))
 
 # Parity hook: accumulate a given injection matrix (nodes x draws). Returns
 # per-link sums (links x 2) and per-node sums (nodes x 2), columns odd and

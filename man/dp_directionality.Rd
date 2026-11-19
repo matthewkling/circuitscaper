@@ -16,7 +16,8 @@ dp_directionality(
   n_draws = 32,
   n_dipoles = 1e+05,
   seed = NULL,
-  power = FALSE
+  power = FALSE,
+  progress = TRUE
 )
 }
 \arguments{
@@ -60,6 +61,10 @@ as the \code{"seed"} attribute.}
 
 \item{power}{Logical. Also map the power dissipated (see "Power" in
 \code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
+
+\item{progress}{Logical. Report progress through the 'progressr'
+package (see "Progress" in \code{\link[=dp_omni]{dp_omni()}}). Default \code{TRUE}; it shows only
+when a 'progressr' handler is active.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:

@@ -16,7 +16,8 @@ dp_omni(
   n_draws = 32,
   n_dipoles = 1e+05,
   seed = NULL,
-  power = FALSE
+  power = FALSE,
+  progress = TRUE
 )
 }
 \arguments{
@@ -65,6 +66,10 @@ as the \code{"seed"} attribute.}
 
 \item{power}{Logical. Also map the power dissipated (see "Power" in
 \code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
+
+\item{progress}{Logical. Report progress through the 'progressr'
+package (see "Progress" in \code{\link[=dp_omni]{dp_omni()}}). Default \code{TRUE}; it shows only
+when a 'progressr' handler is active.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}; with \code{normalize},
@@ -202,6 +207,21 @@ the solves; it barely depends on \code{radius}. Draws are sampled and link
 currents summed in parallel over Julia's threads; set the number with
 \code{\link[=cs_setup]{cs_setup()}}. To reuse factorizations across runs, pass a circuit from
 \code{\link[=dp_circuit]{dp_circuit()}}.
+}
+
+\subsection{Progress}{
+
+The dipole functions report progress through the 'progressr' package:
+one step per factorization and, for each batch of draws, one for sampling
+its dipoles and one per circuit solved (current, and with \code{normalize},
+flow potential), plus one per solve of the mean flow with a
+\code{destination}. Draws are solved in batches of 8 to 32 (fewer on larger
+grids), so at the default 32 draws most runs are one batch. Nothing is
+shown unless a handler is active, e.g.
+\code{progressr::with_progress(dp_omni(...))} or, in a 'shiny' app,
+\code{progressr::withProgressShiny(dp_omni(...))}; see \code{\link[progressr:handlers]{progressr::handlers()}}.
+Reporting doesn't change the results. Set \code{progress = FALSE} to signal
+nothing at all.
 }
 }
 \examples{

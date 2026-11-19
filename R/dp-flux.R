@@ -142,16 +142,18 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
                     source_threshold = 0.01, radius_units = c("pixels", "km"),
                     resistance_is = "resistances", normalize = TRUE,
                     direction = TRUE, cell_value = c("absolute", "rms"),
-                    power = FALSE) {
+                    power = FALSE, progress = TRUE) {
   radius_units <- match.arg(radius_units)
   cell_value <- match.arg(cell_value)
   normalize <- isTRUE(normalize)
   power <- isTRUE(power)
-  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
+  input <- dp_circuit_input(resistance, resistance_is)
+  p <- dp_progressor(progress, dp_factor_steps(input, normalize) + 1 + normalize)
+  circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   o <- dp_weights(circuit, origin, source_threshold, "origin")
   d <- dp_weights(circuit, destination, source_threshold, "destination")
-  f <- dp_flux_values(circuit, o, d, kernel, normalize, cell_value)
+  f <- dp_flux_values(circuit, o, d, kernel, normalize, cell_value, p = p)
 
   v <- cbind(current = f$current)
   if (normalize) v <- cbind(v, flow_potential = f$fp, normalized_current = f$nc)
@@ -175,9 +177,11 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
 #' the total pair weight `W` and the coverage shares (see `dp_set_coverage()`).
 #' With `check = FALSE`, returns
 #' `NULL` instead of an error when no pairs are within reach.
+#' @param p A progressor, or `NULL`: each solve (one, or two with
+#'   `normalize`) is a step.
 #' @noRd
 dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
-                           check = TRUE) {
+                           check = TRUE, p = NULL) {
   inj <- dp_call("flux_injection", circuit$env$id, o, d, kernel$dr0, kernel$hw,
                  kernel$rowmap)
   if (inj$W <= 0) {
@@ -190,14 +194,18 @@ dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
   summarise <- function(cells) {
     if (cell_value == "rms") sqrt(0.5 * cells[, 2]) else 0.5 * cells[, 1]
   }
+  dp_tick(p, "Solving the mean flow", 0)
   cells <- dp_call("flux", circuit$env$id, b)
+  dp_tick(p)
   out <- list(current = summarise(cells), flow = 0.5 * cells[, 3:4, drop = FALSE],
               power = 0.5 * cells[, 5], b = b, W = inj$W,
               coverage = c(origin_in_reach = inj$origin_in_reach,
                            destination_in_reach = inj$destination_in_reach,
                            pair_weight_in_reach = inj$pair_weight_in_reach))
   if (normalize) {
+    dp_tick(p, "Solving the mean flow's flow potential", 0)
     ucells <- dp_call("flux", circuit$env$uniform_id, b)
+    dp_tick(p)
     out$fp <- summarise(ucells)
     out$nc <- ifelse(out$fp > 0, out$current / out$fp, NA_real_)
     out$fp_power <- 0.5 * ucells[, 5]

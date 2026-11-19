@@ -24,6 +24,7 @@ Depends:
 Imports:
     terra,
     JuliaConnectoR (>= 1.1.3),
+    progressr,
     rjson,
     tools,
     utils

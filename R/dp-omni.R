@@ -121,6 +121,19 @@
 #' [cs_setup()]. To reuse factorizations across runs, pass a circuit from
 #' [dp_circuit()].
 #'
+#' ## Progress
+#' The dipole functions report progress through the 'progressr' package:
+#' one step per factorization and, for each batch of draws, one for sampling
+#' its dipoles and one per circuit solved (current, and with `normalize`,
+#' flow potential), plus one per solve of the mean flow with a
+#' `destination`. Draws are solved in batches of 8 to 32 (fewer on larger
+#' grids), so at the default 32 draws most runs are one batch. Nothing is
+#' shown unless a handler is active, e.g.
+#' `progressr::with_progress(dp_omni(...))` or, in a 'shiny' app,
+#' `progressr::withProgressShiny(dp_omni(...))`; see [progressr::handlers()].
+#' Reporting doesn't change the results. Set `progress = FALSE` to signal
+#' nothing at all.
+#'
 #' @param resistance A [terra::SpatRaster] or file path: the resistance (or
 #'   conductance) surface. Or a circuit from [dp_circuit()], to reuse its
 #'   factorization.
@@ -155,6 +168,9 @@
 #'   as the `"seed"` attribute.
 #' @param power Logical. Also map the power dissipated (see "Power" in
 #'   [dp_omni()]), and with `normalize`, normalized power. Default `FALSE`.
+#' @param progress Logical. Report progress through the 'progressr'
+#'   package (see "Progress" in [dp_omni()]). Default `TRUE`; it shows only
+#'   when a 'progressr' handler is active.
 #'
 #' @return A [terra::SpatRaster] with layers `current`; with `normalize`,
 #'   `flow_potential` and `normalized_current`; with `power`, `power`; and
@@ -185,7 +201,8 @@
 dp_omni <- function(resistance, radius, source_strength = NULL,
                     destination = NULL, source_threshold = 0.01,
                     radius_units = c("pixels", "km"), resistance_is = "resistances", normalize = TRUE,
-                    n_draws = 32, n_dipoles = 1e5, seed = NULL, power = FALSE) {
+                    n_draws = 32, n_dipoles = 1e5, seed = NULL, power = FALSE,
+                    progress = TRUE) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
   n_dipoles <- dp_count(n_dipoles, "n_dipoles")
@@ -193,17 +210,22 @@ dp_omni <- function(resistance, radius, source_strength = NULL,
   normalize <- isTRUE(normalize)
   power <- isTRUE(power)
 
-  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
+  input <- dp_circuit_input(resistance, resistance_is)
+  p <- dp_progressor(progress, dp_factor_steps(input, normalize) +
+                       (!is.null(destination)) * (1 + normalize) +
+                       dp_draw_steps(input, n_draws, 1 + normalize))
+  circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   w <- dp_weights(circuit, source_strength, source_threshold, "source_strength")
   if (is.null(destination)) {
     return(dp_random_map(circuit, w, w, kernel, seed, n_draws, n_dipoles,
-                         normalize, mask = w > 0, power = power))
+                         normalize, mask = w > 0, power = power, p = p))
   }
   w2 <- dp_weights(circuit, destination, source_threshold, "destination")
-  center <- dp_flux_values(circuit, w, w2, kernel, normalize, "rms", check = FALSE)
+  center <- dp_flux_values(circuit, w, w2, kernel, normalize, "rms", check = FALSE,
+                           p = p)
   dp_random_map(circuit, w, w2, kernel, seed, n_draws, n_dipoles, normalize,
-                mask = w > 0 | w2 > 0, center = center, power = power)
+                mask = w > 0 | w2 > 0, center = center, power = power, p = p)
 }
 
 
@@ -218,11 +240,12 @@ dp_omni <- function(resistance, radius, source_strength = NULL,
 #' pairs, the dipoles are centered on their mean, so the draws estimate the
 #' variance of the pairs' currents, and the mean's exact squared current is
 #' added back: \eqn{W^2 / S} times the flux map's squared RMS current.
+#' @param p A progressor, or `NULL` (see `dp_draw_steps()`).
 #' @noRd
 dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                             normalize, center = NULL, power = FALSE) {
+                             normalize, center = NULL, power = FALSE, p = NULL) {
   res <- dp_random_dipoles(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                           uniform = normalize, center = center)
+                           uniform = normalize, center = center, p = p)
   if (res$S <= 0) {
     stop("No pairs of cells can be drawn: no two source cells (or origin and ",
          "destination cells) are within `radius` of each other in the same ",
@@ -273,9 +296,9 @@ dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
 #' diagnostic over `mask`.
 #' @noRd
 dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                          normalize, mask, center = NULL, power = FALSE) {
+                          normalize, mask, center = NULL, power = FALSE, p = NULL) {
   v <- dp_random_values(circuit, w1, w2, kernel, seed, n_draws, n_dipoles, normalize,
-                        center, power)
+                        center, power, p)
   m <- dp_random_layers(v, normalize, mask)
   out <- dp_to_raster(circuit, m$values, colnames(m$values))
   attr(out, "halves") <- m$halves
