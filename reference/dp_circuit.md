@@ -5,7 +5,12 @@
 ## Usage
 
 ``` r
-dp_circuit(resistance, resistance_is = "resistances", flow_potential = TRUE)
+dp_circuit(
+  resistance,
+  resistance_is = "resistances",
+  flow_potential = TRUE,
+  progress = TRUE
+)
 ```
 
 ## Arguments
@@ -26,6 +31,13 @@ dp_circuit(resistance, resistance_is = "resistances", flow_potential = TRUE)
   Logical. Also factor the uniform circuit (the same cells with
   conductance 1) that flow potential and normalized current use. Default
   `TRUE`. If `FALSE`, it is built when first needed.
+
+- progress:
+
+  Logical. Report progress through the 'progressr' package (see
+  "Progress" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)).
+  Default `TRUE`; it shows only when a 'progressr' handler is active.
 
 ## Value
 

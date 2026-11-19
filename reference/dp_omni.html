@@ -62,7 +62,8 @@
 <span>  n_draws <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>  n_dipoles <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  power <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  power <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -138,6 +139,12 @@ as the <code>"seed"</code> attribute.</p></dd>
 <dt id="arg-power">power<a class="anchor" aria-label="anchor" href="#arg-power"></a></dt>
 <dd><p>Logical. Also map the power dissipated (see "Power" in
 <code>dp_omni()</code>), and with <code>normalize</code>, normalized power. Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
+<dd><p>Logical. Report progress through the 'progressr'
+package (see "Progress" in <code>dp_omni()</code>). Default <code>TRUE</code>; it shows only
+when a 'progressr' handler is active.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -272,6 +279,23 @@ the solves; it barely depends on <code>radius</code>. Draws are sampled and link
 currents summed in parallel over Julia's threads; set the number with
 <code><a href="cs_setup.html">cs_setup()</a></code>. To reuse factorizations across runs, pass a circuit from
 <code><a href="dp_circuit.html">dp_circuit()</a></code>.</p>
+</div>
+
+<div class="section">
+<h3 id="progress">Progress<a class="anchor" aria-label="anchor" href="#progress"></a></h3>
+
+
+<p>The dipole functions report progress through the 'progressr' package:
+one step per factorization and, for each batch of draws, one for sampling
+its dipoles and one per circuit solved (current, and with <code>normalize</code>,
+flow potential), plus one per solve of the mean flow with a
+<code>destination</code>. Draws are solved in batches of 8 to 32 (fewer on larger
+grids), so at the default 32 draws most runs are one batch. Nothing is
+shown unless a handler is active, e.g.
+<code>progressr::with_progress(dp_omni(...))</code> or, in a 'shiny' app,
+<code>progressr::withProgressShiny(dp_omni(...))</code>; see <code><a href="https://progressr.futureverse.org/reference/handlers.html" class="external-link">progressr::handlers()</a></code>.
+Reporting doesn't change the results. Set <code>progress = FALSE</code> to signal
+nothing at all.</p>
 </div>
 
     </div>

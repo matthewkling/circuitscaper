@@ -16,7 +16,8 @@ dp_flux(
   normalize = TRUE,
   direction = TRUE,
   cell_value = c("absolute", "rms"),
-  power = FALSE
+  power = FALSE,
+  progress = TRUE
 )
 ```
 
@@ -86,6 +87,13 @@ dp_flux(
   Logical. Also map the power dissipated (see "Power" in
   [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)),
   and with `normalize`, normalized power. Default `FALSE`.
+
+- progress:
+
+  Logical. Report progress through the 'progressr' package (see
+  "Progress" in
+  [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)).
+  Default `TRUE`; it shows only when a 'progressr' handler is active.
 
 ## Value
 

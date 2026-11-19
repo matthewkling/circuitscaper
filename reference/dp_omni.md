@@ -17,7 +17,8 @@ dp_omni(
   n_draws = 32,
   n_dipoles = 1e+05,
   seed = NULL,
-  power = FALSE
+  power = FALSE,
+  progress = TRUE
 )
 ```
 
@@ -101,6 +102,12 @@ dp_omni(
 
   Logical. Also map the power dissipated (see "Power" in `dp_omni()`),
   and with `normalize`, normalized power. Default `FALSE`.
+
+- progress:
+
+  Logical. Report progress through the 'progressr' package (see
+  "Progress" in `dp_omni()`). Default `TRUE`; it shows only when a
+  'progressr' handler is active.
 
 ## Value
 
@@ -244,6 +251,21 @@ currents summed in parallel over Julia's threads; set the number with
 [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md).
 To reuse factorizations across runs, pass a circuit from
 [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md).
+
+### Progress
+
+The dipole functions report progress through the 'progressr' package:
+one step per factorization and, for each batch of draws, one for
+sampling its dipoles and one per circuit solved (current, and with
+`normalize`, flow potential), plus one per solve of the mean flow with a
+`destination`. Draws are solved in batches of 8 to 32 (fewer on larger
+grids), so at the default 32 draws most runs are one batch. Nothing is
+shown unless a handler is active, e.g.
+`progressr::with_progress(dp_omni(...))` or, in a 'shiny' app,
+`progressr::withProgressShiny(dp_omni(...))`; see
+[`progressr::handlers()`](https://progressr.futureverse.org/reference/handlers.html).
+Reporting doesn't change the results. Set `progress = FALSE` to signal
+nothing at all.
 
 ## See also
 

@@ -58,7 +58,8 @@
 <span>  normalize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  n_draws <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  power <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  power <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,6 +113,12 @@ as the <code>"seed"</code> attribute.</p></dd>
 <dt id="arg-power">power<a class="anchor" aria-label="anchor" href="#arg-power"></a></dt>
 <dd><p>Logical. Also map the power dissipated (see "Power" in
 <code><a href="dp_omni.html">dp_omni()</a></code>), and with <code>normalize</code>, normalized power. Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
+<dd><p>Logical. Report progress through the 'progressr'
+package (see "Progress" in <code><a href="dp_omni.html">dp_omni()</a></code>). Default <code>TRUE</code>; it shows only
+when a 'progressr' handler is active.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -59,6 +59,14 @@
     extra solves.
   - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
     prepares a circuit whose factorizations several runs can reuse.
+  - The `dp_*()` functions report progress through the ‘progressr’
+    package: a step per factorization and, per batch of draws, for
+    sampling the dipoles and for each solve. Wrap a call in
+    [`progressr::with_progress()`](https://progressr.futureverse.org/reference/with_progress.html),
+    or in a ‘shiny’ app
+    [`progressr::withProgressShiny()`](https://progressr.futureverse.org/reference/withProgressShiny.html),
+    to see it; with no handler active, nothing is shown.
+    `progress = FALSE` turns it off. ‘progressr’ is a new dependency.
 
   These methods map squared current on the whole circuit, so their
   results differ from Circuitscape’s and Omniscape’s by design; see
