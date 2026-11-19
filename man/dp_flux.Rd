@@ -15,7 +15,8 @@ dp_flux(
   normalize = TRUE,
   direction = TRUE,
   cell_value = c("absolute", "rms"),
-  power = FALSE
+  power = FALSE,
+  progress = TRUE
 )
 }
 \arguments{
@@ -58,6 +59,10 @@ of squared current, as in \code{\link[=dp_omni]{dp_omni()}}.}
 
 \item{power}{Logical. Also map the power dissipated (see "Power" in
 \code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
+
+\item{progress}{Logical. Report progress through the 'progressr'
+package (see "Progress" in \code{\link[=dp_omni]{dp_omni()}}). Default \code{TRUE}; it shows only
+when a 'progressr' handler is active.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:

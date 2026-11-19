@@ -96,7 +96,7 @@ dp_directionality <- function(resistance, origin, destination, radius = Inf,
                               radius_units = c("pixels", "km"),
                               resistance_is = "resistances", normalize = TRUE,
                               n_draws = 32, n_dipoles = 1e5, seed = NULL,
-                              power = FALSE) {
+                              power = FALSE, progress = TRUE) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
   n_dipoles <- dp_count(n_dipoles, "n_dipoles")
@@ -104,15 +104,18 @@ dp_directionality <- function(resistance, origin, destination, radius = Inf,
   normalize <- isTRUE(normalize)
   power <- isTRUE(power)
 
-  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
+  input <- dp_circuit_input(resistance, resistance_is)
+  p <- dp_progressor(progress, dp_factor_steps(input, normalize) + 1 + normalize +
+                       dp_draw_steps(input, n_draws, 1 + normalize))
+  circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   o <- dp_weights(circuit, origin, source_threshold, "origin")
   d <- dp_weights(circuit, destination, source_threshold, "destination")
   mask <- o > 0 | d > 0
 
-  f <- dp_flux_values(circuit, o, d, kernel, normalize, "rms")
+  f <- dp_flux_values(circuit, o, d, kernel, normalize, "rms", p = p)
   u <- dp_random_values(circuit, o, d, kernel, seed, n_draws, n_dipoles, normalize,
-                        center = f, power = power)
+                        center = f, power = power, p = p)
   omni <- dp_random_layers(u, normalize, mask)
 
   share <- function(cur2) ifelse(cur2 > 0, f$W * f$current^2 / cur2, NA_real_)

@@ -4,7 +4,12 @@
 \alias{dp_circuit}
 \title{Prepare a Circuit for the Dipole Methods}
 \usage{
-dp_circuit(resistance, resistance_is = "resistances", flow_potential = TRUE)
+dp_circuit(
+  resistance,
+  resistance_is = "resistances",
+  flow_potential = TRUE,
+  progress = TRUE
+)
 }
 \arguments{
 \item{resistance}{A \link[terra:SpatRaster]{terra::SpatRaster} or file path: the resistance (or
@@ -16,6 +21,10 @@ conductance) surface.}
 \item{flow_potential}{Logical. Also factor the uniform circuit (the same
 cells with conductance 1) that flow potential and normalized current
 use. Default \code{TRUE}. If \code{FALSE}, it is built when first needed.}
+
+\item{progress}{Logical. Report progress through the 'progressr'
+package (see "Progress" in \code{\link[=dp_omni]{dp_omni()}}). Default \code{TRUE}; it shows only
+when a 'progressr' handler is active.}
 }
 \value{
 A \code{dp_circuit} object.

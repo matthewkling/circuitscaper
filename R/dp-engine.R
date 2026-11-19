@@ -46,6 +46,83 @@ dp_call <- function(fun, ...) {
 #' @noRd
 dp_session <- function() jl_eval("CircuitscaperDipole.SESSION")
 
+#' A Progressor as a Julia Callback
+#'
+#' 'JuliaConnectoR' passes an R function to Julia as a callback, which Julia
+#' calls (from its main task only) as `progress(message, amount)`; `NULL`
+#' becomes `nothing`, and Julia then skips the calls.
+#' @noRd
+dp_julia_progress <- function(p) {
+  if (is.null(p)) return(NULL)
+  function(message, amount) {
+    p(message, amount)
+    NULL
+  }
+}
+
+
+# Progress -----------------------------------------------------------------
+
+#' A Progressor for a Dipole Run
+#'
+#' Progress goes through 'progressr': a run signals its steps, and whoever
+#' calls it chooses whether and how to show them (`progressr::handlers()`,
+#' `progressr::with_progress()`, `progressr::withProgressShiny()`). With no
+#' handler active, nothing is shown, and the signals cost next to nothing.
+#'
+#' The progressor finishes when the calling function exits, so the bar
+#' completes even if a run takes fewer steps than counted (e.g., when it
+#' stops early with an error).
+#' @param progress Logical. The user-facing `progress` argument; `FALSE`
+#'   signals nothing.
+#' @param steps Number of steps.
+#' @return A `p(message, amount)` function, or `NULL` for no progress.
+#' @noRd
+dp_progressor <- function(progress, steps, envir = parent.frame()) {
+  if (!isTRUE(progress) || steps <= 0) return(NULL)
+  pr <- progressr::progressor(steps = steps, envir = envir)
+  function(message = "", amount = 1) {
+    pr(if (nzchar(message)) message else character(0), amount = amount)
+    invisible(NULL)
+  }
+}
+
+#' Signal a Progress Step
+#'
+#' Amount 0 announces a step (its message shows while it runs), amount 1
+#' completes it.
+#' @noRd
+dp_tick <- function(p, message = "", amount = 1) {
+  if (!is.null(p)) p(message, amount)
+  invisible(NULL)
+}
+
+#' Steps to Build or Check a Circuit
+#'
+#' One per factorization that `dp_as_circuit()` will do: none for a
+#' `dp_circuit` that is current and complete.
+#' @param x From `dp_circuit_input()`.
+#' @noRd
+dp_factor_steps <- function(x, uniform) {
+  if (!inherits(x, "dp_circuit")) return(1 + uniform)
+  env <- x$env
+  if (!identical(env$session, dp_julia())) return(1 + (uniform || env$uniform_id > 0))
+  as.integer(uniform && env$uniform_id == 0)
+}
+
+#' Steps of a Batched Random Solve
+#'
+#' Per batch of draws, one step for sampling the injections and one per
+#' circuit solved, as `run_dipoles()` in Julia reports them.
+#' @param x From `dp_circuit_input()`, or a `dp_circuit`.
+#' @noRd
+dp_draw_steps <- function(x, n_draws, n_circuits, batch = 0L) {
+  n_nodes <- if (inherits(x, "dp_circuit")) x$env$n_nodes else x$n_nodes
+  dp_julia()
+  b <- dp_call("batch_size", n_nodes, as.integer(batch))
+  ceiling(n_draws / b) * (1 + n_circuits)
+}
+
 
 # Inputs -------------------------------------------------------------------
 
@@ -128,8 +205,10 @@ dp_to_raster <- function(circuit, v, names) {
 #' cell numbers.
 #' @param conductance SpatRaster from `dp_conductance()`.
 #' @param uniform Logical. Also build the uniform circuit.
+#' @param p A progressor from `dp_progressor()`, or `NULL`: each
+#'   factorization is a step.
 #' @noRd
-new_dp_circuit <- function(conductance, uniform = TRUE) {
+new_dp_circuit <- function(conductance, uniform = TRUE, p = NULL) {
   env <- new.env(parent = emptyenv())
   env$conductance <- conductance
   env$template <- terra::rast(conductance)
@@ -142,20 +221,20 @@ new_dp_circuit <- function(conductance, uniform = TRUE) {
   env$id <- 0L
   env$uniform_id <- 0L
   circuit <- structure(list(env = env), class = "dp_circuit")
-  dp_build(circuit, uniform)
+  dp_build(circuit, uniform, p)
   reg.finalizer(env, dp_finalize, onexit = FALSE)
   circuit
 }
 
 #' (Re)build a Circuit's Julia Side
 #' @noRd
-dp_build <- function(circuit, uniform) {
+dp_build <- function(circuit, uniform, p = NULL) {
   env <- circuit$env
   env$session <- dp_julia()
   wide <- terra::as.matrix(env$conductance, wide = TRUE)
   valid <- !is.na(wide)
   wide[!valid] <- 0
-  info <- dp_call("prepare", wide, valid, uniform)
+  info <- dp_call("prepare", wide, valid, uniform, dp_julia_progress(p))
   env$id <- info$id
   env$uniform_id <- info$uniform_id
   env$n_nodes <- info$n_nodes
@@ -184,8 +263,9 @@ dp_finalize <- function(env) {
 #' crash. A circuit built in an earlier Julia is rebuilt, with a message.
 #' @param uniform Logical. The uniform circuit is needed too; build it if
 #'   missing.
+#' @param p A progressor, or `NULL`: each factorization is a step.
 #' @noRd
-dp_check_circuit <- function(circuit, uniform = FALSE) {
+dp_check_circuit <- function(circuit, uniform = FALSE, p = NULL) {
   if (!inherits(circuit, "dp_circuit")) {
     stop("`circuit` must be a dp_circuit object.", call. = FALSE)
   }
@@ -193,9 +273,9 @@ dp_check_circuit <- function(circuit, uniform = FALSE) {
   session <- dp_julia()
   if (!identical(env$session, session)) {
     message("Julia has restarted since this circuit was built; rebuilding it.")
-    dp_build(circuit, uniform || env$uniform_id > 0)
+    dp_build(circuit, uniform || env$uniform_id > 0, p)
   } else if (uniform && env$uniform_id == 0) {
-    env$uniform_id <- dp_call("prepare_uniform", env$id)
+    env$uniform_id <- dp_call("prepare_uniform", env$id, dp_julia_progress(p))
   }
   invisible(circuit)
 }
@@ -229,9 +309,10 @@ print.dp_circuit <- function(x, ...) {
 #'   dipole is then centered on the mean dipole, `W / S * b`, so the sums
 #'   estimate the variance of the pairs' currents rather than their mean
 #'   square.
+#' @param p A progressor, or `NULL`: steps as counted by `dp_draw_steps()`.
 #' @noRd
 dp_random_dipoles <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                              uniform = FALSE, batch = 0L, center = NULL) {
+                              uniform = FALSE, batch = 0L, center = NULL, p = NULL) {
   dp_check_circuit(circuit, uniform)
   env <- circuit$env
   ids <- c(env$id, if (uniform) env$uniform_id)
@@ -239,7 +320,8 @@ dp_random_dipoles <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
   cw <- if (is.null(center)) 0 else as.double(center$W)
   dp_call("random_dipoles", as.integer(ids), as.double(w1), as.double(w2),
           kernel$dr0, kernel$hw, kernel$rowmap, as.integer(seed),
-          as.integer(n_draws), as.integer(n_dipoles), as.integer(batch), cb, cw)
+          as.integer(n_draws), as.integer(n_dipoles), as.integer(batch), cb, cw,
+          dp_julia_progress(p))
 }
 
 #' Accumulate Given Injections (Parity Hook)

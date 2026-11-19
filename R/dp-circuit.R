@@ -27,6 +27,9 @@
 #' @param flow_potential Logical. Also factor the uniform circuit (the same
 #'   cells with conductance 1) that flow potential and normalized current
 #'   use. Default `TRUE`. If `FALSE`, it is built when first needed.
+#' @param progress Logical. Report progress through the 'progressr'
+#'   package (see "Progress" in [dp_omni()]). Default `TRUE`; it shows only
+#'   when a 'progressr' handler is active.
 #'
 #' @return A `dp_circuit` object.
 #'
@@ -43,9 +46,11 @@
 #'
 #' @export
 dp_circuit <- function(resistance, resistance_is = "resistances",
-                       flow_potential = TRUE) {
-  new_dp_circuit(dp_conductance(resistance, resistance_is),
-                 uniform = isTRUE(flow_potential))
+                       flow_potential = TRUE, progress = TRUE) {
+  uniform <- isTRUE(flow_potential)
+  conductance <- dp_conductance(resistance, resistance_is)
+  new_dp_circuit(conductance, uniform = uniform,
+                 p = dp_progressor(progress, 1 + uniform))
 }
 
 
@@ -53,13 +58,33 @@ dp_circuit <- function(resistance, resistance_is = "resistances",
 #'
 #' Passes a `dp_circuit` through (checked, and with the uniform circuit
 #' added if `uniform`); builds one from a raster otherwise.
+#' @param resistance A `dp_circuit`, a raster or file path, or a
+#'   `dp_circuit_input()`.
+#' @param p A progressor, or `NULL`: each factorization is a step (see
+#'   `dp_factor_steps()`).
 #' @noRd
-dp_as_circuit <- function(resistance, resistance_is = "resistances", uniform = FALSE) {
-  if (inherits(resistance, "dp_circuit")) {
-    dp_check_circuit(resistance, uniform)
-    return(resistance)
+dp_as_circuit <- function(resistance, resistance_is = "resistances", uniform = FALSE,
+                          p = NULL) {
+  x <- dp_circuit_input(resistance, resistance_is)
+  if (inherits(x, "dp_circuit")) {
+    dp_check_circuit(x, uniform, p)
+    return(x)
   }
-  new_dp_circuit(dp_conductance(resistance, resistance_is), uniform)
+  new_dp_circuit(x$conductance, uniform, p)
+}
+
+#' Read a `resistance` Argument Ahead of Building Its Circuit
+#'
+#' A `dp_circuit` passes through; a raster or file path becomes its
+#' conductance surface and number of nodes, which is enough to count the
+#' progress steps of a run before factoring.
+#' @noRd
+dp_circuit_input <- function(resistance, resistance_is = "resistances") {
+  if (inherits(resistance, c("dp_circuit", "dp_circuit_input"))) return(resistance)
+  conductance <- dp_conductance(resistance, resistance_is)
+  n_nodes <- terra::global(conductance, "notNA")[[1]]
+  structure(list(conductance = conductance, n_nodes = n_nodes),
+            class = "dp_circuit_input")
 }
 
 #' Source Weights in Node Order

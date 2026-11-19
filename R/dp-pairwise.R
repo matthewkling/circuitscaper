@@ -82,20 +82,31 @@
 #' @export
 dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
                         resistance_is = "resistances", normalize = TRUE,
-                        n_draws = 32, seed = NULL, power = FALSE) {
+                        n_draws = 32, seed = NULL, power = FALSE, progress = TRUE) {
   method <- match.arg(method)
   normalize <- isTRUE(normalize)
   power <- isTRUE(power)
-  circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
+  if (method == "random") {
+    n_draws <- dp_count(n_draws, "n_draws", min = 2)
+    seed <- dp_seed(seed)
+  }
+  input <- dp_circuit_input(resistance, resistance_is)
+  solve_steps <- if (method == "exact") {
+    1 + normalize
+  } else {
+    dp_draw_steps(input, n_draws, 1 + normalize)
+  }
+  p <- dp_progressor(progress, dp_factor_steps(input, normalize) + solve_steps)
+  circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   nodes <- dp_focal_nodes(circuit, locations)
   env <- circuit$env
 
   if (method == "exact") {
-    res <- dp_call("pairwise_exact", env$id, nodes, 0L)
+    res <- dp_call("pairwise_exact", env$id, nodes, 0L, dp_julia_progress(p), FALSE)
     dp_check_pairs(res$n_pairs)
     v <- list(cur2 = 0.5 * res$cells[, 1], pow = 0.5 * res$power[, 1])
     if (normalize) {
-      u <- dp_call("pairwise_exact", env$uniform_id, nodes, 0L)
+      u <- dp_call("pairwise_exact", env$uniform_id, nodes, 0L, dp_julia_progress(p), TRUE)
       v$fp2 <- 0.5 * u$cells[, 1]
       v$fpow <- 0.5 * u$power[, 1]
     }
@@ -114,10 +125,9 @@ dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
     }
     out <- dp_to_raster(circuit, values, colnames(values))
   } else {
-    n_draws <- dp_count(n_draws, "n_draws", min = 2)
-    seed <- dp_seed(seed)
     ids <- c(env$id, if (normalize) env$uniform_id)
-    res <- dp_call("pairwise_random", as.integer(ids), nodes, seed, n_draws, 0L)
+    res <- dp_call("pairwise_random", as.integer(ids), nodes, seed, n_draws, 0L,
+                   dp_julia_progress(p))
     dp_check_pairs(res$n_pairs)
     n_half <- c(ceiling(n_draws / 2), floor(n_draws / 2))
     sq <- function(cells) 0.5 * rowSums(cells) / n_draws
