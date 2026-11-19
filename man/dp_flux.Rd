@@ -59,9 +59,11 @@ of squared current, as in \code{\link[=dp_omni]{dp_omni()}}.}
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
 \describe{
 \item{current}{Half the sum of absolute current over a cell's links, as
-in Circuitscape's current maps (without the injection term), or with
-\code{cell_value = "rms"}, the square root of half the sum of squared
-current.}
+in Circuitscape's current maps, or with \code{cell_value = "rms"}, the
+square root of half the sum of squared current. Unlike Circuitscape,
+it leaves out the current injected or withdrawn at the cell itself, so
+origin and destination cells read lower: a cell that injects one unit,
+all leaving along its links, has \code{current} 1/2 rather than 1.}
 \item{flow_potential, normalized_current}{(with \code{normalize}) \code{current}
 on the uniform circuit, summarised the same way, and \code{current}
 divided by it: above 1 where the landscape channels the flow, below 1
