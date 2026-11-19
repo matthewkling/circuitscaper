@@ -127,9 +127,11 @@ of squared current, as in <code><a href="dp_omni.html">dp_omni()</a></code>.</p>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers:</p><dl><dt>current</dt>
 <dd><p>Half the sum of absolute current over a cell's links, as
-in Circuitscape's current maps (without the injection term), or with
-<code>cell_value = "rms"</code>, the square root of half the sum of squared
-current.</p></dd>
+in Circuitscape's current maps, or with <code>cell_value = "rms"</code>, the
+square root of half the sum of squared current. Unlike Circuitscape,
+it leaves out the current injected or withdrawn at the cell itself, so
+origin and destination cells read lower: a cell that injects one unit,
+all leaving along its links, has <code>current</code> 1/2 rather than 1.</p></dd>
 
 <dt>flow_potential, normalized_current</dt>
 <dd><p>(with <code>normalize</code>) <code>current</code>
@@ -144,11 +146,30 @@ over the cell's links of the current along the link times its unit
 direction.</p></dd>
 
 
-</dl><p>Attribute <code>"in_reach"</code>: the share of all origin–destination pair weight,
-\(W / (\sum o \sum d)\), that is within <code>radius</code> and in the same
-component, and so carried by the map. A small share means most of the
-origin has no destination within reach.</p>
-    </div>
+</dl><p>Three attributes say how much of the two distributions the map covers,
+each between 0 and 1:</p><dl><dt><code>"origin_in_reach"</code></dt>
+<dd><p>The share of origin strength on cells with
+any destination strength within <code>radius</code> and in the same component.
+This is the one that says whether most of the origin has a destination
+within reach: origin cells without one send nothing. A cell that is
+both origin and destination counts as reached, although its pair with
+itself moves nothing.</p></dd>
+
+<dt><code>"destination_in_reach"</code></dt>
+<dd><p>The same for destination strength: the
+share on cells with any origin strength within reach.</p></dd>
+
+<dt><code>"pair_weight_in_reach"</code></dt>
+<dd><p>The share of all origin–destination pair
+weight, \(W / (\sum o \sum d)\), that is within <code>radius</code> and in the
+same component, and so carried by the map. It depends on the size of
+the domain relative to <code>radius</code>: where the distributions span many
+radii, most pairs are out of reach and the share is small, however
+closely the two distributions overlap. With <code>radius = Inf</code> and one
+component, it is 1.</p></dd>
+
+
+</dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Maps the net flow from an origin distribution to a destination
@@ -227,7 +248,8 @@ pass a circuit from <code><a href="dp_circuit.html">dp_circuit()</a></code>.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Only pairs within 45 cells of each other</span></span></span>
 <span class="r-in"><span><span class="va">near</span> <span class="op">&lt;-</span> <span class="fu">dp_flux</span><span class="op">(</span><span class="va">resistance</span>, <span class="va">origin</span>, <span class="va">destination</span>, radius <span class="op">=</span> <span class="fl">45</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">near</span>, <span class="st">"in_reach"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">near</span>, <span class="st">"origin_in_reach"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">near</span>, <span class="st">"pair_weight_in_reach"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">DONTSHOW</span><span class="op">(</span><span class="op">{</span><span class="fu">JuliaConnectoR</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/JuliaConnectoR/man/stopJulia.html" class="external-link">stopJulia</a></span><span class="op">(</span><span class="op">)</span><span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>

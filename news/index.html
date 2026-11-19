@@ -54,14 +54,14 @@
 <li>
 <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> maps connectivity among every pair of focal nodes, the squared-current analogue of <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s cumulative map, at a cost independent of the number of nodes, or exactly from one solve per node, with flow potential and normalized current.</li>
 <li>
-<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow from an origin to a destination distribution, with direction, in one solve, among pairs within an optional radius, with flow potential and normalized current as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>. Its current is the sum of absolute current over a cell’s links, as in Circuitscape, or with <code>cell_value = "rms"</code>, the RMS current, as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>.</li>
+<code><a href="../reference/dp_flux.html">dp_flux()</a></code> maps the net flow from an origin to a destination distribution, with direction, in one solve, among pairs within an optional radius, with flow potential and normalized current as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>. Its current is the sum of absolute current over a cell’s links, as in Circuitscape, or with <code>cell_value = "rms"</code>, the RMS current, as in <code><a href="../reference/dp_omni.html">dp_omni()</a></code>. Attributes <code>"origin_in_reach"</code> and <code>"destination_in_reach"</code> give the shares of origin and destination strength with any counterpart within the radius, and <code>"pair_weight_in_reach"</code> the share of all origin–destination pair weight within it, which is small whenever the domain is large relative to the radius.</li>
 <li>
 <code><a href="../reference/dp_directionality.html">dp_directionality()</a></code> maps both at once from the same pairs, the directional map of <code><a href="../reference/dp_flux.html">dp_flux()</a></code> and the undirected map of <code>dp_omni(destination = )</code>, with their ratio: where movement between the two distributions is one-way and where it runs both ways. Both it and <code>dp_omni(destination = )</code> center their random dipoles on the pairs’ mean dipole, which is solved exactly, so their noise is much smaller where movement is one-way.</li>
 <li>
 <code><a href="../reference/dp_circuit.html">dp_circuit()</a></code> prepares a circuit whose factorizations several runs can reuse.</li>
 </ul><p>These methods map squared current on the whole circuit, so their results differ from Circuitscape’s and Omniscape’s by design; see <code><a href="../reference/dp_omni.html">?dp_omni</a></code>. They are experimental.</p>
 </li>
-<li><p>The dipole methods need only Julia, not the Circuitscape and Omniscape Julia packages. <code>cs_install_julia(circuitscape = FALSE)</code> installs Julia alone, and <code>cs_julia_available(circuitscape = FALSE)</code> checks for it.</p></li>
+<li><p>The dipole methods need only Julia, not the Circuitscape and Omniscape Julia packages. <code>cs_install_julia(circuitscape = FALSE)</code> installs Julia alone, and <code>cs_julia_available(circuitscape = FALSE)</code> checks that a recent enough Julia is found and starts.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="changes-development-version">Changes<a class="anchor" aria-label="anchor" href="#changes-development-version"></a></h3>
@@ -74,7 +74,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
-<ul><li><p><code>cs_install_julia(force = TRUE)</code> now updates Circuitscape.jl and Omniscape.jl even when a new release needs newer versions of their own dependencies. It previously held those dependencies fixed, so, for example, it stayed on Circuitscape.jl 6.1 instead of installing 6.2, which needs a newer GZip.jl.</p></li>
+<ul><li><p><code><a href="../reference/cs_setup.html">cs_setup()</a></code> now starts Julia when the Julia it finds is a shim or launcher in another directory, such as Chocolatey’s on Windows. It pointed ‘JuliaConnectoR’ at the shim’s directory, which Julia also uses to find its system image, so Julia failed to start (“could not load library …sys.dll”). It now asks Julia for its own directory first.</p></li>
+<li><p><code>cs_install_julia(force = TRUE)</code> now updates Circuitscape.jl and Omniscape.jl even when a new release needs newer versions of their own dependencies. It previously held those dependencies fixed, so, for example, it stayed on Circuitscape.jl 6.1 instead of installing 6.2, which needs a newer GZip.jl.</p></li>
 <li><p><code><a href="../reference/cs_one_to_all.html">cs_one_to_all()</a></code> and <code><a href="../reference/cs_all_to_one.html">cs_all_to_one()</a></code> return per-node current layers only with <code>cumulative_only = FALSE</code>, as documented. Circuitscape.jl before 6.2 wrote these maps regardless, so with older versions both functions also returned them by default.</p></li>
 </ul></div>
 </div>

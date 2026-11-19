@@ -155,8 +155,10 @@ As <code><a href="dp_omni.html">dp_omni()</a></code>'s <code>flow_potential</cod
 
 </dl><p>Attributes: <code>"halves"</code>, comparing the estimates from odd and even draws
 on origin and destination cells, as in <code><a href="dp_omni.html">dp_omni()</a></code>, for the undirected
-layers and <code>directionality</code>; <code>"seed"</code>; and <code>"in_reach"</code>, as in
-<code><a href="dp_flux.html">dp_flux()</a></code>.</p>
+layers and <code>directionality</code>; <code>"seed"</code>; and <code>"origin_in_reach"</code>,
+<code>"destination_in_reach"</code> and <code>"pair_weight_in_reach"</code>, as in <code><a href="dp_flux.html">dp_flux()</a></code>:
+the first two say how much of each distribution has a counterpart within
+reach, the third depends on the size of the domain relative to <code>radius</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

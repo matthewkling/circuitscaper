@@ -337,14 +337,22 @@ plot of chunk flux
 
 With a `radius`, only origin and destination cells within reach of each
 other are paired, so each origin cell sends its flow to the destination
-habitat near it. The `"in_reach"` attribute is the share of all
-origin–destination pairs (weighted by strength) that are within reach:
+habitat near it. Three attributes say how much of the two distributions
+the map covers. `"origin_in_reach"` and `"destination_in_reach"` are the
+shares of origin and destination strength with any counterpart within
+reach; origin cells without one send nothing. `"pair_weight_in_reach"`
+is the share of all origin–destination pairs (weighted by strength) that
+are within reach. It shrinks as the domain grows relative to the radius,
+even where each origin cell has destination habitat nearby, so use the
+first two to ask whether most of the origin can reach a destination:
 
 ``` r
 
 near <- dp_flux(circuit, origin, destination, radius = 15)
-attr(near, "in_reach")
-#> [1] 0.229299
+unlist(attributes(near)[c("origin_in_reach", "destination_in_reach",
+                          "pair_weight_in_reach")])
+#>      origin_in_reach destination_in_reach pair_weight_in_reach 
+#>             0.974758             1.000000             0.229299
 ```
 
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)
@@ -643,8 +651,10 @@ the two distributions overlap, a cell’s pair with itself counts in \\W\\
 but moves nothing, so flow cancels there and the map mostly shows
 movement from origin-only to destination-only habitat. With several
 components, each carries its share of \\W\\; origin cells with no
-destination within reach send nothing, and \\W / (\sum o \sum d)\\ is
-returned as `"in_reach"`.
+destination within reach send nothing. \\W / (\sum o \sum d)\\ is
+returned as `"pair_weight_in_reach"`, and the shares of \\o\\ on cells
+with \\(Kd)\_i \> 0\\ and of \\d\\ on cells with \\(Ko)\_j \> 0\\ as
+`"origin_in_reach"` and `"destination_in_reach"`.
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)’s
 flow potential is the same injection solved on the uniform circuit.
 

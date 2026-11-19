@@ -126,8 +126,11 @@ Attributes: `"halves"`, comparing the estimates from odd and even draws
 on origin and destination cells, as in
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md),
 for the undirected layers and `directionality`; `"seed"`; and
-`"in_reach"`, as in
-[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md).
+`"origin_in_reach"`, `"destination_in_reach"` and
+`"pair_weight_in_reach"`, as in
+[`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md):
+the first two say how much of each distribution has a counterpart within
+reach, the third depends on the size of the domain relative to `radius`.
 
 ## Details
 

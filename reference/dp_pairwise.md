@@ -107,8 +107,15 @@ target, using \\\sum\_{i\<j}(y_i - y_j)^2 = N\sum_i y_i^2 - (\sum_i
 y_i)^2\\ for each link, with \\y_i\\ its current when node \\i\\ is the
 source.
 
-Unlike Circuitscape's cell maps, no current is added at focal nodes for
-the current injected there.
+Current enters and leaves the circuit at the focal nodes, as in
+Circuitscape, but cell values count only the current on links.
+Circuitscape's cell maps also add the current injected or withdrawn at a
+cell before halving, so that a focal node's value includes the full unit
+it sends or receives; here, the current arriving from outside the
+circuit isn't counted, so focal nodes' cells read lower than in
+[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md).
+Other cells, where current both enters and leaves along links, are
+unaffected.
 
 Flow potential is the same quantity on the uniform circuit (with the
 same draws, for `method = "random"`), and normalized current is current

@@ -398,13 +398,21 @@ proportion to its strength, wherever it has to go:</p>
 </div>
 <p>With a <code>radius</code>, only origin and destination cells within
 reach of each other are paired, so each origin cell sends its flow to
-the destination habitat near it. The <code>"in_reach"</code> attribute
-is the share of all origin–destination pairs (weighted by strength) that
-are within reach:</p>
+the destination habitat near it. Three attributes say how much of the
+two distributions the map covers. <code>"origin_in_reach"</code> and
+<code>"destination_in_reach"</code> are the shares of origin and
+destination strength with any counterpart within reach; origin cells
+without one send nothing. <code>"pair_weight_in_reach"</code> is the
+share of all origin–destination pairs (weighted by strength) that are
+within reach. It shrinks as the domain grows relative to the radius,
+even where each origin cell has destination habitat nearby, so use the
+first two to ask whether most of the origin can reach a destination:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">near</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_flux.html">dp_flux</a></span><span class="op">(</span><span class="va">circuit</span>, <span class="va">origin</span>, <span class="va">destination</span>, radius <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">near</span>, <span class="st">"in_reach"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.229299</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attributes.html" class="external-link">attributes</a></span><span class="op">(</span><span class="va">near</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"origin_in_reach"</span>, <span class="st">"destination_in_reach"</span>,</span>
+<span>                          <span class="st">"pair_weight_in_reach"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      origin_in_reach destination_in_reach pair_weight_in_reach </span></span>
+<span><span class="co">#&gt;             0.974758             1.000000             0.229299</span></span></code></pre></div>
 <p><code><a href="../reference/dp_omni.html">dp_omni()</a></code> with a <code>destination</code> maps the
 routes between the two distributions within reach, with flow potential
 and normalized current as for one surface:</p>
@@ -734,8 +742,10 @@ overlap, a cell’s pair with itself counts in <span class="math inline">\(W\)</
 there and the map mostly shows movement from origin-only to
 destination-only habitat. With several components, each carries its
 share of <span class="math inline">\(W\)</span>; origin cells with no
-destination within reach send nothing, and <span class="math inline">\(W
-/ (\sum o \sum d)\)</span> is returned as <code>"in_reach"</code>.
+destination within reach send nothing. <span class="math inline">\(W /
+(\sum o \sum d)\)</span> is returned as
+<code>"pair_weight_in_reach"</code>, and the shares of <span class="math inline">\(o\)</span> on cells with <span class="math inline">\((Kd)_i &gt; 0\)</span> and of <span class="math inline">\(d\)</span> on cells with <span class="math inline">\((Ko)_j &gt; 0\)</span> as
+<code>"origin_in_reach"</code> and <code>"destination_in_reach"</code>.
 <code><a href="../reference/dp_flux.html">dp_flux()</a></code>’s flow potential is the same injection solved on
 the uniform circuit.</p>
 <p><code><a href="../reference/dp_directionality.html">dp_directionality()</a></code> compares the two. On each link,

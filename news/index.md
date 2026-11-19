@@ -32,6 +32,11 @@
     in Circuitscape, or with `cell_value = "rms"`, the RMS current, as
     in
     [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md).
+    Attributes `"origin_in_reach"` and `"destination_in_reach"` give the
+    shares of origin and destination strength with any counterpart
+    within the radius, and `"pair_weight_in_reach"` the share of all
+    origin–destination pair weight within it, which is small whenever
+    the domain is large relative to the radius.
   - [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
     maps both at once from the same pairs, the directional map of
     [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)
@@ -51,8 +56,8 @@
 
 - The dipole methods need only Julia, not the Circuitscape and Omniscape
   Julia packages. `cs_install_julia(circuitscape = FALSE)` installs
-  Julia alone, and `cs_julia_available(circuitscape = FALSE)` checks for
-  it.
+  Julia alone, and `cs_julia_available(circuitscape = FALSE)` checks
+  that a recent enough Julia is found and starts.
 
 ### Changes
 
@@ -83,6 +88,13 @@
   compare.
 
 ### Bug fixes
+
+- [`cs_setup()`](https://matthewkling.github.io/circuitscaper/reference/cs_setup.md)
+  now starts Julia when the Julia it finds is a shim or launcher in
+  another directory, such as Chocolatey’s on Windows. It pointed
+  ‘JuliaConnectoR’ at the shim’s directory, which Julia also uses to
+  find its system image, so Julia failed to start (“could not load
+  library …sys.dll”). It now asks Julia for its own directory first.
 
 - `cs_install_julia(force = TRUE)` now updates Circuitscape.jl and
   Omniscape.jl even when a new release needs newer versions of their own
