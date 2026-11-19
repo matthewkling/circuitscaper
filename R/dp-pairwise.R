@@ -59,9 +59,11 @@
 #' @param n_draws Integer. Number of draws (solves) for `method = "random"`.
 #'   Default `32`.
 #'
-#' @return A [terra::SpatRaster] with layers `current`, and with
-#'   `normalize`, `flow_potential` and `normalized_current`, as in
-#'   [dp_omni()]. Attributes:
+#' @return A [terra::SpatRaster] with layers `current`; with `normalize`,
+#'   `flow_potential` and `normalized_current`; with `power`, `power`; and
+#'   with both, `normalized_power`, as in [dp_omni()]. With
+#'   `method = "exact"`, `power` sums to the pairs' total effective
+#'   resistance, the power each pair's unit current dissipates. Attributes:
 #'   `"n_pairs"`, the number of pairs counted; for `method = "random"`, also
 #'   `"halves"` (see [dp_omni()]) and `"seed"`.
 #'
@@ -80,9 +82,10 @@
 #' @export
 dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
                         resistance_is = "resistances", normalize = TRUE,
-                        n_draws = 32, seed = NULL) {
+                        n_draws = 32, seed = NULL, power = FALSE) {
   method <- match.arg(method)
   normalize <- isTRUE(normalize)
+  power <- isTRUE(power)
   circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   nodes <- dp_focal_nodes(circuit, locations)
   env <- circuit$env
@@ -90,13 +93,24 @@ dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
   if (method == "exact") {
     res <- dp_call("pairwise_exact", env$id, nodes, 0L)
     dp_check_pairs(res$n_pairs)
-    v <- list(cur2 = 0.5 * res$cells[, 1])
-    if (normalize) v$fp2 <- 0.5 * dp_call("pairwise_exact", env$uniform_id, nodes, 0L)$cells[, 1]
+    v <- list(cur2 = 0.5 * res$cells[, 1], pow = 0.5 * res$power[, 1])
+    if (normalize) {
+      u <- dp_call("pairwise_exact", env$uniform_id, nodes, 0L)
+      v$fp2 <- 0.5 * u$cells[, 1]
+      v$fpow <- 0.5 * u$power[, 1]
+    }
     ratio <- function(a, b) ifelse(b > 0, sqrt(a / b), NA_real_)
     values <- cbind(current = sqrt(v$cur2))
     if (normalize) {
       values <- cbind(values, flow_potential = sqrt(v$fp2),
                       normalized_current = ratio(v$cur2, v$fp2))
+    }
+    if (power) {
+      values <- cbind(values, power = v$pow)
+      if (normalize) {
+        values <- cbind(values, normalized_power = ifelse(v$fpow > 0, v$pow / v$fpow,
+                                                          NA_real_))
+      }
     }
     out <- dp_to_raster(circuit, values, colnames(values))
   } else {
@@ -114,6 +128,14 @@ dp_pairwise <- function(resistance, locations, method = c("random", "exact"),
     if (normalize) {
       v$fp2 <- sq(res$cells[[2]])
       v$fp2_half <- halves(res$cells[[2]])
+    }
+    if (power) {
+      v$pow <- sq(res$power[[1]])
+      v$pow_half <- halves(res$power[[1]])
+      if (normalize) {
+        v$fpow <- sq(res$power[[2]])
+        v$fpow_half <- halves(res$power[[2]])
+      }
     }
     m <- dp_random_layers(v, normalize, rep(TRUE, length(v$cur2)))
     out <- dp_to_raster(circuit, m$values, colnames(m$values))

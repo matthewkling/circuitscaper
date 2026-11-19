@@ -74,6 +74,31 @@
 #' (\eqn{\rho \approx} 0.85). No current is added at endpoints for the
 #' injected current itself, unlike Circuitscape's cell maps.
 #'
+#' ## Power
+#' With `power = TRUE`, the result also maps the power dissipated, which
+#' picks out choke points: places where current is forced through
+#' resistance. A link's power is its squared current (summed over pairs, as
+#' for `current`) times its resistance, \eqn{1 / g_e}. A cell's `power` is
+#' half the sum over its links, so each link's power is shared between the
+#' two cells it joins, and the cells sum to the circuit's total. It comes
+#' from the same per-link sums as `current`, so it costs no extra solves,
+#' and its estimate is unbiased with about twice the relative noise of
+#' `current`.
+#'
+#' This is not `current` squared times the cell's resistance. A link's
+#' resistance depends on both cells it joins (with Circuitscape's averaged
+#' conductances, it approaches twice the lower of the two resistances where
+#' they differ widely), and diagonal links' resistance is \eqn{\sqrt{2}}
+#' times larger. Squaring a current map and multiplying by resistance
+#' overstates power on high-resistance cells next to low-resistance ones,
+#' where choke points often are.
+#'
+#' With `normalize`, `normalized_power` is power divided by the power of
+#' the same pairs on the uniform circuit. Unlike normalized current, it has
+#' the units of resistance (the uniform circuit's links have resistance 1),
+#' so compare it within a surface rather than across surfaces in different
+#' units.
+#'
 #' ## Accuracy
 #' Each draw contributes noise with a relative standard deviation of about
 #' 1.4, so per-cell noise falls as \eqn{1/\sqrt{\mathrm{n\_draws}}}: in
@@ -128,12 +153,16 @@
 #'   (default), one is drawn from R's random number generator, so
 #'   [set.seed()] also makes runs reproducible. The seed used is returned
 #'   as the `"seed"` attribute.
+#' @param power Logical. Also map the power dissipated (see "Power" in
+#'   [dp_omni()]), and with `normalize`, normalized power. Default `FALSE`.
 #'
-#' @return A [terra::SpatRaster] with layers `current`, and with
-#'   `normalize`, `flow_potential` and `normalized_current`. Attributes:
-#'   `"halves"`, a data frame comparing the estimates from odd and even
-#'   draws on source (and destination) cells (Spearman's \eqn{\rho} and
-#'   the median relative difference), and `"seed"`.
+#' @return A [terra::SpatRaster] with layers `current`; with `normalize`,
+#'   `flow_potential` and `normalized_current`; with `power`, `power`; and
+#'   with both, `normalized_power`. Attributes: `"halves"`, a data frame
+#'   comparing the estimates from odd and even draws on source (and
+#'   destination) cells (Spearman's \eqn{\rho} and the median relative
+#'   difference), for `current` and the normalized and power layers; and
+#'   `"seed"`.
 #'
 #' @seealso [dp_circuit()], [dp_pairwise()], [dp_flux()], [os_run()]
 #'
@@ -156,24 +185,25 @@
 dp_omni <- function(resistance, radius, source_strength = NULL,
                     destination = NULL, source_threshold = 0.01,
                     radius_units = c("pixels", "km"), resistance_is = "resistances", normalize = TRUE,
-                    n_draws = 32, n_dipoles = 1e5, seed = NULL) {
+                    n_draws = 32, n_dipoles = 1e5, seed = NULL, power = FALSE) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
   n_dipoles <- dp_count(n_dipoles, "n_dipoles")
   seed <- dp_seed(seed)
   normalize <- isTRUE(normalize)
+  power <- isTRUE(power)
 
   circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   w <- dp_weights(circuit, source_strength, source_threshold, "source_strength")
   if (is.null(destination)) {
     return(dp_random_map(circuit, w, w, kernel, seed, n_draws, n_dipoles,
-                         normalize, mask = w > 0))
+                         normalize, mask = w > 0, power = power))
   }
   w2 <- dp_weights(circuit, destination, source_threshold, "destination")
   center <- dp_flux_values(circuit, w, w2, kernel, normalize, "rms", check = FALSE)
   dp_random_map(circuit, w, w2, kernel, seed, n_draws, n_dipoles, normalize,
-                mask = w > 0 | w2 > 0, center = center)
+                mask = w > 0 | w2 > 0, center = center, power = power)
 }
 
 
@@ -190,7 +220,7 @@ dp_omni <- function(resistance, radius, source_strength = NULL,
 #' added back: \eqn{W^2 / S} times the flux map's squared RMS current.
 #' @noRd
 dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                             normalize, center = NULL) {
+                             normalize, center = NULL, power = FALSE) {
   res <- dp_random_dipoles(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
                            uniform = normalize, center = center)
   if (res$S <= 0) {
@@ -209,6 +239,14 @@ dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
     out$fp2 <- sq(res$cells[[2]])
     out$fp2_half <- halves(res$cells[[2]])
   }
+  if (power) {
+    out$pow <- sq(res$power[[1]])
+    out$pow_half <- halves(res$power[[1]])
+    if (normalize) {
+      out$fpow <- sq(res$power[[2]])
+      out$fpow_half <- halves(res$power[[2]])
+    }
+  }
   if (!is.null(center)) {
     k <- center$W^2 / res$S
     out$cur2 <- out$cur2 + k * center$current^2
@@ -216,6 +254,14 @@ dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
     if (normalize) {
       out$fp2 <- out$fp2 + k * center$fp^2
       out$fp2_half <- out$fp2_half + k * center$fp^2
+    }
+    if (power) {
+      out$pow <- out$pow + k * center$power
+      out$pow_half <- out$pow_half + k * center$power
+      if (normalize) {
+        out$fpow <- out$fpow + k * center$fp_power
+        out$fpow_half <- out$fpow_half + k * center$fp_power
+      }
     }
   }
   out
@@ -227,9 +273,9 @@ dp_random_values <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
 #' diagnostic over `mask`.
 #' @noRd
 dp_random_map <- function(circuit, w1, w2, kernel, seed, n_draws, n_dipoles,
-                          normalize, mask, center = NULL) {
+                          normalize, mask, center = NULL, power = FALSE) {
   v <- dp_random_values(circuit, w1, w2, kernel, seed, n_draws, n_dipoles, normalize,
-                        center)
+                        center, power)
   m <- dp_random_layers(v, normalize, mask)
   out <- dp_to_raster(circuit, m$values, colnames(m$values))
   attr(out, "halves") <- m$halves
@@ -254,6 +300,17 @@ dp_random_layers <- function(v, normalize, mask) {
     halves <- rbind(halves, dp_halves(ratio(v$cur2_half[, 1], v$fp2_half[, 1]),
                                       ratio(v$cur2_half[, 2], v$fp2_half[, 2]), mask))
     rownames(halves) <- c("current", "normalized_current")
+  }
+  if (!is.null(v$pow)) {
+    pratio <- function(a, b) ifelse(b > 0, a / b, NA_real_)
+    values <- cbind(values, power = v$pow)
+    halves <- rbind(halves, power = dp_halves(v$pow_half[, 1], v$pow_half[, 2], mask))
+    if (normalize) {
+      values <- cbind(values, normalized_power = pratio(v$pow, v$fpow))
+      halves <- rbind(halves, normalized_power = dp_halves(
+        pratio(v$pow_half[, 1], v$fpow_half[, 1]),
+        pratio(v$pow_half[, 2], v$fpow_half[, 2]), mask))
+    }
   }
   list(values = values, halves = halves)
 }

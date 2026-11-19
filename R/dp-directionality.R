@@ -60,12 +60,16 @@
 #'     `dp_flux(cell_value = "rms")`'s `current`.}
 #'   \item{flux_flow_potential, flux_normalized_current}{(with `normalize`)
 #'     As `dp_flux()`'s `flow_potential` and `normalized_current`.}
+#'   \item{flux_power, flux_normalized_power}{(with `power`; the second also
+#'     needs `normalize`) As `dp_flux()`'s `power` and `normalized_power`.}
 #'   \item{flow_x, flow_y}{Net flow through the cell towards the east and the
 #'     north, as from [dp_flux()].}
 #'   \item{omni_current}{The undirected map's current, as
 #'     `dp_omni(destination = )`'s `current`.}
 #'   \item{omni_flow_potential, omni_normalized_current}{(with `normalize`)
 #'     As `dp_omni()`'s `flow_potential` and `normalized_current`.}
+#'   \item{omni_power, omni_normalized_power}{(with `power`; the second also
+#'     needs `normalize`) As `dp_omni()`'s `power` and `normalized_power`.}
 #' }
 #' Attributes: `"halves"`, comparing the estimates from odd and even draws
 #' on origin and destination cells, as in [dp_omni()], for the undirected
@@ -91,12 +95,14 @@ dp_directionality <- function(resistance, origin, destination, radius = Inf,
                               source_threshold = 0.01,
                               radius_units = c("pixels", "km"),
                               resistance_is = "resistances", normalize = TRUE,
-                              n_draws = 32, n_dipoles = 1e5, seed = NULL) {
+                              n_draws = 32, n_dipoles = 1e5, seed = NULL,
+                              power = FALSE) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
   n_dipoles <- dp_count(n_dipoles, "n_dipoles")
   seed <- dp_seed(seed)
   normalize <- isTRUE(normalize)
+  power <- isTRUE(power)
 
   circuit <- dp_as_circuit(resistance, resistance_is, uniform = normalize)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
@@ -106,13 +112,17 @@ dp_directionality <- function(resistance, origin, destination, radius = Inf,
 
   f <- dp_flux_values(circuit, o, d, kernel, normalize, "rms")
   u <- dp_random_values(circuit, o, d, kernel, seed, n_draws, n_dipoles, normalize,
-                        center = f)
+                        center = f, power = power)
   omni <- dp_random_layers(u, normalize, mask)
 
   share <- function(cur2) ifelse(cur2 > 0, f$W * f$current^2 / cur2, NA_real_)
   v <- cbind(directionality = share(u$cur2), flux_current = f$current)
   if (normalize) {
     v <- cbind(v, flux_flow_potential = f$fp, flux_normalized_current = f$nc)
+  }
+  if (power) {
+    v <- cbind(v, flux_power = f$power)
+    if (normalize) v <- cbind(v, flux_normalized_power = f$np)
   }
   v <- cbind(v, flow_x = f$flow[, 1], flow_y = f$flow[, 2])
   ov <- omni$values

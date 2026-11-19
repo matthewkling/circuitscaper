@@ -33,6 +33,12 @@
     it and `dp_omni(destination = )` center their random dipoles on the
     pairs' mean dipole, which is solved exactly, so their noise is much
     smaller where movement is one-way.
+  * With `power = TRUE` (off by default), `dp_omni()`, `dp_pairwise()`,
+    `dp_flux()` and `dp_directionality()` also map the power dissipated,
+    which picks out choke points, and with `normalize = TRUE`, normalized
+    power. Each link's squared current is weighted by that link's
+    resistance, which squaring a current map and multiplying by cell
+    resistance can't do; it costs no extra solves.
   * `dp_circuit()` prepares a circuit whose factorizations several runs can
     reuse.
 

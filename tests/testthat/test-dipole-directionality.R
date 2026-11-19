@@ -116,3 +116,28 @@ test_that("centered estimates are unbiased and bounded on a patchy landscape", {
   expect_equal(sum(runs[ok, ]) / ncol(runs), sum(e$undirected[ok]), tolerance = 0.03)
   expect_lt(stats::median(abs(rowMeans(runs)[ok] / e$undirected[ok] - 1)), 0.03)
 })
+
+test_that("dp_directionality's power layers are dp_flux's and dp_omni's", {
+  skip_if_no_julia(circuitscape = FALSE)
+  x <- dipole_test_grid()
+  dest <- dipole_test_grid(seed = 7)$suitability
+  circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
+  r <- dp_directionality(circuit, x$suitability, dest, radius = 5, seed = 3,
+                         n_draws = 8, n_dipoles = 2000, power = TRUE)
+  f <- dp_flux(circuit, x$suitability, dest, radius = 5, power = TRUE)
+  o <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
+               destination = dest, seed = 3, n_draws = 8, n_dipoles = 2000, power = TRUE)
+  vals <- function(r, n) terra::values(r[[n]], mat = FALSE)
+  for (n in c("power", "normalized_power")) {
+    expect_equal(vals(r, paste0("flux_", n)), vals(f, n), tolerance = 1e-12)
+    expect_equal(vals(r, paste0("omni_", n)), vals(o, n), tolerance = 1e-10)
+  }
+  expect_equal(rownames(attr(r, "halves")),
+               c("omni_current", "omni_normalized_current", "omni_power",
+                 "omni_normalized_power", "directionality"))
+  # Off by default
+  r0 <- dp_directionality(circuit, x$suitability, dest, radius = 5, seed = 3,
+                          n_draws = 8, n_dipoles = 2000)
+  expect_false(any(grepl("power", names(r0))))
+  expect_identical(terra::values(r0), terra::values(r[[names(r0)]]))
+})

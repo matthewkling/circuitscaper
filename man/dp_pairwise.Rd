@@ -11,7 +11,8 @@ dp_pairwise(
   resistance_is = "resistances",
   normalize = TRUE,
   n_draws = 32,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 }
 \arguments{
@@ -43,11 +44,16 @@ Default \code{32}.}
 (default), one is drawn from R's random number generator, so
 \code{\link[=set.seed]{set.seed()}} also makes runs reproducible. The seed used is returned
 as the \code{"seed"} attribute.}
+
+\item{power}{Logical. Also map the power dissipated (see "Power" in
+\code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
 }
 \value{
-A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}, and with
-\code{normalize}, \code{flow_potential} and \code{normalized_current}, as in
-\code{\link[=dp_omni]{dp_omni()}}. Attributes:
+A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{current}; with \code{normalize},
+\code{flow_potential} and \code{normalized_current}; with \code{power}, \code{power}; and
+with both, \code{normalized_power}, as in \code{\link[=dp_omni]{dp_omni()}}. With
+\code{method = "exact"}, \code{power} sums to the pairs' total effective
+resistance, the power each pair's unit current dissipates. Attributes:
 \code{"n_pairs"}, the number of pairs counted; for \code{method = "random"}, also
 \code{"halves"} (see \code{\link[=dp_omni]{dp_omni()}}) and \code{"seed"}.
 }

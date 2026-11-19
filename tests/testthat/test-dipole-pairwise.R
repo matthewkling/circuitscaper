@@ -39,6 +39,38 @@ test_that("exact pairwise matches a dense brute force, across components", {
   cur <- terra::values(ex$current, mat = FALSE)
   expect_equal(terra::values(ex$normalized_current, mat = FALSE),
                ifelse(fp > 0, cur / fp, NA), tolerance = 1e-12)
+
+  # Power: squared current times each link's resistance
+  pw <- dp_pairwise(circuit, xy, method = "exact", power = TRUE)
+  expect_named(pw, c("current", "flow_potential", "normalized_current", "power",
+                     "normalized_power"))
+  got <- dp_node_values(circuit, pw$power)
+  expect_equal(got, dipole_exact_cells(gi, P, 1 / gi$g) / 4, tolerance = 1e-8)
+  # Each link's power is split between its two cells, so the cells sum to
+  # the power dissipated: for unit current, a pair's effective resistance
+  n <- length(gi$comp)
+  L <- matrix(0, n, n)
+  L[cbind(gi$a, gi$b)] <- -gi$g
+  L[cbind(gi$b, gi$a)] <- -gi$g
+  diag(L) <- -rowSums(L)
+  reff <- 0
+  for (k in unique(gi$comp[node])) {
+    nd <- node[gi$comp[node] == k]
+    if (length(nd) < 2) next
+    comp <- which(gi$comp == k)
+    X <- matrix(0, n, n)
+    X[comp[-1], comp[-1]] <- solve(L[comp[-1], comp[-1]])
+    pr <- utils::combn(nd, 2)
+    reff <- reff + sum(X[cbind(pr[1, ], pr[1, ])] + X[cbind(pr[2, ], pr[2, ])] -
+                         2 * X[cbind(pr[1, ], pr[2, ])])
+  }
+  expect_equal(sum(got), reff, tolerance = 1e-8)
+  gu <- dipole_graph_info(circuit, uniform = TRUE)
+  fpp <- dipole_exact_cells(gu, P, 1 / gu$g) / 4
+  expect_equal(dp_node_values(circuit, pw$normalized_power),
+               ifelse(fpp > 0, got / fpp, NA), tolerance = 1e-8)
+  expect_named(dp_pairwise(circuit, xy, method = "exact", power = TRUE, normalize = FALSE),
+               c("current", "power"))
 })
 
 test_that("random pairwise is unbiased and matches exact (oracle 4)", {
@@ -62,6 +94,24 @@ test_that("random pairwise is unbiased and matches exact (oracle 4)", {
                                     normalize = FALSE), mat = FALSE)
     expect_gt(stats::cor(ex, rd, method = "spearman"), 0.998)
   }
+  # Power, from the same draws
+  xy <- terra::xyFromCell(ref, focal_cells(ref$conductance, 25, seed = 25))
+  pe <- dp_pairwise(circuit, xy, method = "exact", power = TRUE)
+  pr <- dp_pairwise(circuit, xy, n_draws = 512, seed = 1, power = TRUE)
+  for (n in c("power", "normalized_power")) {
+    expect_gt(stats::cor(terra::values(pe[[n]], mat = FALSE),
+                         terra::values(pr[[n]], mat = FALSE),
+                         method = "spearman", use = "complete.obs"), 0.99)
+  }
+  # A run's total varies by about 4% at 512 draws; the mean of four by 2%
+  totals <- sapply(1:4, function(s) {
+    sum(terra::values(dp_pairwise(circuit, xy, n_draws = 512, seed = s, power = TRUE,
+                                  normalize = FALSE)$power), na.rm = TRUE)
+  })
+  expect_equal(mean(totals), sum(terra::values(pe$power), na.rm = TRUE),
+               tolerance = 0.06)
+  expect_equal(rownames(attr(pr, "halves")),
+               c("current", "normalized_current", "power", "normalized_power"))
   xy <- terra::xyFromCell(ref, focal_cells(ref$conductance, 25))
   ex <- terra::values(dp_pairwise(circuit, xy, method = "exact", normalize = FALSE),
                       mat = FALSE)^2

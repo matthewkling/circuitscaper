@@ -196,6 +196,11 @@ function node_sums(gr::Graph, x::AbstractMatrix{Float64})
     out
 end
 
+# Per-node sums over incident links of squared current times the link's
+# resistance, 1 / g: the power dissipated, from per-link sums of squared
+# current x (links x k)
+power_sums(c::Circuit, x::AbstractMatrix{Float64}) = node_sums(c.graph, x ./ c.g)
+
 # Columns per solve. Each column costs a few n-vectors (~0.4 GB at 18M
 # nodes), small next to the factor (~14 GB there), while narrow batches
 # leave the multithreaded solve underused: at 18M nodes, 16 columns solved
@@ -585,12 +590,13 @@ end
 
 # Solved against each of the circuits `ids` (all on the same graph, e.g. a
 # circuit and its uniform twin), with the same injections. Returns per
-# circuit the per-node sums (nodes x 2: odd draws, even draws).
+# circuit the per-node sums of squared current and of power (nodes x 2: odd
+# draws, even draws).
 function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real)
     circs = [circuit(id) for id in asvec(ids)]
     gr = first(circs).graph
     groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
-    isempty(groups) && return (n_pairs = 0, cells = Matrix{Float64}[])
+    isempty(groups) && return (n_pairs = 0, cells = Matrix{Float64}[], power = Matrix{Float64}[])
     b = batch > 0 ? Int(batch) : default_batch(nnodes(gr))
     accs = [LinkSums(nlinks(gr)) for _ in circs]
     for s0 in 1:b:Int(n_draws)
@@ -602,18 +608,20 @@ function pairwise_random(ids, nodes, seed::Real, n_draws::Real, batch::Real)
         end
     end
     (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
-     cells = [node_sums(gr, acc.s) for acc in accs])
+     cells = [node_sums(gr, acc.s) for acc in accs],
+     power = [power_sums(c, acc.s) for (c, acc) in zip(circs, accs)])
 end
 
 # Exact sum over pairs of focal nodes of squared link current, from one
 # solve per node: with y_i a link's current for unit flow from node i to its
 # component's first node, sum_{i<j} (y_i - y_j)^2 = N sum y_i^2 - (sum y_i)^2.
-# Returns per-node sums over incident links (nodes x 1).
+# Returns per-node sums over incident links (nodes x 1), of squared current
+# and of power.
 function pairwise_exact(id::Real, nodes, batch::Real)
     c = circuit(id)
     gr = c.graph
     groups = focal_groups(gr, Vector{Int}(round.(Int, asvec(nodes))))
-    isempty(groups) && return (n_pairs = 0, cells = zeros(0, 1))
+    isempty(groups) && return (n_pairs = 0, cells = zeros(0, 1), power = zeros(0, 1))
     jobs = [(v, g[1]) for g in groups for v in g[2:end]]
     n_comp = zeros(Int, gr.ncomp)
     for g in groups
@@ -645,7 +653,7 @@ function pairwise_exact(id::Real, nodes, batch::Real)
     end
     x = [max(n_comp[gr.comp[a[e]]] * sy2[e] - sy[e]^2, 0.0) for e in eachindex(a)]
     (n_pairs = sum(length(g) * (length(g) - 1) ÷ 2 for g in groups),
-     cells = node_sums(gr, reshape(x, :, 1)))
+     cells = node_sums(gr, reshape(x, :, 1)), power = power_sums(c, reshape(x, :, 1)))
 end
 
 
@@ -690,13 +698,14 @@ flux_injection(id::Real, o, d, dr0, hw, rowmap) =
                    make_kernel(dr0, hw, rowmap))
 
 # One solve of a given injection (balanced within each component). Returns
-# per-node sums over incident links of |I|, I^2, and the x and y components
-# of I times the link's unit direction (x east, y north on the grid).
+# per-node sums over incident links of |I|, I^2, the x and y components of I
+# times the link's unit direction (x east, y north on the grid), and the
+# power I^2 / g.
 function flux(id::Real, b)
     c = circuit(id)
     gr = c.graph
     V = c.fac \ Vector{Float64}(asvec(b))
-    out = zeros(nnodes(gr), 4)
+    out = zeros(nnodes(gr), 5)
     for e in eachindex(gr.a)
         i = gr.a[e]
         j = gr.b[e]
@@ -709,6 +718,7 @@ function flux(id::Real, b)
             out[v, 2] += I^2
             out[v, 3] += I * dx / len
             out[v, 4] += I * dy / len
+            out[v, 5] += I^2 / c.g[e]
         end
     end
     out
@@ -775,13 +785,14 @@ function random_dipoles(ids, w1, w2, dr0::Real, hw, rowmap, seed::Real, n_draws:
     s = sampler(first(asvec(ids)), w1, w2, dr0, hw, rowmap)
     S = pair_sum(s)
     # No pairs can be drawn; R reports it
-    S > 0 || return (S = 0.0, cells = Matrix{Float64}[])
+    S > 0 || return (S = 0.0, cells = Matrix{Float64}[], power = Matrix{Float64}[])
     b = batch > 0 ? Int(batch) : default_batch(nnodes(s.graph))
     cb = Vector{Float64}(asvec(center_b))
     center = isempty(cb) ? nothing : (center_w / S) .* cb
     accs = run_dipoles(circs, s, Int(seed), Int(n_draws), Int(n_dipoles); batch = b,
                        center = center)
-    (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)])
+    (S = S, cells = [node_sums(c.graph, a.s) for (c, a) in zip(circs, accs)],
+     power = [power_sums(c, a.s) for (c, a) in zip(circs, accs)])
 end
 
 # Parity hook: accumulate a given injection matrix (nodes x draws). Returns

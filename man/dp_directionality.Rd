@@ -15,7 +15,8 @@ dp_directionality(
   normalize = TRUE,
   n_draws = 32,
   n_dipoles = 1e+05,
-  seed = NULL
+  seed = NULL,
+  power = FALSE
 )
 }
 \arguments{
@@ -56,6 +57,9 @@ cells). Default \code{TRUE}.}
 (default), one is drawn from R's random number generator, so
 \code{\link[=set.seed]{set.seed()}} also makes runs reproducible. The seed used is returned
 as the \code{"seed"} attribute.}
+
+\item{power}{Logical. Also map the power dissipated (see "Power" in
+\code{\link[=dp_omni]{dp_omni()}}), and with \code{normalize}, normalized power. Default \code{FALSE}.}
 }
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
@@ -65,12 +69,16 @@ A \link[terra:SpatRaster]{terra::SpatRaster} with layers:
 \code{dp_flux(cell_value = "rms")}'s \code{current}.}
 \item{flux_flow_potential, flux_normalized_current}{(with \code{normalize})
 As \code{dp_flux()}'s \code{flow_potential} and \code{normalized_current}.}
+\item{flux_power, flux_normalized_power}{(with \code{power}; the second also
+needs \code{normalize}) As \code{dp_flux()}'s \code{power} and \code{normalized_power}.}
 \item{flow_x, flow_y}{Net flow through the cell towards the east and the
 north, as from \code{\link[=dp_flux]{dp_flux()}}.}
 \item{omni_current}{The undirected map's current, as
 \code{dp_omni(destination = )}'s \code{current}.}
 \item{omni_flow_potential, omni_normalized_current}{(with \code{normalize})
 As \code{dp_omni()}'s \code{flow_potential} and \code{normalized_current}.}
+\item{omni_power, omni_normalized_power}{(with \code{power}; the second also
+needs \code{normalize}) As \code{dp_omni()}'s \code{power} and \code{normalized_power}.}
 }
 Attributes: \code{"halves"}, comparing the estimates from odd and even draws
 on origin and destination cells, as in \code{\link[=dp_omni]{dp_omni()}}, for the undirected

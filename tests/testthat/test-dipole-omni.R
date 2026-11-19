@@ -140,19 +140,43 @@ test_that("dp_omni with a destination targets origin-destination pairs without b
   # Squared current is symmetric in a pair, so the symmetric part of P is
   # the target's weight
   exact <- dipole_exact_cells(gi, (P + t(P)) / 2) / 2
-  runs <- sapply(1:12, function(s) {
+  exact_power <- dipole_exact_cells(gi, (P + t(P)) / 2, 1 / gi$g) / 2
+  runs <- lapply(1:12, function(s) {
     r <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
                  destination = fut, normalize = FALSE, n_draws = 256,
-                 n_dipoles = 1000, seed = s)
-    dp_node_values(circuit, r)^2
+                 n_dipoles = 1000, seed = s, power = TRUE)
+    cbind(dp_node_values(circuit, r$current)^2, dp_node_values(circuit, r$power))
   })
   ok <- exact > 0
-  expect_equal(sum(runs[ok, ]) / ncol(runs), sum(exact[ok]), tolerance = 0.01)
-  expect_lt(stats::median(abs(rowMeans(runs)[ok] / exact[ok] - 1)), 0.03)
+  for (k in 1:2) {
+    want <- list(exact, exact_power)[[k]]
+    est <- sapply(runs, function(x) x[, k])
+    expect_equal(sum(est[ok, ]) / ncol(est), sum(want[ok]), tolerance = 0.01)
+    expect_lt(stats::median(abs(rowMeans(est)[ok] / want[ok] - 1)), 0.03)
+  }
 
   r <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
                destination = fut, seed = 1, n_draws = 8, n_dipoles = 1000)
   expect_named(r, c("current", "flow_potential", "normalized_current"))
+  r <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
+               destination = fut, seed = 1, n_draws = 8, n_dipoles = 1000, power = TRUE)
+  expect_named(r, c("current", "flow_potential", "normalized_current", "power",
+                    "normalized_power"))
+  # Same draws, so power doesn't change the other layers
+  r0 <- dp_omni(circuit, radius = 5, source_strength = x$suitability,
+                destination = fut, seed = 1, n_draws = 8, n_dipoles = 1000)
+  expect_identical(terra::values(r[[1:3]]), terra::values(r0))
+  expect_equal(terra::values(r$normalized_power, mat = FALSE),
+               {
+                 fp <- dp_omni(terra::mask(x$conductance * 0 + 1, x$conductance),
+                               radius = 5, source_strength = x$suitability,
+                               destination = fut, seed = 1, n_draws = 8,
+                               n_dipoles = 1000, power = TRUE, normalize = FALSE,
+                               resistance_is = "conductances")
+                 p <- terra::values(r$power, mat = FALSE)
+                 u <- terra::values(fp$power, mat = FALSE)
+                 ifelse(u > 0, p / u, NA)
+               }, tolerance = 1e-8)
 })
 
 test_that("dp_omni checks its inputs", {
