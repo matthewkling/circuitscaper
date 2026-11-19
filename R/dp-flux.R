@@ -94,10 +94,25 @@
 #'     over the cell's links of the current along the link times its unit
 #'     direction.}
 #' }
-#' Attribute `"in_reach"`: the share of all origin–destination pair weight,
-#' \eqn{W / (\sum o \sum d)}, that is within `radius` and in the same
-#' component, and so carried by the map. A small share means most of the
-#' origin has no destination within reach.
+#' Three attributes say how much of the two distributions the map covers,
+#' each between 0 and 1:
+#' \describe{
+#'   \item{`"origin_in_reach"`}{The share of origin strength on cells with
+#'     any destination strength within `radius` and in the same component.
+#'     This is the one that says whether most of the origin has a destination
+#'     within reach: origin cells without one send nothing. A cell that is
+#'     both origin and destination counts as reached, although its pair with
+#'     itself moves nothing.}
+#'   \item{`"destination_in_reach"`}{The same for destination strength: the
+#'     share on cells with any origin strength within reach.}
+#'   \item{`"pair_weight_in_reach"`}{The share of all origin–destination pair
+#'     weight, \eqn{W / (\sum o \sum d)}, that is within `radius` and in the
+#'     same component, and so carried by the map. It depends on the size of
+#'     the domain relative to `radius`: where the distributions span many
+#'     radii, most pairs are out of reach and the share is small, however
+#'     closely the two distributions overlap. With `radius = Inf` and one
+#'     component, it is 1.}
+#' }
 #'
 #' @seealso [dp_omni()], [dp_directionality()], [cs_advanced()]
 #'
@@ -111,7 +126,8 @@
 #'
 #' # Only pairs within 45 cells of each other
 #' near <- dp_flux(resistance, origin, destination, radius = 45)
-#' attr(near, "in_reach")
+#' attr(near, "origin_in_reach")
+#' attr(near, "pair_weight_in_reach")
 #' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
@@ -132,8 +148,7 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
   if (normalize) v <- cbind(v, flow_potential = f$fp, normalized_current = f$nc)
   if (isTRUE(direction)) v <- cbind(v, flow_x = f$flow[, 1], flow_y = f$flow[, 2])
   out <- dp_to_raster(circuit, v, colnames(v))
-  attr(out, "in_reach") <- f$in_reach
-  out
+  dp_set_coverage(out, f)
 }
 
 
@@ -142,14 +157,15 @@ dp_flux <- function(resistance, origin, destination, radius = Inf,
 #' Solves the flux injection on the circuit and, with `normalize`, on its
 #' uniform twin. Returns per-node `current` (summarised by `cell_value`),
 #' `flow` (x and y), and with `normalize`, `fp` and `nc`; the injection `b`,
-#' the total pair weight `W` and `in_reach`. With `check = FALSE`, returns
+#' the total pair weight `W` and the coverage shares (see `dp_set_coverage()`).
+#' With `check = FALSE`, returns
 #' `NULL` instead of an error when no pairs are within reach.
 #' @noRd
 dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
                            check = TRUE) {
   inj <- dp_call("flux_injection", circuit$env$id, o, d, kernel$dr0, kernel$hw,
                  kernel$rowmap)
-  if (inj$in_reach <= 0) {
+  if (inj$W <= 0) {
     if (!check) return(NULL)
     stop("No origin and destination cells are within `radius` of each other ",
          "in the same connected part of the circuit, so there is no flow.",
@@ -161,10 +177,25 @@ dp_flux_values <- function(circuit, o, d, kernel, normalize, cell_value,
   }
   cells <- dp_call("flux", circuit$env$id, b)
   out <- list(current = summarise(cells), flow = 0.5 * cells[, 3:4, drop = FALSE],
-              b = b, W = inj$W, in_reach = inj$in_reach)
+              b = b, W = inj$W,
+              coverage = c(origin_in_reach = inj$origin_in_reach,
+                           destination_in_reach = inj$destination_in_reach,
+                           pair_weight_in_reach = inj$pair_weight_in_reach))
   if (normalize) {
     out$fp <- summarise(dp_call("flux", circuit$env$uniform_id, b))
     out$nc <- ifelse(out$fp > 0, out$current / out$fp, NA_real_)
   }
   out
+}
+
+
+#' Set the Coverage Attributes
+#'
+#' Sets `"origin_in_reach"`, `"destination_in_reach"` and
+#' `"pair_weight_in_reach"` on `x` from the `coverage` of
+#' `dp_flux_values()`.
+#' @noRd
+dp_set_coverage <- function(x, f) {
+  for (nm in names(f$coverage)) attr(x, nm) <- f$coverage[[nm]]
+  x
 }

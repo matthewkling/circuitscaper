@@ -20,7 +20,9 @@ test_that("dp_directionality's layers are dp_flux's and dp_omni's", {
     expect_equal(vals(r, paste0("omni_", n)), vals(o, n), tolerance = 1e-10)
   }
   for (n in c("flow_x", "flow_y")) expect_equal(vals(r, n), vals(f, n), tolerance = 1e-12)
-  expect_equal(attr(r, "in_reach"), attr(f, "in_reach"))
+  for (a in c("origin_in_reach", "destination_in_reach", "pair_weight_in_reach")) {
+    expect_equal(attr(r, a), attr(f, a))
+  }
   expect_equal(attr(r, "seed"), 3L)
   expect_equal(rownames(attr(r, "halves")),
                c("omni_current", "omni_normalized_current", "directionality"))
@@ -30,7 +32,7 @@ test_that("dp_directionality's layers are dp_flux's and dp_omni's", {
   dd <- dp_node_values(circuit, dest)
   od[is.na(od) | od < 0.01] <- 0
   dd[is.na(dd) | dd < 0.01] <- 0
-  W <- attr(f, "in_reach") * sum(od) * sum(dd)
+  W <- attr(f, "pair_weight_in_reach") * sum(od) * sum(dd)
   cur <- vals(r, "omni_current")
   expect_equal(vals(r, "directionality"),
                ifelse(cur > 0, W * vals(r, "flux_current")^2 / cur^2, NA),

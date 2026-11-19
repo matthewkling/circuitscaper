@@ -83,7 +83,7 @@ test_that("dp_flux matches the prototype's net flux (oracle 5)", {
                      "flow_x", "flow_y"))
   expect_equal(terra::values(got$current, mat = FALSE),
                terra::values(want, mat = FALSE), tolerance = 1e-8)
-  expect_equal(attr(got, "in_reach"), 1, tolerance = 1e-12)
+  expect_equal(attr(got, "pair_weight_in_reach"), 1, tolerance = 1e-12)
 })
 
 test_that("flux injections are the pair sums, by radius and component", {
@@ -95,7 +95,12 @@ test_that("flux injections are the pair sums, by radius and component", {
     P <- flux_pair_weights(t$circuit, t$gi, t$o, t$d, radius)
     W <- sum(P)
     expect_equal(inj$b, (rowSums(P) - colSums(P)) / W, tolerance = 1e-10)
-    expect_equal(inj$in_reach, W / (sum(t$o) * sum(t$d)), tolerance = 1e-12)
+    expect_equal(inj$pair_weight_in_reach, W / (sum(t$o) * sum(t$d)), tolerance = 1e-12)
+    # Origin (destination) cells with any pair weight, i.e. a counterpart in reach
+    expect_equal(inj$origin_in_reach, sum(t$o[rowSums(P) > 0]) / sum(t$o),
+                 tolerance = 1e-12)
+    expect_equal(inj$destination_in_reach, sum(t$d[colSums(P) > 0]) / sum(t$d),
+                 tolerance = 1e-12)
     # Balanced within each component
     expect_equal(as.vector(tapply(inj$b, t$gi$comp, sum)),
                  rep(0, length(unique(t$gi$comp))), tolerance = 1e-14)
@@ -109,14 +114,14 @@ test_that("dp_flux matches a dense solve with a radius", {
   want <- flux_exact_current(t$gi, (rowSums(P) - colSums(P)) / sum(P))
   r <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 5)
   expect_equal(dp_node_values(t$circuit, r$current), want, tolerance = 1e-8)
-  expect_equal(attr(r, "in_reach"), sum(P) / (sum(t$o) * sum(t$d)), tolerance = 1e-12)
-  expect_lt(attr(r, "in_reach"), 1)
+  expect_equal(attr(r, "pair_weight_in_reach"), sum(P) / (sum(t$o) * sum(t$d)), tolerance = 1e-12)
+  expect_lt(attr(r, "pair_weight_in_reach"), 1)
 
   # A radius beyond the grid is the same as no limit
   far <- dp_flux(t$circuit, t$x$suitability, t$dest, radius = 100)
   inf <- dp_flux(t$circuit, t$x$suitability, t$dest)
   expect_equal(terra::values(far), terra::values(inf), tolerance = 1e-10)
-  expect_equal(attr(far, "in_reach"), attr(inf, "in_reach"), tolerance = 1e-12)
+  expect_equal(attr(far, "pair_weight_in_reach"), attr(inf, "pair_weight_in_reach"), tolerance = 1e-12)
 })
 
 test_that("dp_flux gives RMS cell values, bounded by the undirected map", {
@@ -178,7 +183,7 @@ test_that("swapping origin and destination reverses the flow", {
   expect_equal(terra::values(b$current), terra::values(a$current), tolerance = 1e-10)
   expect_equal(terra::values(b$flow_x), -terra::values(a$flow_x), tolerance = 1e-10)
   expect_equal(terra::values(b$flow_y), -terra::values(a$flow_y), tolerance = 1e-10)
-  expect_equal(attr(b, "in_reach"), attr(a, "in_reach"), tolerance = 1e-12)
+  expect_equal(attr(b, "pair_weight_in_reach"), attr(a, "pair_weight_in_reach"), tolerance = 1e-12)
 })
 
 test_that("dp_flux gives the direction of flow", {
@@ -225,7 +230,7 @@ test_that("dp_flux weights each component by its origin-destination pairs", {
   left <- (seq_len(terra::ncell(origin)) - 1) %% 31 < 7
   O <- c(sum(o[left], na.rm = TRUE), sum(o[!left], na.rm = TRUE))
   D <- c(sum(d[left], na.rm = TRUE), sum(d[!left], na.rm = TRUE))
-  expect_equal(attr(r, "in_reach"), sum(O * D) / (sum(O) * sum(D)), tolerance = 1e-12)
+  expect_equal(attr(r, "pair_weight_in_reach"), sum(O * D) / (sum(O) * sum(D)), tolerance = 1e-12)
 
   # Each part carries its share O_c D_c / W of the flow: on its own, the
   # left part's map is the same up to that factor
@@ -254,4 +259,79 @@ test_that("dp_flux's flow potential is the same flow on the uniform circuit", {
     expect_equal(terra::values(r$normalized_current, mat = FALSE),
                  ifelse(fp > 0, cur / fp, NA), tolerance = 1e-12)
   }
+})
+
+test_that("dp_flux reports how much of each distribution is within reach", {
+  skip_if_no_julia(circuitscape = FALSE)
+  grid <- function(nr, nc) {
+    terra::rast(nrows = nr, ncols = nc, xmin = 0, xmax = nc, ymin = 0, ymax = nr,
+                crs = "EPSG:5070")
+  }
+  layer <- function(tmpl, cols) {
+    r <- terra::setValues(tmpl, 0)
+    r[, cols] <- 1
+    r
+  }
+  coverage <- function(r) {
+    unlist(attributes(r)[c("origin_in_reach", "destination_in_reach",
+                           "pair_weight_in_reach")])
+  }
+  run <- function(cond, o, d, radius) {
+    dp_flux(cond, o, d, radius = radius, resistance_is = "conductances",
+            normalize = FALSE, direction = FALSE)
+  }
+
+  # Overlapping distributions on a large grid, small radius: few pairs are in
+  # reach, but every origin and destination cell has a counterpart nearby
+  tmpl <- grid(60, 60)
+  cond <- terra::setValues(tmpl, 1)
+  r <- run(cond, layer(tmpl, 1:50), layer(tmpl, 3:52), radius = 2)
+  cv <- coverage(r)
+  expect_equal(cv[["origin_in_reach"]], 1)
+  expect_equal(cv[["destination_in_reach"]], 1)
+  expect_lt(cv[["pair_weight_in_reach"]], 0.01)
+  # Origin cells more than `radius` from all destination habitat are unreached:
+  # columns 1-8 are 3 or more cells from column 11
+  cv <- coverage(run(cond, layer(tmpl, 1:50), layer(tmpl, 11:60), radius = 2))
+  expect_equal(cv[["origin_in_reach"]], 42 / 50, tolerance = 1e-12)
+
+  # Farther apart than the radius: nothing is reached, and dp_flux() stops
+  tmpl <- grid(15, 40)
+  cond <- terra::setValues(tmpl, 1)
+  o <- layer(tmpl, 1:3)
+  d <- layer(tmpl, 38:40)
+  expect_error(run(cond, o, d, radius = 5), "within `radius`")
+  circuit <- dp_circuit(cond, resistance_is = "conductances")
+  k <- dp_kernel(circuit$env$template, 5, "pixels")
+  ow <- dp_weights(circuit, o, 0.01, "origin")
+  dw <- dp_weights(circuit, d, 0.01, "destination")
+  expect_null(dp_flux_values(circuit, ow, dw, k, FALSE, "absolute", check = FALSE))
+  inj <- dp_call("flux_injection", circuit$env$id, ow, dw, k$dr0, k$hw, k$rowmap)
+  expect_equal(c(inj$W, inj$origin_in_reach, inj$destination_in_reach,
+                 inj$pair_weight_in_reach), c(0, 0, 0, 0))
+
+  # Half the origin is within reach of the destination
+  r <- run(cond, layer(tmpl, c(1:3, 20:22)), layer(tmpl, 24:26), radius = 5)
+  expect_equal(coverage(r)[["origin_in_reach"]], 0.5, tolerance = 1e-12)
+  expect_equal(coverage(r)[["destination_in_reach"]], 1)
+
+  # Two components: origin in the left one, with no destination, is unreached
+  tmpl <- grid(10, 20)
+  cond <- terra::setValues(tmpl, 1)
+  cond[, 10] <- NA
+  o <- terra::mask(layer(tmpl, c(2:3, 15:16)), cond)
+  d <- terra::mask(layer(tmpl, 17:18), cond)
+  cv <- coverage(run(cond, o, d, radius = Inf))
+  expect_equal(cv[["origin_in_reach"]], 0.5, tolerance = 1e-12)
+  expect_equal(cv[["destination_in_reach"]], 1)
+  expect_equal(cv[["pair_weight_in_reach"]], 0.5, tolerance = 1e-12)
+  # ... and likewise for destination weight with no origin
+  cv <- coverage(run(cond, d, o, radius = Inf))
+  expect_equal(cv[["origin_in_reach"]], 1)
+  expect_equal(cv[["destination_in_reach"]], 0.5, tolerance = 1e-12)
+
+  # No radius, one component: everything is in reach
+  cond <- terra::setValues(tmpl, 1)
+  cv <- coverage(run(cond, layer(tmpl, 1:3), layer(tmpl, 18:20), radius = Inf))
+  expect_equal(unname(cv), c(1, 1, 1), tolerance = 1e-12)
 })

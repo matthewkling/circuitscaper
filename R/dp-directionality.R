@@ -69,8 +69,10 @@
 #' }
 #' Attributes: `"halves"`, comparing the estimates from odd and even draws
 #' on origin and destination cells, as in [dp_omni()], for the undirected
-#' layers and `directionality`; `"seed"`; and `"in_reach"`, as in
-#' [dp_flux()].
+#' layers and `directionality`; `"seed"`; and `"origin_in_reach"`,
+#' `"destination_in_reach"` and `"pair_weight_in_reach"`, as in [dp_flux()]:
+#' the first two say how much of each distribution has a counterpart within
+#' reach, the third depends on the size of the domain relative to `radius`.
 #'
 #' @seealso [dp_flux()], [dp_omni()]
 #'
@@ -125,6 +127,5 @@ dp_directionality <- function(resistance, origin, destination, radius = Inf,
   out <- dp_to_raster(circuit, v, colnames(v))
   attr(out, "halves") <- halves
   attr(out, "seed") <- seed
-  attr(out, "in_reach") <- f$in_reach
-  out
+  dp_set_coverage(out, f)
 }

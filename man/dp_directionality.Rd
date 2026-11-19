@@ -74,8 +74,10 @@ As \code{dp_omni()}'s \code{flow_potential} and \code{normalized_current}.}
 }
 Attributes: \code{"halves"}, comparing the estimates from odd and even draws
 on origin and destination cells, as in \code{\link[=dp_omni]{dp_omni()}}, for the undirected
-layers and \code{directionality}; \code{"seed"}; and \code{"in_reach"}, as in
-\code{\link[=dp_flux]{dp_flux()}}.
+layers and \code{directionality}; \code{"seed"}; and \code{"origin_in_reach"},
+\code{"destination_in_reach"} and \code{"pair_weight_in_reach"}, as in \code{\link[=dp_flux]{dp_flux()}}:
+the first two say how much of each distribution has a counterpart within
+reach, the third depends on the size of the domain relative to \code{radius}.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}

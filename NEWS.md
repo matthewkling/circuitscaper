@@ -20,7 +20,12 @@
     optional radius, with flow potential and normalized current as in
     `dp_omni()`. Its current is the sum of absolute current over a cell's
     links, as in Circuitscape, or with `cell_value = "rms"`, the RMS
-    current, as in `dp_omni()`.
+    current, as in `dp_omni()`. Attributes `"origin_in_reach"` and
+    `"destination_in_reach"` give the shares of origin and destination
+    strength with any counterpart within the radius, and
+    `"pair_weight_in_reach"` the share of all origin–destination pair
+    weight within it, which is small whenever the domain is large relative
+    to the radius.
   * `dp_directionality()` maps both at once from the same pairs, the
     directional map of `dp_flux()` and the undirected map of
     `dp_omni(destination = )`, with their ratio: where movement between
