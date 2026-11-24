@@ -186,8 +186,10 @@ conditions.
 movement passes. `dp_isolation()` scores every cell by its effective
 resistance to the habitat within reach, or to and from another
 distribution, so it also shows how connected a site would be at each
-place. For discrete sites, `cs_pairwise()`'s resistance matrix answers the
-same question exactly.
+place. With `coverage = TRUE`, it also compares each cell with ideal
+continuous habitat, so the amount of habitat in reach counts as well as the
+resistance to it. For discrete sites, `cs_pairwise()`'s resistance matrix
+answers the same question exactly.
 
 ### Circuitscape and Omniscape, or dipole methods?
 

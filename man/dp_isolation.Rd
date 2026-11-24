@@ -17,6 +17,8 @@ dp_isolation(
   n_draws = 64,
   seed = NULL,
   se = FALSE,
+  coverage = FALSE,
+  reference_resistance = 1,
   contact = FALSE,
   progress = TRUE
 )
@@ -70,6 +72,14 @@ as the \code{"seed"} attribute.}
 \item{se}{Logical. Also return each layer's per-cell standard error, as
 layers with an \verb{_se} suffix. Default \code{FALSE}.}
 
+\item{coverage}{Logical. Also return the \code{coverage} and
+\code{effective_coverage} layers, which compare each cell with ideal
+continuous habitat (see "Coverage"). Default \code{FALSE}.}
+
+\item{reference_resistance}{Positive number. The resistance of the ideal
+habitat for \code{effective_coverage}, in the units of the input's
+resistance (also when \code{resistance_is = "conductances"}). Default \code{1}.}
+
 \item{contact}{Logical. Also return each cell's contact resistance, the
 resistance of its own links in parallel, as the \code{contact} layer (see
 "Sites"). Default \code{FALSE}.}
@@ -81,7 +91,9 @@ when a 'progressr' handler is active.}
 \value{
 A \link[terra:SpatRaster]{terra::SpatRaster} with layers \code{resistance} and
 \code{mean_resistance}; with \code{normalize}, \code{normalized_resistance} and
-\code{normalized_mean_resistance}; and with \code{se}, an \verb{_se} layer for each.
+\code{normalized_mean_resistance}; with \code{coverage}, \code{coverage} and
+\code{effective_coverage}; and with \code{se}, an \verb{_se} layer for each but
+\code{coverage}, which is exact.
 With a \code{destination}, this set of layers twice, prefixed \code{origin_} and
 \code{destination_}. With \code{contact}, a last layer \code{contact}. Attributes:
 \code{"relative_se"}, each layer's median relative standard error over the
@@ -160,6 +172,45 @@ remove any noise, so where contact is most of the value (high-resistance
 cells), the remainder is very noisy.
 }
 
+\subsection{Coverage}{
+
+\code{resistance} responds to where the targets are, not to how much of them
+there is: \eqn{q} is a share, so thinning every target to a tenth of its
+strength leaves it unchanged. With \code{coverage = TRUE}, two layers compare
+each cell with ideal continuous habitat: every cell a target of strength
+1 and of resistance \code{reference_resistance}, at the same \code{radius} and
+\code{site_radius}, and with no edges.
+\describe{
+\item{\code{coverage}}{Target strength in reach as a share of the ideal's,
+\eqn{A_i / A^*}, where \eqn{A^*} is the number of other cells
+within \code{radius}: the focal mean of target strength over the
+radius, the cell itself left out, with cells that are NA, off the
+grid or in another component counting as zero. It is exact, and in
+units of target strength, so it runs from 0 to 1 for strengths that
+do (such as suitability). It ignores resistance.}
+\item{\code{effective_coverage}}{Coverage discounted by how much harder
+the targets are to reach than in ideal habitat,
+\eqn{(A_i / A^*) (R^* / R_i)}, where \eqn{R_i} is \code{resistance} and
+\eqn{R^*} is its ideal value: target strength in reach per unit
+resistance, relative to ideal habitat. 1 is as connected as ideal
+habitat; it responds to the amount of targets, their arrangement
+and the resistance surface together. Its relative noise is that of
+\code{resistance}, and it is corrected for the bias of inverting a noisy
+estimate.}
+}
+
+\eqn{R^*} is solved exactly, once per kernel, on a uniform grid wide
+enough that its edges don't matter. It is proportional to
+\code{reference_resistance}, so effective coverage depends on the units of
+resistance: set \code{reference_resistance} to the resistance of good
+habitat, so that 1 means as connected as continuous good habitat. On
+lon/lat grids with \code{radius_units = "km"}, cells narrow towards the
+poles, so the kernel, and with it \eqn{A^*} and \eqn{R^*}, vary by row.
+Rows within reach of the top or bottom of the grid use the nearest row
+whose kernel fits, so that there, as at other edges, the grid's edge
+lowers coverage. Coverage needs a finite \code{radius}.
+}
+
 \subsection{Method}{
 
 Each draw injects a random-sign dipole across every link of the circuit,
@@ -195,6 +246,7 @@ attribute gives each layer's median relative standard error either way.
 
 Reproducibility, performance and progress are as for \code{\link[=dp_omni]{dp_omni()}}: one
 factorization (two with \code{normalize}), then about \code{n_draws} solves.
+Coverage adds a small factorization and one solve per kernel.
 }
 }
 \examples{
@@ -204,6 +256,11 @@ resistance <- terra::rast(system.file("extdata/resistance.tif",
 result <- dp_isolation(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "relative_se")
+
+# Compared with ideal continuous habitat of resistance 1
+covered <- dp_isolation(resistance, radius = 15, normalize = FALSE,
+                        coverage = TRUE, seed = 1)
+terra::plot(covered[[c("coverage", "effective_coverage")]])
 
 # Isolation between two distributions, in both directions
 origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

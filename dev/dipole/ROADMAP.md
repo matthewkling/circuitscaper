@@ -19,7 +19,7 @@ Items move here from `background.md`'s old "Next steps" and from design discussi
 
 ## 2. Small additions
 
-- [ ] **Per-cell connectivity to targets (in progress).** For every cell, the effective resistance to its targets: the other habitat within the radius for omni-type runs, or the destination for flux runs.
+- [x] **Per-cell connectivity to targets: `dp_isolation()` (#18).** For every cell, the effective resistance to its targets: the other habitat within the radius for omni-type runs, or the destination for flux runs.
   - **Estimator:** random-sign dipoles across every link, scaled by √g, with one solve per draw on the factored circuit, so that E[(y_i − y_j)²] = R_ij. Per-cell statistics come from window sums of y and y², accumulated draw by draw. A 14 × 14 dense check found it unbiased, with median error 8% / 3% / 1% at 32 / 128 / 2000 draws for the mean-resistance statistic.
   - **Candidate statistics:**
     - mean effective resistance to targets;
@@ -32,6 +32,11 @@ Items move here from `background.md`'s old "Next steps" and from design discussi
     - `origin_`/`destination_` layers when there's a `destination`.
   - **Contact resistance:** single-cell resistance turned out to be dominated by the cell's own links (ρ 0.93 with local resistance on the example). Each cell therefore stands for a site of radius `site_radius` (default 2 px). `site_radius = 0` gives the single-cell reading, and `contact = TRUE` adds the exact contact layer. Subtracting contact was considered and is left to users; dividing by it flips the bias.
   - **Follow-up:** an exact per-site mode (one solve per site), deferred.
+  - **Coverage (2026-11-24):** `resistance` ignores how much target is in reach, since q is a share. `coverage = TRUE` adds `coverage` (focal mean of target strength, A / A*) and `effective_coverage` ((A / A*)(R* / R), bias-corrected for inverting R), against ideal continuous habitat solved exactly per kernel (per row on lon/lat), with `reference_resistance` (default 1). A mean-resistance analogue was skipped.
+- [ ] **Resistance matrix from `dp_pairwise(method = "exact")`.** It needs no extra solves: solve v is a unit flow from focal node v to its component's first node, x_v (zero for that reference node), and R_ij = x_i(i) − x_i(j) − x_j(i) + x_j(j). So the matrix is the solves read at the focal nodes; pairs in different components get `Inf`/`NA`. With single-cell nodes it's the same quantity as `cs_pairwise()`'s `resistance_matrix`, contact resistance included, which is right for comparability with Circuitscape and IBR studies.
+  - Offer it for the exact method only. Link dipoles could estimate it for the random method, but each entry would have about √(2/n_draws) noise, too much for a distance matrix.
+  - API: lean towards a `"resistance_matrix"` attribute (keeps the SpatRaster return type, like `"n_pairs"`), with node IDs as dimnames.
+- [ ] **Frame `dp_isolation()` against one-to-all in its docs.** One-to-all grounds the other nodes, so current flows to the easiest targets, and its resistance is the minimum over all ways of splitting the withdrawal (Thomson), hence ≤ `dp_isolation()`'s, which withdraws in fixed proportions. One-to-all also outputs current maps, not per-node resistances, for a few focal nodes against all others equally. Add one-to-all to `dp_isolation()`'s "closest established method" entry in the article.
 - [ ] **`site_radius` for the random-dipole maps** (`dp_omni()`, and possibly `dp_pairwise()` and `dp_directionality()`).
   - **The problem:** the `power` layer has the same contact issue as single-cell isolation. A source cell's power includes its own pairs' dissipation on its own links, which scales with strength × resistance. A dense exact check on the example landscape (radius 15) split power into contact and pass-through parts:
 
@@ -63,6 +68,7 @@ Items move here from `background.md`'s old "Next steps" and from design discussi
 - [ ] **Conditional pair weights**, the dipole counterpart of `os_condition()`: continuous climate-similarity weights, including matching present to future climate. Two-distribution pairing already exists through `destination`.
 - [ ] **Absolute current via Cauchy weights.** The hook exists (`weight =` in `run_dipoles()`), but it needs about 10× the draws.
 - [ ] **Pairing lost, stable and gained zones** for cross-era runs.
+- [ ] **A fixed-proportion one-to-all cumulative current map.** True one-to-all (grounding the other nodes) needs a different circuit per node, so it doesn't fit the engine. But injecting e_i − q_i per node (withdrawn across the targets in proportion) does: random signs over those injections estimate Σ_i ‖I(e_i − q_i)‖² from a few dozen solves. Build only if users want the one-to-all current map.
 - [ ] **Restoration gradient maps and optimization.**
 - [ ] **Random-sign monopoles with distributed loss** (mortality and settlement). Dipoles don't combine with grounds; see SPEC §6.
 

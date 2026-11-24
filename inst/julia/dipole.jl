@@ -917,6 +917,108 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
     (reach = reach, dist = dist, mean = mean, contact = 1 ./ gsum)
 end
 
+# Exact isolation of a cell in ideal continuous habitat, the reference for
+# coverage: conductance 1 on every cell, and every cell within the kernel a
+# target of strength 1, with the same kernel and sites. Returns per node of
+# circuit `id` the ideal reach A (the kernel's cell count less the cell
+# itself) and the ideal `resistance`, for the kernel of the node's row.
+#
+# The unbounded plane is approximated by a grid with a margin of the
+# kernel's extent beyond the outermost sites, insulated at its edge. One
+# factorization, then one solve per distinct kernel (one on pixel and
+# projected grids; up to one per row on lon/lat grids with a radius in km).
+# A row whose kernel or sites are cut by the top or bottom of the grid (on
+# lon/lat grids, where offsets off the grid are dropped) takes the nearest
+# row whose are not, so that, as on other grids, edges lower coverage
+# rather than the reference.
+function ideal_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap,
+                         progress = nothing)
+    gr = circuit(id).graph
+    K = make_kernel(dr0, hw, rowmap)
+    K === nothing && error("coverage needs a finite radius")
+    S = make_kernel(sdr0, shw, srowmap)
+    tick(progress, "Solving the ideal-habitat references", 0)
+    offs(k) = k.dr0:(k.dr0 + size(k.hw, 1) - 1)
+    kR = maximum(abs, offs(K))
+    sR = S === nothing ? 0 : maximum(abs, offs(S))
+    nr = gr.nr
+    full(r) = r - kR - sR >= 1 && r + kR + sR <= nr
+    fulls = filter(full, 1:nr)
+    source_row(r) = isempty(fulls) ? (nr + 1) ÷ 2 : fulls[argmin(abs.(fulls .- r))]
+    site_hw(x) = S === nothing ? nothing : S.hw[:, S.rowmap[clamp(x, 1, nr)]]
+    # A distinct reference for each kernel and set of site kernels around it
+    keys = Dict{Any, Int}()
+    specs = Tuple{Vector{Int}, Vector{Any}}[]
+    row_ref = zeros(Int, nr)
+    for r in 1:nr
+        rs = source_row(r)
+        kh = K.hw[:, K.rowmap[rs]]
+        sh = Any[site_hw(rs + d) for d in -(kR + sR):(kR + sR)]
+        row_ref[r] = get!(keys, (kh, sh)) do
+            push!(specs, (kh, sh))
+            length(specs)
+        end
+    end
+    # The ideal grid, wide enough for the widest kernel and site
+    hk = maximum(maximum(s[1]) for s in specs)
+    hs = S === nothing ? 0 : maximum(S.hw)
+    margin = max(kR, hk)
+    hr = kR + sR + margin
+    hc = hk + hs + margin
+    ideal = uniform_circuit(Graph(trues(2hr + 1, 2hc + 1)))
+    ig = ideal.graph
+    cr, cc = hr + 1, hc + 1
+    # b += x * (the site around (r, c), its row r - cr from the source row)
+    function add_site!(b, r, c, x, sh)
+        h = sh[r - cr + kR + sR + 1]
+        if h === nothing
+            b[ig.id[r, c]] += x
+            return
+        end
+        cells = 0
+        for d in axes(h, 1)
+            h[d] >= 0 && (cells += 2h[d] + 1)
+        end
+        for d in axes(h, 1)
+            h[d] < 0 && continue
+            rr = r + S.dr0 + d - 1
+            for c2 in (c - h[d]):(c + h[d])
+                b[ig.id[rr, c2]] += x / cells
+            end
+        end
+    end
+    A = zeros(length(specs))
+    Rr = zeros(length(specs))
+    n = nnodes(ig)
+    chunk = clamp(200_000_000 ÷ (8n), 1, 64)
+    for s0 in 1:chunk:length(specs)
+        ks = s0:min(length(specs), s0 + chunk - 1)
+        B = zeros(n, length(ks))
+        for (j, k) in enumerate(ks)
+            kh, sh = specs[k]
+            m = sum(h -> h >= 0 ? 2h + 1 : 0, kh) - 1
+            A[k] = m
+            b = view(B, :, j)
+            add_site!(b, cr, cc, 1.0, sh)
+            for d in eachindex(kh)
+                kh[d] < 0 && continue
+                r = cr + K.dr0 + d - 1
+                for c in (cc - kh[d]):(cc + kh[d])
+                    (r == cr && c == cc) && continue
+                    add_site!(b, r, c, -1 / m, sh)
+                end
+            end
+        end
+        X = ideal.fac \ B
+        for (j, k) in enumerate(ks)
+            Rr[k] = dot(view(B, :, j), view(X, :, j))
+        end
+    end
+    tick(progress, "", 1)
+    ref = row_ref[gr.node_r]
+    (reach = A[ref], resistance = Rr[ref])
+end
+
 components(id::Real) = circuit(id).graph.comp
 
 
