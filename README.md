@@ -98,6 +98,7 @@ helps choose between them.
 | How does movement flow between a source area and a destination? | `cs_advanced()` |  |
 | Where are the corridors and barriers across the whole landscape? | `os_run()` | `dp_omni()` |
 | How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )`, `dp_directionality()` |
+| How isolated is each place from its habitat, or from another distribution? | `cs_pairwise()` resistances, for focal nodes only | `dp_isolation()` |
 
 Also:
 

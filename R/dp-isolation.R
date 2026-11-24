@@ -1,0 +1,294 @@
+#' Isolation of Each Cell From Its Targets
+#'
+#' \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+#'
+#' Maps how well connected each cell is to its targets, as effective
+#' resistance: to the habitat within `radius` (`source_strength`), or, with a
+#' `destination`, between the two distributions in both directions. Where
+#' [dp_omni()] and [dp_flux()] map where movement passes, this maps how
+#' isolated each place is. Every cell with targets in reach gets a value,
+#' not only habitat, so it also shows how connected a site would be there.
+#'
+#' @details
+#' A cell's targets are the other cells of its connected component within
+#' `radius`, each weighted by its share \eqn{q_j} of the cell's target
+#' strength in reach, \eqn{A_i = \sum_{j \ne i} t_j k(d_{ij})}, where
+#' \eqn{t} is the target strength and \eqn{k} is 1 within `radius` and 0
+#' otherwise. With \eqn{R_{ij}} the effective resistance between the sites
+#' around cells \eqn{i} and \eqn{j} (see "Sites") on the whole circuit, two
+#' layers summarise the targets:
+#' \describe{
+#'   \item{`resistance`}{Resistance to the target distribution: the
+#'     effective resistance when one unit of current leaves the site and
+#'     is withdrawn across its targets in proportion to \eqn{q}. Many
+#'     targets in reach act like parallel paths and lower it, so it measures
+#'     how well the site is connected to its targets as a set. It is the
+#'     injection of [dp_flux()] with the one site as the origin.}
+#'   \item{`mean_resistance`}{Mean effective resistance to the targets,
+#'     \eqn{\sum_j q_j R_{ij}}: the difficulty of reaching a typical target.
+#'     It is at least `resistance`, by the spread of the targets among
+#'     themselves, and the targets that are hardest to reach weigh most in
+#'     it. With `site_radius = 0`, summed over cells with weights
+#'     \eqn{w_i A_i}, it gives the total effective resistance over the pairs
+#'     of [dp_omni()].}
+#' }
+#'
+#' With a `destination`, each cell is scored in both directions, with
+#' `origin_` and `destination_` prefixes on the layers. The `origin_`
+#' layers take the cell as an origin, with the destination
+#' (`destination`) as its targets: how well could movement from here reach
+#' the destination? The `destination_` layers take the cell as a
+#' destination, with the origin (`source_strength`) as its targets: how
+#' reachable is this place from the origin? For present and future habitat,
+#' the first asks which populations can track their habitat, the second
+#' which future habitat can be colonised. Effective resistance is
+#' symmetric, so the two differ only in their targets.
+#'
+#' Cells without targets in reach (none within `radius` in the same
+#' component) are NA. A cell is never its own target.
+#'
+#' ## Sites
+#' Each cell stands for a site: the cells within `site_radius` of it (2
+#' pixels by default), across which the current is spread evenly. Targets
+#' are sites too, so \eqn{R_{ij}} above is the effective resistance between
+#' the sites around \eqn{i} and \eqn{j}. This matters because on a grid,
+#' the effective resistance from a single cell grows only with the log of
+#' distance, so most of it is in the first few rings of links around the
+#' cell. A single cell's value is then dominated by its own contact
+#' resistance, the resistance of its own links in parallel, and maps the
+#' cell's own resistance more than its place in the landscape. Spreading the
+#' current over a site keeps that local term from dominating, as
+#' Circuitscape's focal regions do. Choose `site_radius` for the area a
+#' population or site occupies; values depend on it, so compare runs at the
+#' same site radius.
+#'
+#' With `site_radius = 0`, each site is its single cell, and its own
+#' resistance is part of its isolation: the reading for a single point of
+#' interest. With `contact = TRUE`, the result includes the `contact` layer,
+#' each cell's contact resistance (exact, not estimated), which is a lower
+#' bound on the single-cell `resistance`. Subtracting it leaves the
+#' resistance beyond the cell's own links, but the subtraction doesn't
+#' remove any noise, so where contact is most of the value (high-resistance
+#' cells), the remainder is very noisy.
+#'
+#' ## Method
+#' Each draw injects a random-sign dipole across every link of the circuit,
+#' scaled by the square root of the link's conductance, and solves the
+#' circuit once. For the solution \eqn{y}, \eqn{(y_i - y_j)^2} is then an
+#' unbiased estimate of \eqn{R_{ij}} for every pair at once, and both layers
+#' come from sums of \eqn{y} and \eqn{y^2} over each cell's targets, after
+#' averaging \eqn{y} over each site. Their mean over draws estimates each
+#' layer without bias.
+#'
+#' Flow potential has no direct analogue here. With `normalize`, the same
+#' draws on the uniform circuit (conductance 1 on the same cells) give the
+#' same quantities for geometry alone, and the normalized layers divide by
+#' them: the resistance of a unit-resistance landscape of the same shape
+#' that would give the same isolation, so in the units of the input's
+#' resistance. A normalized value of 2 means the cell is as isolated as it
+#' would be if every cell had resistance 2. Above the landscape's typical
+#' resistance, the cell is isolated by its resistances; below, by geometry
+#' (distance, edges, few targets) more than by resistance.
+#'
+#' ## Accuracy
+#' Each draw's estimate of `resistance` is a squared Gaussian-like quantity,
+#' so its relative standard error is about \eqn{\sqrt{2 / \mathrm{n\_draws}}}
+#' at any grid size: about 18% at the default 64 draws, and 10% at 200.
+#' `mean_resistance` averages over targets and is usually less noisy. Both
+#' circuits see the same draws, so on landscapes of modest contrast the
+#' noise of the normalized layers largely cancels, but where resistance
+#' varies by orders of magnitude it doesn't. With `se = TRUE`, the result includes each layer's per-cell
+#' standard error, from the spread of the draws; the `"relative_se"`
+#' attribute gives each layer's median relative standard error either way.
+#'
+#' Reproducibility, performance and progress are as for [dp_omni()]: one
+#' factorization (two with `normalize`), then about `n_draws` solves.
+#'
+#' @inheritParams dp_omni
+#' @param source_strength Optional [terra::SpatRaster] or file path on the
+#'   same grid: target strength, e.g. habitat suitability. If `NULL`
+#'   (default), the conductance surface is used, as in [dp_omni()]. With a
+#'   `destination`, this is the origin strength: the targets of the
+#'   `destination_` layers.
+#' @param destination Optional [terra::SpatRaster] or file path on the same
+#'   grid: destination strength, the targets of the `origin_` layers.
+#'   Default `NULL`: one set of targets.
+#' @param site_radius Numeric or `NULL`. The radius of the site each cell
+#'   stands for (see "Sites"), in `radius_units`. `0` is the cell alone.
+#'   Default `NULL`: 2 pixels, whatever `radius_units`.
+#' @param n_draws Integer. Number of draws (solves). Default `64`.
+#' @param se Logical. Also return each layer's per-cell standard error, as
+#'   layers with an `_se` suffix. Default `FALSE`.
+#' @param contact Logical. Also return each cell's contact resistance, the
+#'   resistance of its own links in parallel, as the `contact` layer (see
+#'   "Sites"). Default `FALSE`.
+#'
+#' @return A [terra::SpatRaster] with layers `resistance` and
+#'   `mean_resistance`; with `normalize`, `normalized_resistance` and
+#'   `normalized_mean_resistance`; and with `se`, an `_se` layer for each.
+#'   With a `destination`, this set of layers twice, prefixed `origin_` and
+#'   `destination_`. With `contact`, a last layer `contact`. Attributes:
+#'   `"relative_se"`, each layer's median relative standard error over the
+#'   cells with values, and `"seed"`.
+#'
+#' @seealso [dp_omni()], [dp_flux()], [dp_circuit()]
+#'
+#' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
+#' resistance <- terra::rast(system.file("extdata/resistance.tif",
+#'                                       package = "circuitscaper"))
+#' result <- dp_isolation(resistance, radius = 15, seed = 1)
+#' terra::plot(result)
+#' attr(result, "relative_se")
+#'
+#' # Isolation between two distributions, in both directions
+#' origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
+#' destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
+#' between <- dp_isolation(resistance, radius = 45, source_strength = origin,
+#'                         destination = destination, normalize = FALSE, seed = 1)
+#' terra::plot(between)
+#' \dontshow{JuliaConnectoR::stopJulia()}
+#'
+#' @export
+dp_isolation <- function(resistance, radius, source_strength = NULL,
+                         destination = NULL, site_radius = NULL, source_threshold = 0.01,
+                         radius_units = c("pixels", "km"),
+                         resistance_is = "resistances", normalize = TRUE,
+                         n_draws = 64, seed = NULL, se = FALSE, contact = FALSE,
+                         progress = TRUE) {
+  radius_units <- match.arg(radius_units)
+  n_draws <- dp_count(n_draws, "n_draws", min = 2)
+  seed <- dp_seed(seed)
+  normalize <- isTRUE(normalize)
+  se <- isTRUE(se)
+  contact <- isTRUE(contact)
+  dp_check_site_radius(site_radius)
+
+  input <- dp_circuit_input(resistance, resistance_is)
+  p <- dp_progressor(progress, dp_factor_steps(input, normalize) +
+                       dp_draw_steps(input, n_draws, 1 + normalize))
+  circuit <- dp_as_circuit(input, uniform = normalize, p = p)
+  kernel <- dp_kernel(circuit$env$template, radius, radius_units)
+  site <- dp_site_kernel(circuit$env$template, site_radius, radius_units)
+  w <- dp_weights(circuit, source_strength, source_threshold, "source_strength")
+  targets <- if (is.null(destination)) {
+    list(w)
+  } else {
+    list(origin_ = dp_weights(circuit, destination, source_threshold, "destination"),
+         destination_ = w)
+  }
+
+  env <- circuit$env
+  ids <- c(env$id, if (normalize) env$uniform_id)
+  res <- dp_call("isolation", as.integer(ids), do.call(cbind, targets), kernel$dr0,
+                 kernel$hw, kernel$rowmap, site$dr0, site$hw, site$rowmap, seed,
+                 n_draws, 0L, dp_julia_progress(p))
+  if (all(vapply(res$reach, function(a) !any(a > 0), TRUE))) {
+    stop("No cell has a target within `radius` in the same part of the circuit.",
+         call. = FALSE)
+  }
+
+  prefixes <- if (is.null(destination)) "" else names(targets)
+  layers <- lapply(seq_along(prefixes), function(k) {
+    m <- dp_isolation_layers(list(resistance = res$dist[[k]],
+                                  mean_resistance = res$mean[[k]]),
+                             res$reach[[k]], n_draws, normalize, se)
+    colnames(m) <- paste0(prefixes[k], colnames(m))
+    m
+  })
+  values <- do.call(cbind, layers)
+  if (contact) {
+    values <- cbind(values, contact = ifelse(is.finite(res$contact), res$contact, NA_real_))
+  }
+  out <- dp_to_raster(circuit, values, colnames(values))
+  attr(out, "relative_se") <- dp_isolation_relative_se(layers, prefixes, normalize)
+  attr(out, "seed") <- seed
+  out
+}
+
+#' Layers From Per-Cell Sums Over Draws
+#'
+#' @param sums Named list of nodes x 5 matrices from Julia's `isolation()`:
+#'   sums over draws of x, x^2, u, u^2 and x u, with u the same statistic on
+#'   the uniform circuit.
+#' @param reach Summed target weight within reach; cells with none are NA.
+#' @return A matrix of layers: each statistic, then with `normalize` each
+#'   normalized statistic, then with `se` their standard errors. The
+#'   normalized standard error is the delta method's for a ratio of means.
+#' @noRd
+dp_isolation_layers <- function(sums, reach, n, normalize, se) {
+  none <- !(reach > 0)
+  est <- list()
+  err <- list()
+  for (name in names(sums)) {
+    s <- sums[[name]]
+    m <- s[, 1] / n
+    est[[name]] <- m
+    err[[name]] <- sqrt(pmax(s[, 2] - n * m^2, 0) / (n - 1) / n)
+  }
+  if (normalize) {
+    for (name in names(sums)) {
+      s <- sums[[name]]
+      mu <- s[, 3] / n
+      r <- ifelse(mu > 0, s[, 1] / s[, 3], NA_real_)
+      # Residuals x - r u sum to zero; their spread gives the ratio's error
+      z2 <- s[, 2] - 2 * r * s[, 5] + r^2 * s[, 4]
+      key <- paste0("normalized_", name)
+      est[[key]] <- r
+      err[[key]] <- sqrt(pmax(z2, 0) / (n - 1) / n) / mu
+    }
+  }
+  values <- do.call(cbind, est)
+  if (se) {
+    errs <- do.call(cbind, err)
+    colnames(errs) <- paste0(names(err), "_se")
+    values <- cbind(values, errs)
+  }
+  attr(values, "relative_se") <- vapply(names(est), function(k) {
+    ok <- !none & is.finite(est[[k]]) & est[[k]] > 0
+    stats::median(err[[k]][ok] / est[[k]][ok])
+  }, 0)
+  values[none, ] <- NA_real_
+  values
+}
+
+#' Check `site_radius`: `NULL`, or a finite number of at least 0
+#' @noRd
+dp_check_site_radius <- function(site_radius) {
+  if (is.null(site_radius)) return(invisible())
+  if (!is.numeric(site_radius) || length(site_radius) != 1 || is.na(site_radius) ||
+      site_radius < 0 || !is.finite(site_radius)) {
+    stop("`site_radius` must be a finite number of at least 0, or NULL.", call. = FALSE)
+  }
+  invisible()
+}
+
+#' The Site Kernel: Cells Within `site_radius`
+#'
+#' `NULL` is the default of 2 pixels, whatever `units`. A radius under one
+#' cell is the cell alone, passed to Julia as an empty kernel (no
+#' averaging).
+#' @noRd
+dp_site_kernel <- function(template, site_radius, units) {
+  if (is.null(site_radius)) {
+    site_radius <- 2
+    units <- "pixels"
+  }
+  k <- if (units == "pixels") {
+    dp_kernel_pixels(site_radius, terra::nrow(template))
+  } else if (isTRUE(suppressWarnings(terra::is.lonlat(template)))) {
+    dp_kernel_lonlat(template, site_radius)
+  } else {
+    dp_kernel_projected(template, site_radius)
+  }
+  # Only the cell itself on every row: no averaging
+  own <- 1 - k$dr0
+  alone <- all(k$hw[-own, , drop = FALSE] < 0) && all(k$hw[own, ] <= 0)
+  if (site_radius == 0 || alone) dp_kernel_none() else k
+}
+
+dp_isolation_relative_se <- function(layers, prefixes, normalize) {
+  unlist(lapply(seq_along(layers), function(k) {
+    x <- attr(layers[[k]], "relative_se")
+    stats::setNames(x, paste0(prefixes[k], names(x)))
+  }))
+}

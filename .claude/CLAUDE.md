@@ -24,6 +24,7 @@ An R package wrapping Circuitscape.jl and Omniscape.jl for landscape connectivit
 
 New `dp_*()` functions implementing the "dipole methods": fast omnidirectional, focal-node and cross-era connectivity from superposed random dipoles on a single factored circuit. Start with **`dev/dipole/SPEC.md`**. It is the implementation contract: scope, definitions, architecture, test oracles and pitfalls.
 
+- `dev/dipole/ROADMAP.md` is the task list: what's left, by priority. Update it when an item lands or a new one comes up.
 - `dev/dipole/background.md` has the full design history and evidence; `SPEC.md` wins where they differ.
 - `dev/dipole/prototype/` holds the reference R prototype. The Julia implementation must reproduce it (SPEC §5); don't edit the prototype files.
 - `dev/dipole/reference/` holds reference outputs for tests.

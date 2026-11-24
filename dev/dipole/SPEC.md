@@ -148,6 +148,7 @@ Note that this deliberately differs from Omniscape, which computes flow potentia
 ## 8. Files in this folder
 
 - `SPEC.md`: this file.
+- `ROADMAP.md`: the task list, what's left after v1.
 - `background.md`: the full design document exported from claude.ai: methods, validation, benchmarks, Omniscape comparison, cross-era work, related work.
 - `prototype/`: the reference R prototype and validation scripts, copied from the TreeShift repo's `sandbox/`. Paths inside assume the TreeShift project root; see `prototype/README.md`.
 - `reference/crop_R6_reference.tif`: the reference crop (§5.3).
