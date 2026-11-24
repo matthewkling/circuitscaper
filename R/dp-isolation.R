@@ -76,42 +76,53 @@
 #' remove any noise, so where contact is most of the value (high-resistance
 #' cells), the remainder is very noisy.
 #'
-#' ## Coverage
+#' ## Accessibility
 #' `resistance` responds to where the targets are, not to how much of them
 #' there is: \eqn{q} is a share, so thinning every target to a tenth of its
-#' strength leaves it unchanged. With `coverage = TRUE`, two layers compare
-#' each cell with ideal continuous habitat: every cell a target of strength
-#' 1 and of resistance `reference_resistance`, at the same `radius` and
-#' `site_radius`, and with no edges.
+#' strength leaves it unchanged. With `accessibility = TRUE`, two layers
+#' measure how much of the targets each cell can access, as area:
 #' \describe{
-#'   \item{`coverage`}{Target strength in reach as a share of the ideal's,
-#'     \eqn{A_i / A^*}, where \eqn{A^*} is the number of cells within
-#'     `radius` and beyond the site: the mean target strength over the ring
-#'     between the site and the radius, with cells that are NA, off the
-#'     grid or in another component counting as zero. It is exact, and in
-#'     units of target strength, so it runs from 0 to 1 for strengths that
-#'     do (such as suitability). It ignores resistance.}
-#'   \item{`effective_coverage`}{Coverage discounted by how much harder
-#'     the targets are to reach than in ideal habitat,
-#'     \eqn{(A_i / A^*) (R^* / R_i)}, where \eqn{R_i} is `resistance` and
-#'     \eqn{R^*} is its ideal value: target strength in reach per unit
-#'     resistance, relative to ideal habitat. 1 is as connected as ideal
-#'     habitat; it responds to the amount of targets, their arrangement
-#'     and the resistance surface together. Its relative noise is that of
+#'   \item{`target_area`}{The targets in reach as area, each cell's area
+#'     weighted by its target strength: \eqn{\sum_{j \notin S_i} t_j a_j
+#'     k(d_{ij})}, with \eqn{a_j} the cell's area. For a 0-1 suitability it
+#'     is the area of suitable habitat in reach; for strengths above 1 it is
+#'     an area-equivalent, and can exceed the area in reach. It is exact,
+#'     and ignores resistance.}
+#'   \item{`accessible_area`}{`target_area` counted by how easily the
+#'     targets are reached, \eqn{\mathrm{target\_area}_i \, R^* / R_i},
+#'     where \eqn{R_i} is `resistance` and \eqn{R^*} is the resistance a
+#'     site would have in continuous habitat (every cell a target, of
+#'     resistance `reference_resistance`) at the same `radius` and
+#'     `site_radius`. Targets as easy to reach as in continuous habitat
+#'     count in full, and harder ones proportionally less; targets close to
+#'     the site, or through resistance below the reference, can count for
+#'     more. It responds to the amount of targets, their arrangement and the
+#'     resistance surface together. Its relative noise is that of
 #'     `resistance`, and it is corrected for the bias of inverting a noisy
 #'     estimate.}
 #' }
 #'
+#' Both are in square kilometres where the grid's
+#' coordinate reference system gives cell areas, and in cells otherwise; the
+#' `"area_units"` attribute says which. Both are computed from per-row
+#' running sums, at a cost linear in the radius.
+#'
 #' \eqn{R^*} is solved exactly, once per kernel, on a uniform grid wide
-#' enough that its edges don't matter. It is proportional to
-#' `reference_resistance`, so effective coverage depends on the units of
-#' resistance: set `reference_resistance` to the resistance of good
-#' habitat, so that 1 means as connected as continuous good habitat. On
-#' lon/lat grids with `radius_units = "km"`, cells narrow towards the
-#' poles, so the kernel, and with it \eqn{A^*} and \eqn{R^*}, vary by row.
-#' Rows within reach of the top or bottom of the grid use the nearest row
-#' whose kernel fits, so that there, as at other edges, the grid's edge
-#' lowers coverage. Coverage needs a finite `radius`.
+#' enough that its edges don't matter, and is proportional to
+#' `reference_resistance`: set it to the resistance of good habitat. On
+#' lon/lat grids with `radius_units = "km"`, the kernel varies by row, and
+#' so does \eqn{R^*}; rows within reach of the top or bottom of the grid use
+#' the nearest row whose kernel fits, so that there, as at other edges, the
+#' grid's edge lowers accessible area rather than the reference.
+#' Accessibility needs a finite `radius`.
+#'
+#' A larger `radius` raises `target_area` everywhere and `accessible_area`
+#' almost everywhere, but not at every cell: `resistance` withdraws current
+#' from the targets in fixed proportions, so where widening the radius adds
+#' mostly hard-to-reach targets, it raises the resistance to all of them, and
+#' accessible area can fall. To compare runs at different resolutions, give
+#' `site_radius` in km too: the default of 2 pixels is a different site on
+#' each grid.
 #'
 #' ## Method
 #' Each draw injects a random-sign dipole across every link of the circuit,
@@ -145,7 +156,7 @@
 #'
 #' Reproducibility, performance and progress are as for [dp_omni()]: one
 #' factorization (two with `normalize`), then about `n_draws` solves.
-#' Coverage adds a small factorization and one solve per kernel.
+#' Accessibility adds a small factorization and one solve per kernel.
 #'
 #' @inheritParams dp_omni
 #' @param source_strength Optional [terra::SpatRaster] or file path on the
@@ -162,25 +173,26 @@
 #' @param n_draws Integer. Number of draws (solves). Default `64`.
 #' @param se Logical. Also return each layer's per-cell standard error, as
 #'   layers with an `_se` suffix. Default `FALSE`.
-#' @param coverage Logical. Also return the `coverage` and
-#'   `effective_coverage` layers, which compare each cell with ideal
-#'   continuous habitat (see "Coverage"). Default `FALSE`.
-#' @param reference_resistance Positive number. The resistance of the ideal
-#'   habitat for `effective_coverage`, in the units of the input's
-#'   resistance (also when `resistance_is = "conductances"`). Default `1`.
+#' @param accessibility Logical. Also return the `target_area` and
+#'   `accessible_area` layers (see "Accessibility"). Default `FALSE`.
+#' @param reference_resistance Positive number. The resistance of the
+#'   continuous habitat that `accessible_area` compares with, in the units of
+#'   the input's resistance (also when `resistance_is = "conductances"`).
+#'   Default `1`.
 #' @param contact Logical. Also return each cell's contact resistance, the
 #'   resistance of its own links in parallel, as the `contact` layer (see
 #'   "Sites"). Default `FALSE`.
 #'
 #' @return A [terra::SpatRaster] with layers `resistance` and
 #'   `mean_resistance`; with `normalize`, `normalized_resistance` and
-#'   `normalized_mean_resistance`; with `coverage`, `coverage` and
-#'   `effective_coverage`; and with `se`, an `_se` layer for each but
-#'   `coverage`, which is exact.
+#'   `normalized_mean_resistance`; with `accessibility`, `target_area` and
+#'   `accessible_area`; and with `se`, an `_se` layer for each but
+#'   `target_area`, which is exact.
 #'   With a `destination`, this set of layers twice, prefixed `origin_` and
 #'   `destination_`. With `contact`, a last layer `contact`. Attributes:
 #'   `"relative_se"`, each layer's median relative standard error over the
-#'   cells with values, and `"seed"`.
+#'   cells with values; with `accessibility`, `"area_units"` (`"km2"` or
+#'   `"cells"`); and `"seed"`.
 #'
 #' @seealso [dp_omni()], [dp_flux()], [dp_circuit()]
 #'
@@ -191,10 +203,11 @@
 #' terra::plot(result)
 #' attr(result, "relative_se")
 #'
-#' # Compared with ideal continuous habitat of resistance 1
-#' covered <- dp_isolation(resistance, radius = 15, normalize = FALSE,
-#'                         coverage = TRUE, seed = 1)
-#' terra::plot(covered[[c("coverage", "effective_coverage")]])
+#' # How much of the targets each cell can access, as area
+#' access <- dp_isolation(resistance, radius = 15, normalize = FALSE,
+#'                        accessibility = TRUE, seed = 1)
+#' terra::plot(access[[c("target_area", "accessible_area")]])
+#' attr(access, "area_units")
 #'
 #' # Isolation between two distributions, in both directions
 #' origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
@@ -209,7 +222,7 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
                          destination = NULL, site_radius = NULL, source_threshold = 0.01,
                          radius_units = c("pixels", "km"),
                          resistance_is = "resistances", normalize = TRUE,
-                         n_draws = 64, seed = NULL, se = FALSE, coverage = FALSE,
+                         n_draws = 64, seed = NULL, se = FALSE, accessibility = FALSE,
                          reference_resistance = 1, contact = FALSE,
                          progress = TRUE) {
   radius_units <- match.arg(radius_units)
@@ -218,23 +231,23 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
   normalize <- isTRUE(normalize)
   se <- isTRUE(se)
   contact <- isTRUE(contact)
-  coverage <- isTRUE(coverage)
+  accessibility <- isTRUE(accessibility)
   dp_check_site_radius(site_radius)
-  if (coverage) {
+  if (accessibility) {
     if (!is.numeric(reference_resistance) || length(reference_resistance) != 1 ||
         is.na(reference_resistance) || reference_resistance <= 0 ||
         !is.finite(reference_resistance)) {
       stop("`reference_resistance` must be a positive number.", call. = FALSE)
     }
     if (is.numeric(radius) && length(radius) == 1 && isTRUE(is.infinite(radius))) {
-      stop("`coverage` needs a finite `radius`: with no distance limit there is ",
-           "no ideal neighbourhood to compare with.", call. = FALSE)
+      stop("`accessibility` needs a finite `radius`: with no distance limit, ",
+           "continuous habitat has no finite resistance to compare with.", call. = FALSE)
     }
   }
 
   input <- dp_circuit_input(resistance, resistance_is)
   p <- dp_progressor(progress, dp_factor_steps(input, normalize) +
-                       dp_draw_steps(input, n_draws, 1 + normalize) + coverage)
+                       dp_draw_steps(input, n_draws, 1 + normalize) + accessibility)
   circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   site <- dp_site_kernel(circuit$env$template, site_radius, radius_units)
@@ -260,17 +273,21 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
          call. = FALSE)
   }
 
-  ideal <- if (coverage) {
-    ref <- dp_call("ideal_reference", env$id, kernel$dr0, kernel$hw, kernel$rowmap,
+  if (accessibility) {
+    cell_area <- dp_cell_area(env$template, env$cells)
+    area <- dp_call("target_sums", env$id, do.call(cbind, targets) * cell_area$area,
+                    kernel$dr0, kernel$hw, kernel$rowmap, site$dr0, site$hw, site$rowmap)
+    ref <- dp_call("continuous_reference", env$id, kernel$dr0, kernel$hw, kernel$rowmap,
                    site$dr0, site$hw, site$rowmap, dp_julia_progress(p))
-    list(reach = ref$reach, resistance = ref$resistance * reference_resistance)
+    reference <- ref$resistance * reference_resistance
   }
 
   prefixes <- if (is.null(destination)) "" else names(targets)
   layers <- lapply(seq_along(prefixes), function(k) {
     m <- dp_isolation_layers(list(resistance = res$dist[[k]],
                                   mean_resistance = res$mean[[k]]),
-                             res$reach[[k]], n_draws, normalize, se, ideal)
+                             res$reach[[k]], n_draws, normalize, se,
+                             if (accessibility) list(area = area[[k]], reference = reference))
     colnames(m) <- paste0(prefixes[k], colnames(m))
     m
   })
@@ -280,6 +297,7 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
   }
   out <- dp_to_raster(circuit, values, colnames(values))
   attr(out, "relative_se") <- dp_isolation_relative_se(layers, prefixes, normalize)
+  if (accessibility) attr(out, "area_units") <- cell_area$units
   attr(out, "seed") <- seed
   out
 }
@@ -290,15 +308,17 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
 #'   sums over draws of x, x^2, u, u^2 and x u, with u the same statistic on
 #'   the uniform circuit.
 #' @param reach Summed target weight within reach; cells with none are NA.
-#' @param ideal `NULL`, or a list of per-node `reach` and `resistance` in
-#'   ideal habitat (Julia's `ideal_reference()`, the resistance scaled to
-#'   the reference resistance), for the coverage layers.
+#' @param access `NULL`, or a list of per-node `area` (target area) and
+#'   `reference` (`resistance` in continuous habitat, from Julia's
+#'   `continuous_reference()`, scaled to the reference resistance), for the
+#'   accessibility layers.
 #' @return A matrix of layers: each statistic, then with `normalize` each
-#'   normalized statistic, then with `ideal` the coverage layers, then with
-#'   `se` the standard errors of all but `coverage` (which is exact). The
-#'   normalized standard error is the delta method's for a ratio of means.
+#'   normalized statistic, then with `access` the accessibility layers, then
+#'   with `se` the standard errors of all but `target_area` (which is
+#'   exact). The normalized standard error is the delta method's for a ratio
+#'   of means.
 #' @noRd
-dp_isolation_layers <- function(sums, reach, n, normalize, se, ideal = NULL) {
+dp_isolation_layers <- function(sums, reach, n, normalize, se, access = NULL) {
   none <- !(reach > 0)
   est <- list()
   err <- list()
@@ -320,15 +340,14 @@ dp_isolation_layers <- function(sums, reach, n, normalize, se, ideal = NULL) {
       err[[key]] <- sqrt(pmax(z2, 0) / (n - 1) / n) / mu
     }
   }
-  if (!is.null(ideal)) {
-    cover <- reach / ideal$reach
+  if (!is.null(access)) {
     # 1 / R from the mean of draws is biased up by about (SE / R)^2
     R <- est$resistance
     rel <- err$resistance / R
-    eff <- ifelse(R > 0, cover * ideal$resistance / R / (1 + rel^2), NA_real_)
-    est$coverage <- cover
-    est$effective_coverage <- eff
-    err$effective_coverage <- eff * rel
+    acc <- ifelse(R > 0, access$area * access$reference / R / (1 + rel^2), NA_real_)
+    est$target_area <- access$area
+    est$accessible_area <- acc
+    err$accessible_area <- acc * rel
   }
   values <- do.call(cbind, est)
   if (se) {
@@ -342,6 +361,32 @@ dp_isolation_layers <- function(sums, reach, n, normalize, se, ideal = NULL) {
   }, 0)
   values[none, ] <- NA_real_
   values
+}
+
+#' Area of Each Node's Cell
+#'
+#' km^2 where the grid's coordinate reference system gives areas: on
+#' lon/lat grids, per row, on the same sphere as the km kernels; on
+#' projected grids, the cell's width times height in the CRS's linear unit.
+#' Otherwise 1 per cell, in units of cells.
+#' @return A list: `area`, per node, and `units`, `"km2"` or `"cells"`.
+#' @noRd
+dp_cell_area <- function(template, cells) {
+  if (isTRUE(suppressWarnings(terra::is.lonlat(template)))) {
+    rows <- terra::rowFromCell(template, cells)
+    lat <- terra::yFromRow(template, rows) * pi / 180
+    half <- terra::yres(template) / 2 * pi / 180
+    dlon <- terra::xres(template) * pi / 180
+    area <- earth_radius_km()^2 * dlon * (sin(pmin(lat + half, pi / 2)) - sin(pmax(lat - half, -pi / 2)))
+    return(list(area = area, units = "km2"))
+  }
+  unit <- suppressWarnings(terra::linearUnits(template))
+  if (!is.na(unit) && unit > 0) {
+    km <- unit / 1000
+    return(list(area = rep(terra::xres(template) * km * terra::yres(template) * km, length(cells)),
+                units = "km2"))
+  }
+  list(area = rep(1, length(cells)), units = "cells")
 }
 
 #' Does a Kernel Reach Beyond the Site, on Some Grid Row?
