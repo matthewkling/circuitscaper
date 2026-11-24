@@ -778,10 +778,8 @@ end
 # below then applies to ytilde: R_ij becomes the resistance between sites i
 # and j, (P_i - P_j) L^+ (P_i - P_j)'. With no site kernel, ytilde = y.
 #
-# Per draw, with m1 = q'ytilde and m2 = q'(ytilde.^2):
-#   resistance to the target distribution:  (y_i - m1)^2
-#   mean resistance to targets:  sum_j q_j (y_i - y_j)^2 = (y_i - m1)^2 + (m2 - m1^2)
-# Each is an unbiased estimate; their mean over draws is the result.
+# Per draw, with m1 = q'ytilde, (y_i - m1)^2 is an unbiased estimate of the
+# resistance to the target distribution; its mean over draws is the result.
 #
 # A link's signs depend only on (seed, draw), so a circuit and its uniform
 # twin see the same signs (their ratio is then less noisy), and results don't
@@ -827,38 +825,31 @@ function window_sums(gr::Graph, x::Vector{Float64}, K::Union{Nothing, Kernel},
     out
 end
 
-# Per-cell sums over draws for one statistic: columns sum x, sum x^2 on the
-# circuit, then sum u, sum u^2 and sum x u with u the same statistic on the
-# uniform twin (zero without one)
-function isolation_stats!(dist::Matrix{Float64}, mean::Matrix{Float64},
-                          ys::Vector{Vector{Float64}}, t::Vector{Float64}, A::Vector{Float64},
-                          gr::Graph, K, KS, members)
+# Per-cell sums over draws of the resistance estimate: columns sum x, sum
+# x^2 on the circuit, then sum u, sum u^2 and sum x u with u the same
+# estimate on the uniform twin (zero without one)
+function isolation_stats!(dist::Matrix{Float64}, ys::Vector{Vector{Float64}},
+                          t::Vector{Float64}, A::Vector{Float64}, gr::Graph, K, KS, members)
     # Sums over the targets: the kernel less the site (or the cell itself)
     beyond(x) = window_sums(gr, x, K, members) .-
                 (KS === nothing ? x : window_sums(gr, x, KS, members))
     vals = map(ys) do y
         s1 = beyond(t .* y)
-        s2 = beyond(t .* y .^ 2)
         d = zeros(length(y))
-        m = zeros(length(y))
         for i in eachindex(y)
             A[i] > 0 || continue
-            m1 = s1[i] / A[i]
-            d[i] = (y[i] - m1)^2
-            m[i] = d[i] + max(s2[i] / A[i] - m1^2, 0.0)
+            d[i] = (y[i] - s1[i] / A[i])^2
         end
-        (d, m)
+        d
     end
-    for (acc, k) in ((dist, 1), (mean, 2))
-        x = vals[1][k]
-        acc[:, 1] .+= x
-        acc[:, 2] .+= x .^ 2
-        if length(vals) > 1
-            u = vals[2][k]
-            acc[:, 3] .+= u
-            acc[:, 4] .+= u .^ 2
-            acc[:, 5] .+= x .* u
-        end
+    x = vals[1]
+    dist[:, 1] .+= x
+    dist[:, 2] .+= x .^ 2
+    if length(vals) > 1
+        u = vals[2]
+        dist[:, 3] .+= u
+        dist[:, 4] .+= u .^ 2
+        dist[:, 5] .+= x .* u
     end
     nothing
 end
@@ -866,9 +857,8 @@ end
 # Isolation of every cell from each set of target weights (the columns of
 # `targets`), on a circuit and optionally its uniform twin (`ids`). A cell's
 # targets are those within the kernel and beyond its site. Returns
-# per target set the reach A (summed target weight within reach) and, for
-# each statistic, the per-cell sums over draws (nodes x 5; see
-# isolation_stats!).
+# per target set the reach A (summed target weight within reach) and the
+# per-cell sums over draws (nodes x 5; see isolation_stats!).
 #
 # With `progress`, each batch is 1 + length(circs) steps: solving the
 # batch's link dipoles on each circuit, then summing over targets.
@@ -896,7 +886,6 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
     KS = site_window(K, S, gr.nr)
     reach = [beyond_site(gr, t, K, KS, members) for t in ts]
     dist = [zeros(n, 5) for _ in ts]
-    mean = [zeros(n, 5) for _ in ts]
     nd = Int(n_draws)
     b = batch > 0 ? Int(batch) : default_batch(n)
     for s0 in 1:b:nd
@@ -914,12 +903,12 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
         for j in eachindex(draws)
             ys = [site(Y[:, j]) for Y in Ys]
             for (k, t) in enumerate(ts)
-                isolation_stats!(dist[k], mean[k], ys, t, reach[k], gr, K, KS, members)
+                isolation_stats!(dist[k], ys, t, reach[k], gr, K, KS, members)
             end
         end
         tick(progress, "", 1)
     end
-    (reach = reach, dist = dist, mean = mean, contact = 1 ./ gsum)
+    (reach = reach, dist = dist, contact = 1 ./ gsum)
 end
 
 # A cell's targets are the cells within reach beyond its own site: a site

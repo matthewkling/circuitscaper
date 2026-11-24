@@ -95,20 +95,23 @@ test_that("dp_directionality, dp_flux and dp_pairwise report progress", {
   expect_steps(p, 4)
 })
 
-test_that("dp_isolation reports a step per factorization, solve and summing", {
+test_that("dp_accessibility reports a step per factorization, solve and summing", {
   skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid()
-  # 40 draws: 2 batches of 3 steps (current and uniform solves, summing)
-  p <- capture_progress(dp_isolation(x$conductance, 5, x$suitability,
-                                     resistance_is = "conductances", n_draws = 40, seed = 1))
-  expect_steps(p, 2 + 6)
+  # 40 draws: 2 batches of 3 steps (current and uniform solves, summing),
+  # then one for the continuous-habitat references
+  p <- capture_progress(dp_accessibility(x$conductance, 5, x$suitability, site_radius = 2,
+                                         resistance_is = "conductances", n_draws = 40,
+                                         seed = 1))
+  expect_steps(p, 2 + 6 + 1)
   expect_equal(p$message[3:5], c("Solving link dipoles: draws 1-32 of 40",
                                  "Solving link dipoles on the uniform circuit: draws 1-32 of 40",
                                  "Summing over targets: draws 1-32 of 40"))
-  # Accessibility adds one step for the continuous-habitat references
-  p <- capture_progress(dp_isolation(x$conductance, 5, x$suitability, accessibility = TRUE,
-                                     resistance_is = "conductances", n_draws = 40, seed = 1))
-  expect_steps(p, 2 + 6 + 1)
+  # With no distance limit there is no reference
+  p <- capture_progress(dp_accessibility(x$conductance, Inf, x$suitability, site_radius = 2,
+                                         resistance_is = "conductances", n_draws = 40,
+                                         seed = 1))
+  expect_steps(p, 2 + 6)
 })
 
 test_that("progress doesn't change results", {

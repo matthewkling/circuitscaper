@@ -88,7 +88,7 @@
 #' A source cell's power includes its contact dissipation: what its own
 #' pairs dissipate on its own links as current leaves or arrives, which
 #' scales with its source strength times its resistance (see "Sites" in
-#' [dp_isolation()]). With the default source strength (conductance),
+#' [dp_accessibility()]). With the default source strength (conductance),
 #' high-resistance cells are weak sources and this is small (8% of the
 #' total power on the package's example landscape). But where source
 #' strength doesn't track resistance, as with a habitat-suitability surface
