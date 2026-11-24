@@ -4,9 +4,10 @@
 # mean resistance to targets, for target weights t within a pixel `radius`
 # (Inf: no limit), with each cell standing for the site of valid cells
 # within `site` pixels in its component, and the targets in its own site
-# (the cell itself, for single cells) left out. Also
+# (the cell itself, for single cells) left out. Also returns the target
+# area (target strength times `area`, per node, summed over targets). Also
 # returns the reach A and the cells' contact resistance.
-isolation_exact <- function(circuit, t, radius, site = 0, uniform = FALSE) {
+isolation_exact <- function(circuit, t, radius, site = 0, uniform = FALSE, area = 1) {
   gi <- dipole_graph_info(circuit, uniform)
   n <- length(gi$comp)
   L <- matrix(0, n, n)
@@ -38,7 +39,8 @@ isolation_exact <- function(circuit, t, radius, site = 0, uniform = FALSE) {
                mean_resistance = rowSums(Q * R))
   out[A == 0, ] <- NA
   contact <- 1 / as.numeric(rowsum(c(gi$g, gi$g), c(gi$a, gi$b))[as.character(seq_len(n)), 1])
-  list(values = out, A = A, R = R, contact = contact)
+  list(values = out, A = A, R = R, contact = contact,
+       area = rowSums(P * rep(area, each = n)))
 }
 
 node_values <- function(r, circuit) terra::values(r)[circuit$env$cells, , drop = FALSE]
@@ -191,7 +193,7 @@ test_that("mean resistance decomposes dp_omni's total power", {
   expect_lt(abs(est / total - 1), 0.05)
 })
 
-test_that("the ideal reference is the exact isolation of ideal habitat", {
+test_that("the continuous-habitat reference is its exact isolation", {
   skip_if_no_julia(circuitscape = FALSE)
   # The reference's own grid for radius 4 and sites of 1: 9 cells either side
   # of the centre (kernel 4, site 1, margin 4)
@@ -202,7 +204,7 @@ test_that("the ideal reference is the exact isolation of ideal habitat", {
   centre <- terra::cellFromRowCol(tmpl, 10, 10)
   k <- dp_kernel(tmpl, 4)
   s <- dp_site_kernel(tmpl, 1, "pixels")
-  ref <- dp_call("ideal_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
+  ref <- dp_call("continuous_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
                  s$rowmap, NULL)
   i <- match(centre, circuit$env$cells)
   expect_equal(ref$reach, rep(ex$A[i], 361))
@@ -214,68 +216,100 @@ test_that("the ideal reference is the exact isolation of ideal habitat", {
   expect_equal(ref$resistance[1], unname(ex$values[21 * 41 - 20, "resistance"]), tolerance = 1e-3)
 })
 
-test_that("coverage layers compare targets in reach with ideal habitat", {
+test_that("cell areas are km2 where the grid gives them, and cells otherwise", {
+  lonlat <- terra::rast(nrows = 30, ncols = 10, xmin = 0, xmax = 5, ymin = 0, ymax = 75,
+                        crs = "EPSG:4326")
+  a <- dp_cell_area(lonlat, 1:300)
+  expect_equal(a$units, "km2")
+  # A sphere, against terra's ellipsoid
+  expect_lt(max(abs(a$area / terra::values(terra::cellSize(lonlat, unit = "km"))[, 1] - 1)),
+            0.01)
+  utm <- terra::rast(nrows = 3, ncols = 3, xmin = 0, xmax = 1500, ymin = 0, ymax = 3000,
+                     crs = "EPSG:32611")
+  expect_equal(dp_cell_area(utm, 1:9), list(area = rep(0.5, 9), units = "km2"))
+  none <- terra::rast(nrows = 3, ncols = 3, xmin = 0, xmax = 3, ymin = 0, ymax = 3, crs = "")
+  expect_equal(dp_cell_area(none, 1:9), list(area = rep(1, 9), units = "cells"))
+})
+
+test_that("accessibility layers measure the targets in reach as area", {
   skip_if_no_julia(circuitscape = FALSE)
+  # Lon/lat cells of 1/60 degree near 36 N: areas vary by row
   x <- dipole_test_grid(split = TRUE)
   circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
   t <- dp_weights(circuit, x$suitability, 0.01, "source_strength")
   tmpl <- circuit$env$template
+  area <- dp_cell_area(tmpl, circuit$env$cells)$area
   k <- dp_kernel(tmpl, 5)
   s <- dp_site_kernel(tmpl, 2, "pixels")
-  ref <- dp_call("ideal_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
+  ref <- dp_call("continuous_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
                  s$rowmap, NULL)
   # The kernel's cells beyond the 13-cell site
   expect_equal(unique(ref$reach), sum(2 * k$hw + 1) - 13)
-  ex <- isolation_exact(circuit, t, 5, site = 2)
+  ex <- isolation_exact(circuit, t, 5, site = 2, area = area)
   ok <- !is.na(ex$values[, 1])
 
-  r <- dp_isolation(circuit, 5, x$suitability, n_draws = 2000, seed = 8, coverage = TRUE,
-                    se = TRUE)
+  r <- dp_isolation(circuit, 5, x$suitability, n_draws = 2000, seed = 8,
+                    accessibility = TRUE, se = TRUE)
   expect_equal(names(r), c("resistance", "mean_resistance", "normalized_resistance",
-                           "normalized_mean_resistance", "coverage", "effective_coverage",
+                           "normalized_mean_resistance", "target_area", "accessible_area",
                            "resistance_se", "mean_resistance_se", "normalized_resistance_se",
-                           "normalized_mean_resistance_se", "effective_coverage_se"))
+                           "normalized_mean_resistance_se", "accessible_area_se"))
+  expect_equal(attr(r, "area_units"), "km2")
   v <- node_values(r, circuit)
-  # Coverage is exact
-  expect_equal(v[ok, "coverage"], ex$A[ok] / ref$reach[ok])
-  expect_true(all(is.na(v[!ok, "coverage"])))
-  # Effective coverage: coverage times the ideal resistance over the cell's
-  target <- ex$A / ref$reach * ref$resistance / ex$values[, "resistance"]
-  expect_lt(abs(stats::median(v[ok, "effective_coverage"] / target[ok]) - 1), 0.03)
-  expect_gt(cor(v[ok, "effective_coverage"], target[ok], method = "spearman"), 0.995)
-  z <- (v[ok, "effective_coverage"] - target[ok]) / v[ok, "effective_coverage_se"]
+  # Target area is exact
+  expect_equal(v[ok, "target_area"], ex$area[ok])
+  expect_true(all(is.na(v[!ok, "target_area"])))
+  # Accessible area: target area times the reference over the cell's resistance
+  target <- ex$area * ref$resistance / ex$values[, "resistance"]
+  expect_lt(abs(stats::median(v[ok, "accessible_area"] / target[ok]) - 1), 0.03)
+  expect_gt(cor(v[ok, "accessible_area"], target[ok], method = "spearman"), 0.995)
+  z <- (v[ok, "accessible_area"] - target[ok]) / v[ok, "accessible_area_se"]
   expect_gt(mean(abs(z) < 4), 0.99)
 
   # The bias correction for inverting a noisy resistance: over few draws,
   # the median ratio stays near 1 (uncorrected, 1 + 2 / n_draws higher)
   few <- sapply(1:20, function(seed) {
     node_values(dp_isolation(circuit, 5, x$suitability, n_draws = 16, seed = seed,
-                             coverage = TRUE, normalize = FALSE), circuit)[, "effective_coverage"]
+                             accessibility = TRUE, normalize = FALSE), circuit)[, "accessible_area"]
   })
   expect_lt(abs(stats::median(rowMeans(few)[ok] / target[ok]) - 1), 0.04)
 
-  # The reference resistance scales effective coverage
-  a <- dp_isolation(circuit, 5, x$suitability, n_draws = 4, seed = 1, coverage = TRUE)
-  b <- dp_isolation(circuit, 5, x$suitability, n_draws = 4, seed = 1, coverage = TRUE,
+  # The reference resistance scales accessible area
+  a <- dp_isolation(circuit, 5, x$suitability, n_draws = 4, seed = 1, accessibility = TRUE)
+  b <- dp_isolation(circuit, 5, x$suitability, n_draws = 4, seed = 1, accessibility = TRUE,
                     reference_resistance = 3)
-  expect_equal(terra::values(b$effective_coverage), 3 * terra::values(a$effective_coverage))
-  expect_identical(terra::values(a$coverage), terra::values(b$coverage))
-  # Without coverage, the other layers are unchanged
+  expect_equal(terra::values(b$accessible_area), 3 * terra::values(a$accessible_area))
+  expect_identical(terra::values(a$target_area), terra::values(b$target_area))
+  # Without accessibility, the other layers are unchanged
   c0 <- dp_isolation(circuit, 5, x$suitability, n_draws = 4, seed = 1)
   expect_identical(terra::values(c0), terra::values(a[[names(c0)]]))
+  expect_null(attr(c0, "area_units"))
 
-  # Ideal habitat itself, away from the edges, is 1
+  # Wider reach: more target area everywhere, and more accessible area in the
+  # median (not at every cell: see ?dp_isolation)
+  wide <- node_values(dp_isolation(circuit, 9, x$suitability, n_draws = 200, seed = 1,
+                                   accessibility = TRUE, normalize = FALSE), circuit)
+  narrow <- node_values(dp_isolation(circuit, 5, x$suitability, n_draws = 200, seed = 1,
+                                     accessibility = TRUE, normalize = FALSE), circuit)
+  both <- ok & !is.na(wide[, "target_area"])
+  expect_true(all(wide[both, "target_area"] >= narrow[both, "target_area"]))
+  expect_gt(stats::median(wide[both, "accessible_area"] / narrow[both, "accessible_area"]), 1.5)
+
+  # In continuous habitat of the reference resistance, away from the edges,
+  # every target counts in full; with no CRS, areas are in cells
   flat <- terra::rast(nrows = 41, ncols = 41, xmin = 0, xmax = 41, ymin = 0, ymax = 41,
-                      vals = 1)
-  f <- dp_isolation(flat, 5, flat, n_draws = 400, seed = 1, coverage = TRUE,
+                      vals = 1, crs = "")
+  f <- dp_isolation(flat, 5, flat, n_draws = 400, seed = 1, accessibility = TRUE,
                     normalize = FALSE)
-  inner <- terra::as.matrix(f$effective_coverage, wide = TRUE)[10:32, 10:32]
+  expect_equal(attr(f, "area_units"), "cells")
+  ta <- terra::as.matrix(f$target_area, wide = TRUE)
+  expect_equal(range(ta[6:36, 6:36]), rep(unique(ref$reach), 2))
+  ratio <- terra::as.matrix(f$accessible_area, wide = TRUE)[10:32, 10:32] / ta[10:32, 10:32]
   # Cells share their draws: across 12 seeds this mean is 1.000, SD 0.010
-  expect_lt(abs(mean(inner) - 1), 0.04)
-  expect_equal(range(terra::as.matrix(f$coverage, wide = TRUE)[6:36, 6:36]), c(1, 1))
+  expect_lt(abs(mean(ratio) - 1), 0.04)
 })
 
-test_that("on lon/lat grids, the ideal reference follows latitude", {
+test_that("on lon/lat grids, the continuous-habitat reference follows latitude", {
   skip_if_no_julia(circuitscape = FALSE)
   # 0.5 degree cells from 40 to 70 degrees north, radius 120 km, sites 40 km
   tmpl <- terra::rast(nrows = 60, ncols = 40, xmin = 0, xmax = 20, ymin = 40, ymax = 70,
@@ -284,7 +318,7 @@ test_that("on lon/lat grids, the ideal reference follows latitude", {
   circuit <- dp_circuit(flat, resistance_is = "conductances")
   k <- dp_kernel(tmpl, 120, "km")
   s <- dp_site_kernel(tmpl, 40, "km")
-  ref <- dp_call("ideal_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
+  ref <- dp_call("continuous_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
                  s$rowmap, NULL)
   node_row <- terra::rowFromCell(tmpl, circuit$env$cells)
   A <- tapply(ref$reach, node_row, unique)
@@ -300,23 +334,27 @@ test_that("on lon/lat grids, the ideal reference follows latitude", {
   expect_equal(as.numeric(R[(60 - ext + 1):60]), rep(as.numeric(R[max(full)]), ext))
   # Cells narrow northwards, so more fit in reach, and sites hold more cells
   expect_gt(A[min(full)], A[max(full)])
-  # Away from the edges, a flat landscape is as connected as ideal habitat
+  # Away from the edges, in a flat landscape every target counts in full,
+  # and the target area is about the area of the ring in reach
   f <- dp_isolation(flat, 120, flat, site_radius = 40, radius_units = "km",
-                    n_draws = 400, seed = 1, coverage = TRUE, normalize = FALSE)
-  inner <- terra::as.matrix(f$effective_coverage, wide = TRUE)[(1 + 2 * ext):(60 - 2 * ext),
-                                                               10:31]
-  expect_lt(abs(mean(inner) - 1), 0.03)
+                    n_draws = 400, seed = 1, accessibility = TRUE, normalize = FALSE)
+  rows <- (1 + 2 * ext):(60 - 2 * ext)
+  ta <- terra::as.matrix(f$target_area, wide = TRUE)[rows, 10:31]
+  ratio <- terra::as.matrix(f$accessible_area, wide = TRUE)[rows, 10:31] / ta
+  expect_lt(abs(mean(ratio) - 1), 0.03)
+  expect_lt(abs(stats::median(ta) / (pi * (120^2 - 40^2)) - 1), 0.1)
 })
 
 test_that("a cell's targets are those beyond its own site", {
   skip_if_no_julia(circuitscape = FALSE)
-  tmpl <- terra::rast(nrows = 20, ncols = 30, xmin = 0, xmax = 30, ymin = 0, ymax = 20)
+  tmpl <- terra::rast(nrows = 20, ncols = 30, xmin = 0, xmax = 30, ymin = 0, ymax = 20,
+                      crs = "")
   cond <- terra::setValues(tmpl, 1)
   cond[terra::cellFromRowColCombine(tmpl, 5:9, 20:29)] <- NA   # a lake
   cond[terra::cellFromRowColCombine(tmpl, 6:8, 22:24)] <- 1    # a 3 x 3 island
   cond[terra::cellFromRowColCombine(tmpl, 7, 26:28)] <- 1      # a 1 x 3 islet
   circuit <- dp_circuit(cond, resistance_is = "conductances")
-  r <- dp_isolation(circuit, 8, cond, n_draws = 8, seed = 1, coverage = TRUE)
+  r <- dp_isolation(circuit, 8, cond, n_draws = 8, seed = 1, accessibility = TRUE)
   v <- terra::values(r)
   # Every site on the islet is the whole islet, and the island's centre
   # site is the whole island: no targets beyond them. (Counting the targets
@@ -330,14 +368,14 @@ test_that("a cell's targets are those beyond its own site", {
   # Single cells keep them: their targets are the other cells
   r0 <- dp_isolation(circuit, 8, cond, n_draws = 8, seed = 1, site_radius = 0)
   expect_false(anyNA(terra::values(r0)[c(islet, island), ]))
-  # The dense oracle agrees, and coverage counts only targets beyond the site
+  # The dense oracle agrees, and target area counts only targets beyond the site
   t <- dp_weights(circuit, cond, 0.01, "source_strength")
   ex <- isolation_exact(circuit, t, 8, site = 2)
   nv <- node_values(r, circuit)
+  expect_equal(attr(r, "area_units"), "cells")
   expect_identical(is.na(nv[, "resistance"]), is.na(ex$values[, "resistance"]))
   ok <- !is.na(ex$values[, 1])
-  k <- dp_kernel(tmpl, 8)
-  expect_equal(nv[ok, "coverage"], ex$A[ok] / (sum(2 * k$hw + 1) - 13))
+  expect_equal(nv[ok, "target_area"], ex$A[ok])
 
   # A radius within the site leaves no targets anywhere
   expect_error(dp_isolation(circuit, 2, cond, site_radius = 2), "reach beyond")
@@ -383,7 +421,7 @@ test_that("dp_isolation checks its inputs", {
   expect_error(dp_isolation(cond, -1, target), "radius")
   expect_error(dp_isolation(cond, 3, target, site_radius = -1), "site_radius")
   expect_error(dp_isolation(cond, 3, target, site_radius = Inf), "site_radius")
-  expect_error(dp_isolation(cond, Inf, target, coverage = TRUE), "finite `radius`")
-  expect_error(dp_isolation(cond, 3, target, coverage = TRUE, reference_resistance = 0),
+  expect_error(dp_isolation(cond, Inf, target, accessibility = TRUE), "finite `radius`")
+  expect_error(dp_isolation(cond, 3, target, accessibility = TRUE, reference_resistance = 0),
                "reference_resistance")
 })

@@ -893,18 +893,8 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
         gsum[gr.b[e]] += first(circs).g[e]
     end
     ts = [T[:, k] for k in axes(T, 2)]
-    # A cell's targets are the cells within reach beyond its own site: a
-    # site is never its own target, as a single cell isn't
-    KS = S === nothing ? nothing : K === nothing ? S : intersect_kernels(K, S, gr.nr)
-    reach = [window_sums(gr, t, K, members) .-
-             (KS === nothing ? t : window_sums(gr, t, KS, members)) for t in ts]
-    # Where no target is beyond the site, the difference is rounding, at most
-    # a few ulps of the row prefix sums over the window's rows
-    span_cells = K === nothing ? n : gr.nc * size(K.hw, 1)
-    for (A, t) in zip(reach, ts)
-        tol = 16 * eps() * maximum(t; init = 0.0) * span_cells
-        A[A .<= tol] .= 0.0
-    end
+    KS = site_window(K, S, gr.nr)
+    reach = [beyond_site(gr, t, K, KS, members) for t in ts]
     dist = [zeros(n, 5) for _ in ts]
     mean = [zeros(n, 5) for _ in ts]
     nd = Int(n_draws)
@@ -932,6 +922,37 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
     (reach = reach, dist = dist, mean = mean, contact = 1 ./ gsum)
 end
 
+# A cell's targets are the cells within reach beyond its own site: a site
+# is never its own target, as a single cell isn't. The part of the kernel
+# inside the site (nothing for single cells: then just the cell itself).
+site_window(K, S, nr::Int) = S === nothing ? nothing :
+    K === nothing ? S : intersect_kernels(K, S, nr)
+
+# Sum of x (>= 0) over each node's targets: the kernel less the site window
+# KS (or less the node itself). Where no target is beyond the site, the
+# difference is rounding, at most a few ulps of the row prefix sums over the
+# window's rows, and is set to 0.
+function beyond_site(gr::Graph, x::Vector{Float64}, K, KS, members)
+    out = window_sums(gr, x, K, members) .-
+          (KS === nothing ? x : window_sums(gr, x, KS, members))
+    span_cells = K === nothing ? nnodes(gr) : gr.nc * size(K.hw, 1)
+    tol = 16 * eps() * maximum(x; init = 0.0) * span_cells
+    out[out .<= tol] .= 0.0
+    out
+end
+
+# Sums of each column of W over each node's targets (see beyond_site), for
+# circuit `id`, kernel (dr0, hw, rowmap) and site kernel (sdr0, shw, srowmap)
+function target_sums(id::Real, W, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap)
+    gr = circuit(id).graph
+    n = nnodes(gr)
+    M = reshape(Vector{Float64}(vec(W)), n, :)
+    K = make_kernel(dr0, hw, rowmap)
+    KS = site_window(K, make_kernel(sdr0, shw, srowmap), gr.nr)
+    members = component_members(gr)
+    [beyond_site(gr, M[:, k], K, KS, members) for k in axes(M, 2)]
+end
+
 # The cells in both of two kernels around the same cell, per grid row. Both
 # are centred runs on each row offset, so their intersection is too.
 function intersect_kernels(K::Kernel, S::Kernel, nr::Int)
@@ -946,11 +967,11 @@ function intersect_kernels(K::Kernel, S::Kernel, nr::Int)
     Kernel(lo, hw, collect(1:nr))
 end
 
-# Exact isolation of a cell in ideal continuous habitat, the reference for
-# coverage: conductance 1 on every cell, and every cell within the kernel
+# Exact isolation of a cell in continuous habitat, the reference for
+# accessible area: conductance 1 on every cell, and every cell within the kernel
 # and beyond the centre's site a target of strength 1, with the same kernel
-# and sites. Returns per node of circuit `id` the ideal reach A (the number
-# of those targets) and the ideal `resistance`, for the kernel of the
+# and sites. Returns per node of circuit `id` the reference reach A (the
+# number of those targets) and `resistance`, for the kernel of the
 # node's row (NaN where the kernel reaches no further than the site).
 #
 # The unbounded plane is approximated by a grid with a margin of the
@@ -959,15 +980,15 @@ end
 # projected grids; up to one per row on lon/lat grids with a radius in km).
 # A row whose kernel or sites are cut by the top or bottom of the grid (on
 # lon/lat grids, where offsets off the grid are dropped) takes the nearest
-# row whose are not, so that, as on other grids, edges lower coverage
-# rather than the reference.
-function ideal_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap,
-                         progress = nothing)
+# row whose are not, so that, as on other grids, edges lower accessible
+# area rather than the reference.
+function continuous_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap,
+                              progress = nothing)
     gr = circuit(id).graph
     K = make_kernel(dr0, hw, rowmap)
-    K === nothing && error("coverage needs a finite radius")
+    K === nothing && error("the continuous-habitat reference needs a finite radius")
     S = make_kernel(sdr0, shw, srowmap)
-    tick(progress, "Solving the ideal-habitat references", 0)
+    tick(progress, "Solving the continuous-habitat references", 0)
     offs(k) = k.dr0:(k.dr0 + size(k.hw, 1) - 1)
     kR = maximum(abs, offs(K))
     sR = S === nothing ? 0 : maximum(abs, offs(S))
@@ -989,14 +1010,14 @@ function ideal_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowm
             length(specs)
         end
     end
-    # The ideal grid, wide enough for the widest kernel and site
+    # The reference grid, wide enough for the widest kernel and site
     hk = maximum(maximum(s[1]) for s in specs)
     hs = S === nothing ? 0 : maximum(S.hw)
     margin = max(kR, hk)
     hr = kR + sR + margin
     hc = hk + hs + margin
-    ideal = uniform_circuit(Graph(trues(2hr + 1, 2hc + 1)))
-    ig = ideal.graph
+    ref = uniform_circuit(Graph(trues(2hr + 1, 2hc + 1)))
+    ig = ref.graph
     cr, cc = hr + 1, hc + 1
     # b += x * (the site around (r, c), its row r - cr from the source row)
     function add_site!(b, r, c, x, sh)
@@ -1048,7 +1069,7 @@ function ideal_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowm
                 add_site!(b, r, c, -1 / m, sh)
             end
         end
-        X = ideal.fac \ B
+        X = ref.fac \ B
         for (j, k) in enumerate(ks)
             Rr[k] = A[k] > 0 ? dot(view(B, :, j), view(X, :, j)) : NaN
         end

@@ -105,8 +105,8 @@ test_that("dp_isolation reports a step per factorization, solve and summing", {
   expect_equal(p$message[3:5], c("Solving link dipoles: draws 1-32 of 40",
                                  "Solving link dipoles on the uniform circuit: draws 1-32 of 40",
                                  "Summing over targets: draws 1-32 of 40"))
-  # Coverage adds one step for the ideal-habitat references
-  p <- capture_progress(dp_isolation(x$conductance, 5, x$suitability, coverage = TRUE,
+  # Accessibility adds one step for the continuous-habitat references
+  p <- capture_progress(dp_isolation(x$conductance, 5, x$suitability, accessibility = TRUE,
                                      resistance_is = "conductances", n_draws = 40, seed = 1))
   expect_steps(p, 2 + 6 + 1)
 })
