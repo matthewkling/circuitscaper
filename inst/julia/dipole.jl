@@ -760,6 +760,163 @@ function flux(id::Real, b)
     out
 end
 
+# Isolation --------------------------------------------------------------------
+
+# Per-cell effective resistance to target cells, from random-sign dipoles
+# across every link. Draw r injects b = sum_e s_e sqrt(g_e) (e_a - e_b), with
+# independent signs s_e = ±1. Since sum_e g_e (e_a - e_b)(e_a - e_b)' = L, the
+# solution y = L^-1 b has E[(y_i - y_j)^2] = R_ij, and for weights q summing
+# to 1 on i's component, E[(y_i - q'y)^2] = (e_i - q)' L^+ (e_i - q).
+#
+# With target weights t, i's targets are the other cells of its component
+# within its kernel, weighted q_j = t_j / A_i, A_i = sum_{j != i} t_j.
+#
+# Each cell stands for a site: the mean of y over the valid cells of its
+# component within the site kernel, ytilde = P y, P row-stochastic. This
+# spreads the unit current over the site instead of one cell, which keeps a
+# cell's own links (its contact resistance) from dominating. Everything
+# below then applies to ytilde: R_ij becomes the resistance between sites i
+# and j, (P_i - P_j) L^+ (P_i - P_j)'. With no site kernel, ytilde = y.
+#
+# Per draw, with m1 = q'ytilde and m2 = q'(ytilde.^2):
+#   resistance to the target distribution:  (y_i - m1)^2
+#   mean resistance to targets:  sum_j q_j (y_i - y_j)^2 = (y_i - m1)^2 + (m2 - m1^2)
+# Each is an unbiased estimate; their mean over draws is the result.
+#
+# A link's signs depend only on (seed, draw), so a circuit and its uniform
+# twin see the same signs (their ratio is then less noisy), and results don't
+# depend on batching or the number of threads.
+function link_injections!(B::Matrix{Float64}, c::Circuit, seed::Integer,
+                          draws::AbstractVector{<:Integer})
+    a, b, g = c.graph.a, c.graph.b, c.g
+    fill!(B, 0.0)
+    @threads for k in eachindex(draws)
+        rng = draw_rng(seed, draws[k])
+        @inbounds for e in eachindex(a)
+            x = random_sign(rng) * sqrt(g[e])
+            B[a[e], k] += x
+            B[b[e], k] -= x
+        end
+    end
+    B
+end
+
+# Sum of x over each node's kernel (its own cell included), within its
+# component; with no kernel, over its whole component. Unlike kernel_sums,
+# x may be negative.
+function window_sums(gr::Graph, x::Vector{Float64}, K::Union{Nothing, Kernel},
+                     members::Vector{Vector{Int}})
+    out = zeros(nnodes(gr))
+    if K === nothing
+        tot = zeros(gr.ncomp)
+        for i in eachindex(x)
+            tot[gr.comp[i]] += x[i]
+        end
+        for i in eachindex(out)
+            out[i] = tot[gr.comp[i]]
+        end
+        return out
+    end
+    for nodes in members
+        any(i -> x[i] != 0, nodes) || continue
+        ws = WindowSums(gr, x, nodes)
+        @threads for i in nodes
+            out[i] = window_sum(ws, K, gr, i)
+        end
+    end
+    out
+end
+
+# Per-cell sums over draws for one statistic: columns sum x, sum x^2 on the
+# circuit, then sum u, sum u^2 and sum x u with u the same statistic on the
+# uniform twin (zero without one)
+function isolation_stats!(dist::Matrix{Float64}, mean::Matrix{Float64},
+                          ys::Vector{Vector{Float64}}, t::Vector{Float64}, A::Vector{Float64},
+                          gr::Graph, K, members)
+    vals = map(ys) do y
+        s1 = window_sums(gr, t .* y, K, members) .- t .* y
+        s2 = window_sums(gr, t .* y .^ 2, K, members) .- t .* y .^ 2
+        d = zeros(length(y))
+        m = zeros(length(y))
+        for i in eachindex(y)
+            A[i] > 0 || continue
+            m1 = s1[i] / A[i]
+            d[i] = (y[i] - m1)^2
+            m[i] = d[i] + max(s2[i] / A[i] - m1^2, 0.0)
+        end
+        (d, m)
+    end
+    for (acc, k) in ((dist, 1), (mean, 2))
+        x = vals[1][k]
+        acc[:, 1] .+= x
+        acc[:, 2] .+= x .^ 2
+        if length(vals) > 1
+            u = vals[2][k]
+            acc[:, 3] .+= u
+            acc[:, 4] .+= u .^ 2
+            acc[:, 5] .+= x .* u
+        end
+    end
+    nothing
+end
+
+# Isolation of every cell from each set of target weights (the columns of
+# `targets`), on a circuit and optionally its uniform twin (`ids`). Returns
+# per target set the reach A (summed target weight within reach) and, for
+# each statistic, the per-cell sums over draws (nodes x 5; see
+# isolation_stats!).
+#
+# With `progress`, each batch is 1 + length(circs) steps: solving the
+# batch's link dipoles on each circuit, then summing over targets.
+#
+# The site kernel (sdr0, shw, srowmap) is empty for single cells. Also
+# returns each cell's contact resistance, its own links in parallel,
+# 1 / sum of their conductances, on the first circuit.
+function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap,
+                   seed::Real, n_draws::Real, batch::Real, progress = nothing)
+    circs = [circuit(id) for id in asvec(ids)]
+    gr = first(circs).graph
+    n = nnodes(gr)
+    T = reshape(Vector{Float64}(vec(targets)), n, :)
+    K = make_kernel(dr0, hw, rowmap)
+    S = make_kernel(sdr0, shw, srowmap)
+    members = component_members(gr)
+    site_size = S === nothing ? nothing : window_sums(gr, ones(n), S, members)
+    site(y) = S === nothing ? y : window_sums(gr, y, S, members) ./ site_size
+    gsum = zeros(n)
+    for e in eachindex(gr.a)
+        gsum[gr.a[e]] += first(circs).g[e]
+        gsum[gr.b[e]] += first(circs).g[e]
+    end
+    ts = [T[:, k] for k in axes(T, 2)]
+    reach = [window_sums(gr, t, K, members) .- t for t in ts]
+    dist = [zeros(n, 5) for _ in ts]
+    mean = [zeros(n, 5) for _ in ts]
+    nd = Int(n_draws)
+    b = batch > 0 ? Int(batch) : default_batch(n)
+    for s0 in 1:b:nd
+        draws = s0:min(nd, s0 + b - 1)
+        what = "draws " * span(draws, nd)
+        Ys = map(enumerate(circs)) do (k, c)
+            tick(progress, string("Solving link dipoles", k == 2 ? " on the uniform circuit" : "",
+                                  ": ", what), 0)
+            B = link_injections!(Matrix{Float64}(undef, n, length(draws)), c, Int(seed), draws)
+            Y = c.fac \ B
+            tick(progress, "", 1)
+            Y
+        end
+        tick(progress, "Summing over targets: " * what, 0)
+        for j in eachindex(draws)
+            ys = [site(Y[:, j]) for Y in Ys]
+            for (k, t) in enumerate(ts)
+                isolation_stats!(dist[k], mean[k], ys, t, reach[k], gr, K, members)
+            end
+        end
+        tick(progress, "", 1)
+    end
+    (reach = reach, dist = dist, mean = mean, contact = 1 ./ gsum)
+end
+
 components(id::Real) = circuit(id).graph.comp
 
 

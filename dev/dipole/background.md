@@ -485,6 +485,8 @@ A deeper search, through Google Scholar and the citations of Li & Zhang and Phil
 
 ## Next steps
 
+> As of 2026-11-24, the current task list is `ROADMAP.md` in this folder; this list is kept as it stood, for the record.
+
 - [ ] Decompose the Omniscape gap exactly on a small grid: pairs vs stars, squared vs absolute current, window-truncated vs whole circuit
 - [ ] Check dipoles per draw at 330 m with the halves diagnostic before any fine-grain speed claim
 - [ ] Benchmark on a real land-cover or human-modification resistance surface at 270–300 m, with tiled random dipoles against Omniscape

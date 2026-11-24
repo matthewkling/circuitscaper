@@ -36,6 +36,7 @@ reference:
   - dp_pairwise
   - dp_flux
   - dp_directionality
+  - dp_isolation
 - title: Setup
   desc: Finding, installing and starting Julia.
   contents:

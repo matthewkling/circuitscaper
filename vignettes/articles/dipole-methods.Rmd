@@ -28,6 +28,7 @@ it covers.
 | `dp_omni()` | Omnidirectional connectivity among habitat within a dispersal radius; with a `destination`, the routes linking two distributions | `os_run()` |
 | `dp_pairwise()` | Connectivity among every pair of a set of focal nodes | `cs_pairwise()` (cumulative current) |
 | `dp_flux()` | Net flow from an origin to a destination distribution, with direction | `cs_advanced()` with sources at the origin and grounds at the destination |
+| `dp_isolation()` | How isolated each cell is from its targets (habitat in reach, or the other distribution), as effective resistance | `cs_pairwise()`'s resistance matrix, for focal nodes only |
 | `dp_circuit()` | A factored circuit, to reuse across runs | |
 
 The first half of this article shows how to use them; the second explains
@@ -401,6 +402,105 @@ and 1. `dp_omni()`,
 and `dp_directionality()`, the default is no limit); `dp_pairwise()` pairs
 all focal nodes.
 
+All of these map where movement *passes*. To ask instead how well connected
+each *place* is, see `dp_isolation()`, next.
+
+## Isolation of each cell
+
+`dp_isolation()` scores every cell by its effective resistance to its
+targets: the habitat within `radius`, weighted by strength, or with a
+`destination`, the other distribution. Every cell with targets in reach
+gets a value, habitat or not, so the map also shows how connected a site
+would be at each place: for siting reserves, translocations or restoration.
+Two layers summarise a cell's targets:
+
+- `resistance`, the resistance to the target distribution: one unit of
+  current leaves the cell and is withdrawn across its targets in
+  proportion to their strength. Many targets in reach act like parallel
+  paths and lower it, so it measures how well the cell is connected to its
+  targets as a set.
+- `mean_resistance`, the mean effective resistance to the targets: how hard
+  it is to reach a typical one. The hardest-to-reach targets weigh most in
+  it, and it is at least `resistance`.
+
+Each cell stands for a **site**: the cells within `site_radius` of it (2
+pixels by default), across which the current is spread. This matters. On a
+grid, the effective resistance from a single cell grows only with the log
+of distance, so much of it sits in the first rings of links around the
+cell. A single cell's value is then dominated by its own *contact
+resistance*, that of its own links in parallel, and the map mostly shows
+the resistance surface back. Spreading the current over a site, as
+Circuitscape's focal regions do, lets the landscape around it show through.
+Choose `site_radius` for the area a population or site occupies, and
+compare runs at the same site radius:
+
+
+``` r
+single <- dp_isolation(circuit, radius = 15, site_radius = 0, normalize = FALSE, seed = 1)
+sites <- dp_isolation(circuit, radius = 15, normalize = FALSE, seed = 1)
+wide <- dp_isolation(circuit, radius = 15, site_radius = 4, normalize = FALSE, seed = 1)
+plot(log10(c(single$resistance, sites$resistance, wide$resistance)), nc = 3,
+     main = c("single cells", "2-pixel sites", "4-pixel sites"))
+```
+
+![plot of chunk isolation-sites](figures/dp-isolation-sites-1.png)
+
+`site_radius = 0` gives the single-cell reading, where a cell's own
+resistance is part of its isolation: for a single point of interest.
+`contact = TRUE` adds each cell's contact resistance, exactly, as a layer;
+it is a lower bound on the single-cell `resistance`. Subtracting it leaves
+the resistance beyond the cell's own links, but not less noise, so the
+remainder is noisy where contact is most of the value.
+
+With `normalize` (the default), the normalized layers divide by the same
+quantities on the uniform circuit, which removes the effect of geometry
+(distance to the targets, the domain's edges, how many targets are in
+reach). They are in the units of the input's resistance: the resistance of
+a uniform landscape that would leave the site just as isolated:
+
+
+``` r
+iso <- dp_isolation(circuit, radius = 15, seed = 1)
+plot(log10(iso[[c("resistance", "normalized_resistance")]]), nc = 2,
+     main = c("resistance (log10)", "normalized (log10)"))
+```
+
+![plot of chunk isolation](figures/dp-isolation-1.png)
+
+``` r
+attr(iso, "relative_se")
+#>                 resistance            mean_resistance 
+#>                  0.1679588                  0.1130933 
+#>      normalized_resistance normalized_mean_resistance 
+#>                  0.1877111                  0.1204568
+```
+
+Each draw scores every cell, so the per-cell noise is known: the
+`"relative_se"` attribute gives each layer's median relative standard
+error, and `se = TRUE` adds per-cell standard-error layers. `resistance`
+has a relative error of about $\sqrt{2 / \mathrm{n\_draws}}$ at any grid
+size, 18% at the default 64 draws, and `mean_resistance` usually less. Both
+circuits see the same draws, so on landscapes of modest contrast the
+normalized layers' noise largely cancels; on this one, where resistance
+spans three orders of magnitude, it doesn't.
+
+With a `destination`, each cell is scored in both directions. The `origin_`
+layers take the cell as an origin, with the destination as its targets;
+the `destination_` layers take it as a destination, with the origin as its
+targets. For a shifting range, the first asks where movement could reach
+the future range from, the second which parts of the future range can be
+reached:
+
+
+``` r
+shift <- dp_isolation(circuit, radius = 15, source_strength = origin,
+                      destination = destination, normalize = FALSE, seed = 1)
+plot(log10(shift[[c("origin_resistance", "destination_resistance")]]), nc = 2,
+     main = c("to destination (log10)", "from origin (log10)"))
+```
+
+![plot of chunk isolation-two](figures/dp-isolation-two-1.png)
+
 ## Radius units
 
 By default `radius` counts cells, as in `os_run()`. With
@@ -656,6 +756,48 @@ shared random factor, and the ratio would be off by the same amount
 centering, the ratio also can't exceed 1. With one surface, the mean
 dipole is zero and nothing changes.
 
+### Isolation
+
+For cell $i$, with target strength $t$, the targets are the other cells
+$j$ of its component within the radius, weighted
+$q_j = t_j k(d_{ij}) / A_i$, where $A_i = \sum_{j \ne i} t_j k(d_{ij})$.
+Each cell stands for its site, $p_i$, uniform over the valid cells within
+`site_radius` in its component ($p_i = e_i$ for a single cell). With $L^+$
+the pseudo-inverse of the Laplacian and $R_{ij}$ the effective resistance
+between sites $i$ and $j$,
+
+$$\text{resistance}_i = \big(p_i - \textstyle\sum_j q_j p_j\big)^\top L^+
+\big(p_i - \textstyle\sum_j q_j p_j\big), \qquad
+\text{mean\_resistance}_i = \textstyle\sum_j q_j R_{ij}.$$
+
+The first is the resistance of `dp_flux()`'s injection with site $i$ as
+the only origin. For single cells, the second, summed over cells with
+weights $w_i A_i$, is the total effective resistance over `dp_omni()`'s
+pairs, which is also the total of its `power` layer (Thomson's principle
+again).
+
+Both come from a different kind of random draw. Each draw injects a
+random-sign dipole across every link $e$, scaled by $\sqrt{g_e}$:
+$b = \sum_e s_e \sqrt{g_e}\,(e_a - e_b)$. Since
+$\sum_e g_e (e_a - e_b)(e_a - e_b)^\top = L$, the solution $y = L^{-1} b$
+has $\mathbb{E}[(y_i - y_j)^2] = R_{ij}$ for every pair at once, and
+$\mathbb{E}[(y_i - q^\top y)^2]$ is the first quantity above. This is the
+random projection of Spielman & Srivastava (2011). Averaging $y$ over each
+site gives the same for sites. Per draw, both layers then need only
+$q^\top y$ and $q^\top y^2$, which are sums over each cell's
+kernel window (from row-wise prefix sums), so the cost is a solve plus
+$O(\text{cells} \times \text{kernel rows})$ per draw, and no draws are
+stored. The uniform circuit sees the same signs, so the normalized layers'
+noise partly cancels.
+
+Two related quantities, for comparison. For focal nodes, `cs_pairwise()`'s
+resistance matrix gives the pairwise $R_{ij}$ exactly, from which a
+node's mean resistance to the others follows. Omniscape solves, for each
+target cell, a circuit in which the sources in its window inject in
+proportion to their strength and the target is grounded. That circuit's
+resistance is `resistance` with the roles of source and target swapped,
+but on Omniscape's clipped window. Omniscape doesn't report it.
+
 ### How the results differ from Circuitscape and Omniscape
 
 The dipole methods compute well-defined quantities, but not the same ones
@@ -698,6 +840,9 @@ The implementation is tested against exact answers:
   the random method converges to it.
 - The circuit, injections and per-link sums reproduce an independent R
   implementation to within $10^{-9}$.
+- `dp_isolation()` converges per cell to both layers computed exactly from
+  a dense solve, across components and with and without a radius, and its
+  standard errors match the spread of its errors.
 
 ## Limitations
 

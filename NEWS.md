@@ -39,6 +39,20 @@
     power. Each link's squared current is weighted by that link's
     resistance, which squaring a current map and multiplying by cell
     resistance can't do; it costs no extra solves.
+  * `dp_isolation()` maps how isolated each cell is from its targets, as
+    effective resistance: to the habitat within a radius, or with a
+    `destination`, between two distributions in both directions (each
+    cell's resistance to the destination as an origin, and from the origin
+    as a destination). Two layers summarise a cell's targets: the
+    resistance to them as a set, and the mean resistance to them, each with
+    a normalized version that removes the effect of geometry. Every cell
+    with targets in reach gets a value, habitat or not. Each cell stands
+    for a site of the cells within `site_radius` (2 pixels by default),
+    since a single cell's effective resistance is dominated by its own
+    links; `site_radius = 0` gives the single-cell reading, and
+    `contact = TRUE` adds each cell's exact contact resistance. Random
+    dipoles across every link give these for all cells at once, with
+    per-cell standard errors (`se = TRUE`).
   * `dp_circuit()` prepares a circuit whose factorizations several runs can
     reuse.
   * The `dp_*()` functions report progress through the 'progressr'

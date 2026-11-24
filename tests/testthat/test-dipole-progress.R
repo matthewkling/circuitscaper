@@ -95,6 +95,18 @@ test_that("dp_directionality, dp_flux and dp_pairwise report progress", {
   expect_steps(p, 4)
 })
 
+test_that("dp_isolation reports a step per factorization, solve and summing", {
+  skip_if_no_julia(circuitscape = FALSE)
+  x <- dipole_test_grid()
+  # 40 draws: 2 batches of 3 steps (current and uniform solves, summing)
+  p <- capture_progress(dp_isolation(x$conductance, 5, x$suitability,
+                                     resistance_is = "conductances", n_draws = 40, seed = 1))
+  expect_steps(p, 2 + 6)
+  expect_equal(p$message[3:5], c("Solving link dipoles: draws 1-32 of 40",
+                                 "Solving link dipoles on the uniform circuit: draws 1-32 of 40",
+                                 "Summing over targets: draws 1-32 of 40"))
+})
+
 test_that("progress doesn't change results", {
   skip_if_no_julia(circuitscape = FALSE)
   x <- dipole_test_grid(split = TRUE)
