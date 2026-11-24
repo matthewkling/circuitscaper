@@ -159,6 +159,7 @@ Start from the question you’re asking:
 | How does movement flow between a defined source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
 | How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )`, [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md) |
+| How isolated is each place from its habitat, or from another distribution? | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) resistances, for focal nodes only | [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md) |
 
 **Pairwise** analyses treat discrete sites (habitat patches,
 populations) and ask how well they’re connected to each other.
@@ -193,6 +194,15 @@ it runs both ways. For climate change,
 [`os_condition()`](https://matthewkling.github.io/circuitscaper/reference/os_condition.md)
 offers a related Omniscape analysis, restricting connections to sources
 and targets with compatible present and future conditions.
+
+**Isolation** asks how well connected each *place* is, rather than where
+movement passes.
+[`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
+scores every cell by its effective resistance to the habitat within
+reach, or to and from another distribution, so it also shows how
+connected a site would be at each place. For discrete sites,
+[`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
+resistance matrix answers the same question exactly.
 
 ### Circuitscape and Omniscape, or dipole methods?
 

@@ -41,6 +41,8 @@ one factored circuit. Experimental; see the Dipole methods article.
 - [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md)
   **\[experimental\]** : Directional and Undirected Flow Between Two
   Distributions
+- [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
+  **\[experimental\]** : Isolation of Each Cell From Its Targets
 
 ## Setup
 

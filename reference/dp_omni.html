@@ -233,6 +233,16 @@ two cells it joins, and the cells sum to the circuit's total. It comes
 from the same per-link sums as <code>current</code>, so it costs no extra solves,
 and its estimate is unbiased with about twice the relative noise of
 <code>current</code>.</p>
+<p>A source cell's power includes its contact dissipation: what its own
+pairs dissipate on its own links as current leaves or arrives, which
+scales with its source strength times its resistance (see "Sites" in
+<code><a href="dp_isolation.html">dp_isolation()</a></code>). With the default source strength (conductance),
+high-resistance cells are weak sources and this is small (8% of the
+total power on the package's example landscape). But where source
+strength doesn't track resistance, as with a habitat-suitability surface
+that includes high-resistance cells, it can be a third or more of the
+total and make strong, high-resistance source cells look like choke
+points.</p>
 <p>This is not <code>current</code> squared times the cell's resistance. A link's
 resistance depends on both cells it joins (with Circuitscape's averaged
 conductances, it approaches twice the lower of the two resistances where
