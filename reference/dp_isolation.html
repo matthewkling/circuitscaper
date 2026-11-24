@@ -63,7 +63,7 @@
 <span>  n_draws <span class="op">=</span> <span class="fl">64</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  se <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  coverage <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  accessibility <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  reference_resistance <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  contact <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
@@ -146,16 +146,16 @@ as the <code>"seed"</code> attribute.</p></dd>
 layers with an <code>_se</code> suffix. Default <code>FALSE</code>.</p></dd>
 
 
-<dt id="arg-coverage">coverage<a class="anchor" aria-label="anchor" href="#arg-coverage"></a></dt>
-<dd><p>Logical. Also return the <code>coverage</code> and
-<code>effective_coverage</code> layers, which compare each cell with ideal
-continuous habitat (see "Coverage"). Default <code>FALSE</code>.</p></dd>
+<dt id="arg-accessibility">accessibility<a class="anchor" aria-label="anchor" href="#arg-accessibility"></a></dt>
+<dd><p>Logical. Also return the <code>target_area</code> and
+<code>accessible_area</code> layers (see "Accessibility"). Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-reference-resistance">reference_resistance<a class="anchor" aria-label="anchor" href="#arg-reference-resistance"></a></dt>
-<dd><p>Positive number. The resistance of the ideal
-habitat for <code>effective_coverage</code>, in the units of the input's
-resistance (also when <code>resistance_is = "conductances"</code>). Default <code>1</code>.</p></dd>
+<dd><p>Positive number. The resistance of the
+continuous habitat that <code>accessible_area</code> compares with, in the units of
+the input's resistance (also when <code>resistance_is = "conductances"</code>).
+Default <code>1</code>.</p></dd>
 
 
 <dt id="arg-contact">contact<a class="anchor" aria-label="anchor" href="#arg-contact"></a></dt>
@@ -174,13 +174,14 @@ when a 'progressr' handler is active.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>resistance</code> and
 <code>mean_resistance</code>; with <code>normalize</code>, <code>normalized_resistance</code> and
-<code>normalized_mean_resistance</code>; with <code>coverage</code>, <code>coverage</code> and
-<code>effective_coverage</code>; and with <code>se</code>, an <code>_se</code> layer for each but
-<code>coverage</code>, which is exact.
+<code>normalized_mean_resistance</code>; with <code>accessibility</code>, <code>target_area</code> and
+<code>accessible_area</code>; and with <code>se</code>, an <code>_se</code> layer for each but
+<code>target_area</code>, which is exact.
 With a <code>destination</code>, this set of layers twice, prefixed <code>origin_</code> and
 <code>destination_</code>. With <code>contact</code>, a last layer <code>contact</code>. Attributes:
 <code>"relative_se"</code>, each layer's median relative standard error over the
-cells with values, and <code>"seed"</code>.</p>
+cells with values; with <code>accessibility</code>, <code>"area_units"</code> (<code>"km2"</code> or
+<code>"cells"</code>); and <code>"seed"</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -258,45 +259,54 @@ cells), the remainder is very noisy.</p>
 </div>
 
 <div class="section">
-<h3 id="coverage">Coverage<a class="anchor" aria-label="anchor" href="#coverage"></a></h3>
+<h3 id="accessibility">Accessibility<a class="anchor" aria-label="anchor" href="#accessibility"></a></h3>
 
 
 <p><code>resistance</code> responds to where the targets are, not to how much of them
 there is: \(q\) is a share, so thinning every target to a tenth of its
-strength leaves it unchanged. With <code>coverage = TRUE</code>, two layers compare
-each cell with ideal continuous habitat: every cell a target of strength
-1 and of resistance <code>reference_resistance</code>, at the same <code>radius</code> and
-<code>site_radius</code>, and with no edges.</p><dl><dt><code>coverage</code></dt>
-<dd><p>Target strength in reach as a share of the ideal's,
-\(A_i / A^*\), where \(A^*\) is the number of cells within
-<code>radius</code> and beyond the site: the mean target strength over the ring
-between the site and the radius, with cells that are NA, off the
-grid or in another component counting as zero. It is exact, and in
-units of target strength, so it runs from 0 to 1 for strengths that
-do (such as suitability). It ignores resistance.</p></dd>
+strength leaves it unchanged. With <code>accessibility = TRUE</code>, two layers
+measure how much of the targets each cell can access, as area:</p><dl><dt><code>target_area</code></dt>
+<dd><p>The targets in reach as area, each cell's area
+weighted by its target strength: \(\sum_{j \notin S_i} t_j a_j
+    k(d_{ij})\), with \(a_j\) the cell's area. For a 0-1 suitability it
+is the area of suitable habitat in reach; for strengths above 1 it is
+an area-equivalent, and can exceed the area in reach. It is exact,
+and ignores resistance.</p></dd>
 
-<dt><code>effective_coverage</code></dt>
-<dd><p>Coverage discounted by how much harder
-the targets are to reach than in ideal habitat,
-\((A_i / A^*) (R^* / R_i)\), where \(R_i\) is <code>resistance</code> and
-\(R^*\) is its ideal value: target strength in reach per unit
-resistance, relative to ideal habitat. 1 is as connected as ideal
-habitat; it responds to the amount of targets, their arrangement
-and the resistance surface together. Its relative noise is that of
+<dt><code>accessible_area</code></dt>
+<dd><p><code>target_area</code> counted by how easily the
+targets are reached, \(\mathrm{target\_area}_i \, R^* / R_i\),
+where \(R_i\) is <code>resistance</code> and \(R^*\) is the resistance a
+site would have in continuous habitat (every cell a target, of
+resistance <code>reference_resistance</code>) at the same <code>radius</code> and
+<code>site_radius</code>. Targets as easy to reach as in continuous habitat
+count in full, and harder ones proportionally less; targets close to
+the site, or through resistance below the reference, can count for
+more. It responds to the amount of targets, their arrangement and the
+resistance surface together. Its relative noise is that of
 <code>resistance</code>, and it is corrected for the bias of inverting a noisy
 estimate.</p></dd>
 
 
-</dl><p>\(R^*\) is solved exactly, once per kernel, on a uniform grid wide
-enough that its edges don't matter. It is proportional to
-<code>reference_resistance</code>, so effective coverage depends on the units of
-resistance: set <code>reference_resistance</code> to the resistance of good
-habitat, so that 1 means as connected as continuous good habitat. On
-lon/lat grids with <code>radius_units = "km"</code>, cells narrow towards the
-poles, so the kernel, and with it \(A^*\) and \(R^*\), vary by row.
-Rows within reach of the top or bottom of the grid use the nearest row
-whose kernel fits, so that there, as at other edges, the grid's edge
-lowers coverage. Coverage needs a finite <code>radius</code>.</p>
+</dl><p>Both are in square kilometres where the grid's
+coordinate reference system gives cell areas, and in cells otherwise; the
+<code>"area_units"</code> attribute says which. Both are computed from per-row
+running sums, at a cost linear in the radius.</p>
+<p>\(R^*\) is solved exactly, once per kernel, on a uniform grid wide
+enough that its edges don't matter, and is proportional to
+<code>reference_resistance</code>: set it to the resistance of good habitat. On
+lon/lat grids with <code>radius_units = "km"</code>, the kernel varies by row, and
+so does \(R^*\); rows within reach of the top or bottom of the grid use
+the nearest row whose kernel fits, so that there, as at other edges, the
+grid's edge lowers accessible area rather than the reference.
+Accessibility needs a finite <code>radius</code>.</p>
+<p>A larger <code>radius</code> raises <code>target_area</code> everywhere and <code>accessible_area</code>
+almost everywhere, but not at every cell: <code>resistance</code> withdraws current
+from the targets in fixed proportions, so where widening the radius adds
+mostly hard-to-reach targets, it raises the resistance to all of them, and
+accessible area can fall. To compare runs at different resolutions, give
+<code>site_radius</code> in km too: the default of 2 pixels is a different site on
+each grid.</p>
 </div>
 
 <div class="section">
@@ -336,7 +346,7 @@ standard error, from the spread of the draws; the <code>"relative_se"</code>
 attribute gives each layer's median relative standard error either way.</p>
 <p>Reproducibility, performance and progress are as for <code><a href="dp_omni.html">dp_omni()</a></code>: one
 factorization (two with <code>normalize</code>), then about <code>n_draws</code> solves.
-Coverage adds a small factorization and one solve per kernel.</p>
+Accessibility adds a small factorization and one solve per kernel.</p>
 </div>
 
     </div>
@@ -354,10 +364,11 @@ Coverage adds a small factorization and one solve per kernel.</p>
 <span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span>, <span class="st">"relative_se"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Compared with ideal continuous habitat of resistance 1</span></span></span>
-<span class="r-in"><span><span class="va">covered</span> <span class="op">&lt;-</span> <span class="fu">dp_isolation</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>                        coverage <span class="op">=</span> <span class="cn">TRUE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">covered</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"coverage"</span>, <span class="st">"effective_coverage"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># How much of the targets each cell can access, as area</span></span></span>
+<span class="r-in"><span><span class="va">access</span> <span class="op">&lt;-</span> <span class="fu">dp_isolation</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>                       accessibility <span class="op">=</span> <span class="cn">TRUE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">access</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target_area"</span>, <span class="st">"accessible_area"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">access</span>, <span class="st">"area_units"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Isolation between two distributions, in both directions</span></span></span>
 <span class="r-in"><span><span class="va">origin</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span></span>

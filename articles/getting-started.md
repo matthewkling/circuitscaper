@@ -200,10 +200,10 @@ movement passes.
 [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
 scores every cell by its effective resistance to the habitat within
 reach, or to and from another distribution, so it also shows how
-connected a site would be at each place. With `coverage = TRUE`, it also
-compares each cell with ideal continuous habitat, so the amount of
-habitat in reach counts as well as the resistance to it. For discrete
-sites,
+connected a site would be at each place. With `accessibility = TRUE`, it
+also measures the habitat in reach as area, counted by how easily it is
+reached, so the amount of habitat counts as well as the resistance to
+it. For discrete sites,
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
 resistance matrix answers the same question exactly.
 

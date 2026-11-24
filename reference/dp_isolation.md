@@ -18,7 +18,7 @@ dp_isolation(
   n_draws = 64,
   seed = NULL,
   se = FALSE,
-  coverage = FALSE,
+  accessibility = FALSE,
   reference_resistance = 1,
   contact = FALSE,
   progress = TRUE
@@ -107,17 +107,16 @@ dp_isolation(
   Logical. Also return each layer's per-cell standard error, as layers
   with an `_se` suffix. Default `FALSE`.
 
-- coverage:
+- accessibility:
 
-  Logical. Also return the `coverage` and `effective_coverage` layers,
-  which compare each cell with ideal continuous habitat (see
-  "Coverage"). Default `FALSE`.
+  Logical. Also return the `target_area` and `accessible_area` layers
+  (see "Accessibility"). Default `FALSE`.
 
 - reference_resistance:
 
-  Positive number. The resistance of the ideal habitat for
-  `effective_coverage`, in the units of the input's resistance (also
-  when `resistance_is = "conductances"`). Default `1`.
+  Positive number. The resistance of the continuous habitat that
+  `accessible_area` compares with, in the units of the input's
+  resistance (also when `resistance_is = "conductances"`). Default `1`.
 
 - contact:
 
@@ -138,12 +137,13 @@ A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 with layers `resistance` and `mean_resistance`; with `normalize`,
 `normalized_resistance` and `normalized_mean_resistance`; with
-`coverage`, `coverage` and `effective_coverage`; and with `se`, an `_se`
-layer for each but `coverage`, which is exact. With a `destination`,
-this set of layers twice, prefixed `origin_` and `destination_`. With
-`contact`, a last layer `contact`. Attributes: `"relative_se"`, each
-layer's median relative standard error over the cells with values, and
-`"seed"`.
+`accessibility`, `target_area` and `accessible_area`; and with `se`, an
+`_se` layer for each but `target_area`, which is exact. With a
+`destination`, this set of layers twice, prefixed `origin_` and
+`destination_`. With `contact`, a last layer `contact`. Attributes:
+`"relative_se"`, each layer's median relative standard error over the
+cells with values; with `accessibility`, `"area_units"` (`"km2"` or
+`"cells"`); and `"seed"`.
 
 ## Details
 
@@ -229,46 +229,56 @@ resistance beyond the cell's own links, but the subtraction doesn't
 remove any noise, so where contact is most of the value (high-resistance
 cells), the remainder is very noisy.
 
-### Coverage
+### Accessibility
 
 `resistance` responds to where the targets are, not to how much of them
 there is: \\q\\ is a share, so thinning every target to a tenth of its
-strength leaves it unchanged. With `coverage = TRUE`, two layers compare
-each cell with ideal continuous habitat: every cell a target of strength
-1 and of resistance `reference_resistance`, at the same `radius` and
-`site_radius`, and with no edges.
+strength leaves it unchanged. With `accessibility = TRUE`, two layers
+measure how much of the targets each cell can access, as area:
 
-- `coverage`:
+- `target_area`:
 
-  Target strength in reach as a share of the ideal's, \\A_i / A^\*\\,
-  where \\A^\*\\ is the number of cells within `radius` and beyond the
-  site: the mean target strength over the ring between the site and the
-  radius, with cells that are NA, off the grid or in another component
-  counting as zero. It is exact, and in units of target strength, so it
-  runs from 0 to 1 for strengths that do (such as suitability). It
-  ignores resistance.
+  The targets in reach as area, each cell's area weighted by its target
+  strength: \\\sum\_{j \notin S_i} t_j a_j k(d\_{ij})\\, with \\a_j\\
+  the cell's area. For a 0-1 suitability it is the area of suitable
+  habitat in reach; for strengths above 1 it is an area-equivalent, and
+  can exceed the area in reach. It is exact, and ignores resistance.
 
-- `effective_coverage`:
+- `accessible_area`:
 
-  Coverage discounted by how much harder the targets are to reach than
-  in ideal habitat, \\(A_i / A^\*) (R^\* / R_i)\\, where \\R_i\\ is
-  `resistance` and \\R^\*\\ is its ideal value: target strength in reach
-  per unit resistance, relative to ideal habitat. 1 is as connected as
-  ideal habitat; it responds to the amount of targets, their arrangement
-  and the resistance surface together. Its relative noise is that of
-  `resistance`, and it is corrected for the bias of inverting a noisy
-  estimate.
+  `target_area` counted by how easily the targets are reached,
+  \\\mathrm{target\\area}\_i \\ R^\* / R_i\\, where \\R_i\\ is
+  `resistance` and \\R^\*\\ is the resistance a site would have in
+  continuous habitat (every cell a target, of resistance
+  `reference_resistance`) at the same `radius` and `site_radius`.
+  Targets as easy to reach as in continuous habitat count in full, and
+  harder ones proportionally less; targets close to the site, or through
+  resistance below the reference, can count for more. It responds to the
+  amount of targets, their arrangement and the resistance surface
+  together. Its relative noise is that of `resistance`, and it is
+  corrected for the bias of inverting a noisy estimate.
+
+Both are in square kilometres where the grid's coordinate reference
+system gives cell areas, and in cells otherwise; the `"area_units"`
+attribute says which. Both are computed from per-row running sums, at a
+cost linear in the radius.
 
 \\R^\*\\ is solved exactly, once per kernel, on a uniform grid wide
-enough that its edges don't matter. It is proportional to
-`reference_resistance`, so effective coverage depends on the units of
-resistance: set `reference_resistance` to the resistance of good
-habitat, so that 1 means as connected as continuous good habitat. On
-lon/lat grids with `radius_units = "km"`, cells narrow towards the
-poles, so the kernel, and with it \\A^\*\\ and \\R^\*\\, vary by row.
-Rows within reach of the top or bottom of the grid use the nearest row
-whose kernel fits, so that there, as at other edges, the grid's edge
-lowers coverage. Coverage needs a finite `radius`.
+enough that its edges don't matter, and is proportional to
+`reference_resistance`: set it to the resistance of good habitat. On
+lon/lat grids with `radius_units = "km"`, the kernel varies by row, and
+so does \\R^\*\\; rows within reach of the top or bottom of the grid use
+the nearest row whose kernel fits, so that there, as at other edges, the
+grid's edge lowers accessible area rather than the reference.
+Accessibility needs a finite `radius`.
+
+A larger `radius` raises `target_area` everywhere and `accessible_area`
+almost everywhere, but not at every cell: `resistance` withdraws current
+from the targets in fixed proportions, so where widening the radius adds
+mostly hard-to-reach targets, it raises the resistance to all of them,
+and accessible area can fall. To compare runs at different resolutions,
+give `site_radius` in km too: the default of 2 pixels is a different
+site on each grid.
 
 ### Method
 
@@ -306,7 +316,7 @@ layer's median relative standard error either way.
 Reproducibility, performance and progress are as for
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md):
 one factorization (two with `normalize`), then about `n_draws` solves.
-Coverage adds a small factorization and one solve per kernel.
+Accessibility adds a small factorization and one solve per kernel.
 
 ## See also
 
@@ -324,10 +334,11 @@ result <- dp_isolation(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "relative_se")
 
-# Compared with ideal continuous habitat of resistance 1
-covered <- dp_isolation(resistance, radius = 15, normalize = FALSE,
-                        coverage = TRUE, seed = 1)
-terra::plot(covered[[c("coverage", "effective_coverage")]])
+# How much of the targets each cell can access, as area
+access <- dp_isolation(resistance, radius = 15, normalize = FALSE,
+                       accessibility = TRUE, seed = 1)
+terra::plot(access[[c("target_area", "accessible_area")]])
+attr(access, "area_units")
 
 # Isolation between two distributions, in both directions
 origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

@@ -562,40 +562,52 @@ where resistance spans three orders of magnitude, it doesn’t.
 
 `resistance` responds to where a cell’s targets are, but not to how much
 of them there is: a cell with a sliver of habitat close by can score as
-well as one surrounded by it. With `coverage = TRUE`, two more layers
-compare each cell with ideal continuous habitat, where every cell is a
-target of strength 1 and has resistance `reference_resistance` (default
-1), at the same radius and site radius:
+well as one surrounded by it. With `accessibility = TRUE`, two more
+layers measure the targets in reach as area:
 
-- `coverage`, the target strength in reach as a share of the ideal’s:
-  the mean target strength over the ring between the site and the
-  radius, with cells that are NA, off the grid or cut off counting as
-  zero. It is exact, and ignores resistance.
-- `effective_coverage`, coverage discounted by how much harder the
-  targets are to reach than in ideal habitat: coverage times the ideal
-  resistance over the cell’s `resistance`. 1 is as connected as
-  continuous ideal habitat, and it responds to the amount of targets,
+- `target_area`, the area of the targets beyond the site and within the
+  radius, each cell’s area weighted by its target strength. For a 0-1
+  suitability it is the area of suitable habitat in reach. It is exact,
+  and ignores resistance.
+- `accessible_area`, that area counted by how easily it is reached:
+  `target_area` times \\R^\* / R\\, where \\R\\ is the cell’s
+  `resistance` and \\R^\*\\ is the resistance a site would have in
+  continuous habitat (every cell a target, with resistance
+  `reference_resistance`, default 1) at the same radius and site radius.
+  Targets as easy to reach as in continuous habitat count in full, and
+  harder ones proportionally less. It responds to the amount of targets,
   their arrangement and the resistance between them together.
 
-Here the habitat has resistance 1, so the default reference is
-continuous habitat:
+Both are in square kilometres where the grid’s CRS gives cell areas, and
+in cells otherwise (the `"area_units"` attribute says which). The
+example grid is tagged lon/lat with 1° cells, so they are in square
+kilometres, and cells shrink northwards. Here the habitat has resistance
+1, so the default reference is continuous habitat:
 
 ``` r
 
-cover <- dp_isolation(circuit, radius = 15, normalize = FALSE, coverage = TRUE,
-                      seed = 1)
-plot(c(cover$coverage, log10(cover$effective_coverage)), nc = 2,
-     main = c("coverage", "effective coverage (log10)"))
+access <- dp_isolation(circuit, radius = 15, normalize = FALSE,
+                       accessibility = TRUE, seed = 1)
+attr(access, "area_units")
+#> [1] "km2"
+plot(c(access$target_area, access$accessible_area), nc = 2,
+     main = c("target area", "accessible area"))
 ```
 
-![plot of chunk isolation-coverage](figures/dp-isolation-coverage-1.png)
+![plot of chunk
+isolation-accessibility](figures/dp-isolation-accessibility-1.png)
 
-plot of chunk isolation-coverage
+plot of chunk isolation-accessibility
 
-The ideal’s resistance scales with `reference_resistance`, so effective
-coverage depends on the units of resistance; set it to the resistance of
-good habitat. On lon/lat grids with a radius in km, the kernel changes
-with latitude, and the ideal reference with it, row by row.
+\\R^\*\\ scales with `reference_resistance`, so accessible area depends
+on the units of resistance; set it to the resistance of good habitat. On
+lon/lat grids with a radius in km, the kernel changes with latitude, and
+\\R^\*\\ with it, row by row. A larger radius raises target area
+everywhere and accessible area in most places, but not at every cell:
+`resistance` withdraws from the targets in fixed proportions, so where a
+wider radius adds mostly hard-to-reach targets, accessible area can
+fall. To compare resolutions, give `site_radius` in km as well as
+`radius`.
 
 With a `destination`, each cell is scored in both directions. The
 `origin_` layers take the cell as an origin, with the destination as its
@@ -920,17 +932,19 @@ sums), so the cost is a solve plus \\O(\text{cells} \times \text{kernel
 rows})\\ per draw, and no draws are stored. The uniform circuit sees the
 same signs, so the normalized layers’ noise partly cancels.
 
-For the coverage layers, the ideal reference \\R^\*\\ is `resistance`
-for the centre of a uniform grid of conductance 1, with every cell
-within the radius and beyond the centre’s site a target of strength 1,
-solved exactly: one factorization of a grid reaching the kernel’s extent
-beyond its outermost sites (a wider margin changes it by under 0.1%),
-and one solve per distinct kernel, so per row on lon/lat grids. With
-\\A^\*\\ the ideal’s reach, \\\text{coverage}\_i = A_i / A^\*\\ and
-\\\text{effective\\coverage}\_i = (A_i / A^\*)\\(R^\* / \hat R_i) / (1 +
-\widehat{\mathrm{SE}}\_i^2 / \hat R_i^2)\\, where the last factor
-removes the first-order bias of inverting the noisy estimate \\\hat
-R_i\\.
+For the accessibility layers, the continuous-habitat reference \\R^\*\\
+is `resistance` for the centre of a uniform grid of conductance 1, with
+every cell within the radius and beyond the centre’s site a target of
+strength 1, solved exactly: one factorization of a grid reaching the
+kernel’s extent beyond its outermost sites (a wider margin changes it by
+under 0.1%), and one solve per distinct kernel, so per row on lon/lat
+grids. With \\a_j\\ the area of cell \\j\\, \\\text{target\\area}\_i =
+\sum\_{j \notin S_i} t_j a_j k(d\_{ij})\\, from the same window sums,
+and \\\text{accessible\\area}\_i = \text{target\\area}\_i\\(R^\* / \hat
+R_i) / (1 + \widehat{\mathrm{SE}}\_i^2 / \hat R_i^2)\\, where the last
+factor removes the first-order bias of inverting the noisy estimate
+\\\hat R_i\\. Cell areas on lon/lat grids are those of a sphere of
+radius 6371 km.
 
 Two related quantities, for comparison. For focal nodes,
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
@@ -996,9 +1010,9 @@ The implementation is tested against exact answers:
   converges per cell to both layers computed exactly from a dense solve,
   across components and with and without a radius, and its standard
   errors match the spread of its errors.
-- The coverage reference matches a dense exact solve of ideal habitat,
-  and effective coverage converges per cell to its exact value, with the
-  bias correction holding at 16 draws.
+- The continuous-habitat reference matches a dense exact solve, target
+  area matches its exact value, and accessible area converges per cell
+  to its exact value, with the bias correction holding at 16 draws.
 
 ## Limitations
 

@@ -619,39 +619,51 @@ one, where resistance spans three orders of magnitude, it doesn’t.</p>
 <p><code>resistance</code> responds to where a cell’s targets are, but
 not to how much of them there is: a cell with a sliver of habitat close
 by can score as well as one surrounded by it. With
-<code>coverage = TRUE</code>, two more layers compare each cell with
-ideal continuous habitat, where every cell is a target of strength 1 and
-has resistance <code>reference_resistance</code> (default 1), at the
-same radius and site radius:</p>
+<code>accessibility = TRUE</code>, two more layers measure the targets
+in reach as area:</p>
 <ul>
 <li>
-<code>coverage</code>, the target strength in reach as a share of
-the ideal’s: the mean target strength over the ring between the site and
-the radius, with cells that are NA, off the grid or cut off counting as
-zero. It is exact, and ignores resistance.</li>
+<code>target_area</code>, the area of the targets beyond the site
+and within the radius, each cell’s area weighted by its target strength.
+For a 0-1 suitability it is the area of suitable habitat in reach. It is
+exact, and ignores resistance.</li>
 <li>
-<code>effective_coverage</code>, coverage discounted by how much
-harder the targets are to reach than in ideal habitat: coverage times
-the ideal resistance over the cell’s <code>resistance</code>. 1 is as
-connected as continuous ideal habitat, and it responds to the amount of
-targets, their arrangement and the resistance between them
-together.</li>
+<code>accessible_area</code>, that area counted by how easily it is
+reached: <code>target_area</code> times <span class="math inline">\(R^*
+/ R\)</span>, where <span class="math inline">\(R\)</span> is the cell’s
+<code>resistance</code> and <span class="math inline">\(R^*\)</span> is
+the resistance a site would have in continuous habitat (every cell a
+target, with resistance <code>reference_resistance</code>, default 1) at
+the same radius and site radius. Targets as easy to reach as in
+continuous habitat count in full, and harder ones proportionally less.
+It responds to the amount of targets, their arrangement and the
+resistance between them together.</li>
 </ul>
-<p>Here the habitat has resistance 1, so the default reference is
-continuous habitat:</p>
+<p>Both are in square kilometres where the grid’s CRS gives cell areas,
+and in cells otherwise (the <code>"area_units"</code> attribute says
+which). The example grid is tagged lon/lat with 1° cells, so they are in
+square kilometres, and cells shrink northwards. Here the habitat has
+resistance 1, so the default reference is continuous habitat:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cover</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, coverage <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>                      seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">cover</span><span class="op">$</span><span class="va">coverage</span>, <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">cover</span><span class="op">$</span><span class="va">effective_coverage</span><span class="op">)</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"coverage"</span>, <span class="st">"effective coverage (log10)"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">access</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>                       accessibility <span class="op">=</span> <span class="cn">TRUE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">access</span>, <span class="st">"area_units"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "km2"</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">access</span><span class="op">$</span><span class="va">target_area</span>, <span class="va">access</span><span class="op">$</span><span class="va">accessible_area</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target area"</span>, <span class="st">"accessible area"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figures/dp-isolation-coverage-1.png" alt="plot of chunk isolation-coverage"><div class="figcaption">plot of chunk isolation-coverage</div>
+<img src="figures/dp-isolation-accessibility-1.png" alt="plot of chunk isolation-accessibility"><div class="figcaption">plot of chunk isolation-accessibility</div>
 </div>
-<p>The ideal’s resistance scales with <code>reference_resistance</code>,
-so effective coverage depends on the units of resistance; set it to the
-resistance of good habitat. On lon/lat grids with a radius in km, the
-kernel changes with latitude, and the ideal reference with it, row by
-row.</p>
+<p><span class="math inline">\(R^*\)</span> scales with
+<code>reference_resistance</code>, so accessible area depends on the
+units of resistance; set it to the resistance of good habitat. On
+lon/lat grids with a radius in km, the kernel changes with latitude, and
+<span class="math inline">\(R^*\)</span> with it, row by row. A larger
+radius raises target area everywhere and accessible area in most places,
+but not at every cell: <code>resistance</code> withdraws from the
+targets in fixed proportions, so where a wider radius adds mostly
+hard-to-reach targets, accessible area can fall. To compare resolutions,
+give <code>site_radius</code> in km as well as <code>radius</code>.</p>
 <p>With a <code>destination</code>, each cell is scored in both
 directions. The <code>origin_</code> layers take the cell as an origin,
 with the destination as its targets; the <code>destination_</code>
@@ -1000,16 +1012,18 @@ cell’s kernel window less its site window (both from row-wise prefix
 sums), so the cost is a solve plus <span class="math inline">\(O(\text{cells} \times \text{kernel rows})\)</span>
 per draw, and no draws are stored. The uniform circuit sees the same
 signs, so the normalized layers’ noise partly cancels.</p>
-<p>For the coverage layers, the ideal reference <span class="math inline">\(R^*\)</span> is <code>resistance</code> for the
+<p>For the accessibility layers, the continuous-habitat reference <span class="math inline">\(R^*\)</span> is <code>resistance</code> for the
 centre of a uniform grid of conductance 1, with every cell within the
 radius and beyond the centre’s site a target of strength 1, solved
 exactly: one factorization of a grid reaching the kernel’s extent beyond
 its outermost sites (a wider margin changes it by under 0.1%), and one
-solve per distinct kernel, so per row on lon/lat grids. With <span class="math inline">\(A^*\)</span> the ideal’s reach, <span class="math inline">\(\text{coverage}_i = A_i / A^*\)</span> and <span class="math inline">\(\text{effective\_coverage}_i = (A_i / A^*)\,(R^* /
-\hat R_i)
+solve per distinct kernel, so per row on lon/lat grids. With <span class="math inline">\(a_j\)</span> the area of cell <span class="math inline">\(j\)</span>, <span class="math inline">\(\text{target\_area}_i = \sum_{j \notin S_i} t_j
+a_j k(d_{ij})\)</span>, from the same window sums, and <span class="math inline">\(\text{accessible\_area}_i =
+\text{target\_area}_i\,(R^* / \hat R_i)
 / (1 + \widehat{\mathrm{SE}}_i^2 / \hat R_i^2)\)</span>, where the last
 factor removes the first-order bias of inverting the noisy estimate
-<span class="math inline">\(\hat R_i\)</span>.</p>
+<span class="math inline">\(\hat R_i\)</span>. Cell areas on lon/lat
+grids are those of a sphere of radius 6371 km.</p>
 <p>Two related quantities, for comparison. For focal nodes,
 <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix gives the pairwise <span class="math inline">\(R_{ij}\)</span> exactly, from which a node’s mean
 resistance to the others follows. Omniscape solves, for each target
@@ -1075,9 +1089,9 @@ implementation to within <span class="math inline">\(10^{-9}\)</span>.</li>
 computed exactly from a dense solve, across components and with and
 without a radius, and its standard errors match the spread of its
 errors.</li>
-<li>The coverage reference matches a dense exact solve of ideal habitat,
-and effective coverage converges per cell to its exact value, with the
-bias correction holding at 16 draws.</li>
+<li>The continuous-habitat reference matches a dense exact solve, target
+area matches its exact value, and accessible area converges per cell to
+its exact value, with the bias correction holding at 16 draws.</li>
 </ul>
 </div>
 </div>
