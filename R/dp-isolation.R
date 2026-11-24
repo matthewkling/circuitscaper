@@ -71,6 +71,43 @@
 #' remove any noise, so where contact is most of the value (high-resistance
 #' cells), the remainder is very noisy.
 #'
+#' ## Coverage
+#' `resistance` responds to where the targets are, not to how much of them
+#' there is: \eqn{q} is a share, so thinning every target to a tenth of its
+#' strength leaves it unchanged. With `coverage = TRUE`, two layers compare
+#' each cell with ideal continuous habitat: every cell a target of strength
+#' 1 and of resistance `reference_resistance`, at the same `radius` and
+#' `site_radius`, and with no edges.
+#' \describe{
+#'   \item{`coverage`}{Target strength in reach as a share of the ideal's,
+#'     \eqn{A_i / A^*}, where \eqn{A^*} is the number of other cells
+#'     within `radius`: the focal mean of target strength over the
+#'     radius, the cell itself left out, with cells that are NA, off the
+#'     grid or in another component counting as zero. It is exact, and in
+#'     units of target strength, so it runs from 0 to 1 for strengths that
+#'     do (such as suitability). It ignores resistance.}
+#'   \item{`effective_coverage`}{Coverage discounted by how much harder
+#'     the targets are to reach than in ideal habitat,
+#'     \eqn{(A_i / A^*) (R^* / R_i)}, where \eqn{R_i} is `resistance` and
+#'     \eqn{R^*} is its ideal value: target strength in reach per unit
+#'     resistance, relative to ideal habitat. 1 is as connected as ideal
+#'     habitat; it responds to the amount of targets, their arrangement
+#'     and the resistance surface together. Its relative noise is that of
+#'     `resistance`, and it is corrected for the bias of inverting a noisy
+#'     estimate.}
+#' }
+#'
+#' \eqn{R^*} is solved exactly, once per kernel, on a uniform grid wide
+#' enough that its edges don't matter. It is proportional to
+#' `reference_resistance`, so effective coverage depends on the units of
+#' resistance: set `reference_resistance` to the resistance of good
+#' habitat, so that 1 means as connected as continuous good habitat. On
+#' lon/lat grids with `radius_units = "km"`, cells narrow towards the
+#' poles, so the kernel, and with it \eqn{A^*} and \eqn{R^*}, vary by row.
+#' Rows within reach of the top or bottom of the grid use the nearest row
+#' whose kernel fits, so that there, as at other edges, the grid's edge
+#' lowers coverage. Coverage needs a finite `radius`.
+#'
 #' ## Method
 #' Each draw injects a random-sign dipole across every link of the circuit,
 #' scaled by the square root of the link's conductance, and solves the
@@ -103,6 +140,7 @@
 #'
 #' Reproducibility, performance and progress are as for [dp_omni()]: one
 #' factorization (two with `normalize`), then about `n_draws` solves.
+#' Coverage adds a small factorization and one solve per kernel.
 #'
 #' @inheritParams dp_omni
 #' @param source_strength Optional [terra::SpatRaster] or file path on the
@@ -119,13 +157,21 @@
 #' @param n_draws Integer. Number of draws (solves). Default `64`.
 #' @param se Logical. Also return each layer's per-cell standard error, as
 #'   layers with an `_se` suffix. Default `FALSE`.
+#' @param coverage Logical. Also return the `coverage` and
+#'   `effective_coverage` layers, which compare each cell with ideal
+#'   continuous habitat (see "Coverage"). Default `FALSE`.
+#' @param reference_resistance Positive number. The resistance of the ideal
+#'   habitat for `effective_coverage`, in the units of the input's
+#'   resistance (also when `resistance_is = "conductances"`). Default `1`.
 #' @param contact Logical. Also return each cell's contact resistance, the
 #'   resistance of its own links in parallel, as the `contact` layer (see
 #'   "Sites"). Default `FALSE`.
 #'
 #' @return A [terra::SpatRaster] with layers `resistance` and
 #'   `mean_resistance`; with `normalize`, `normalized_resistance` and
-#'   `normalized_mean_resistance`; and with `se`, an `_se` layer for each.
+#'   `normalized_mean_resistance`; with `coverage`, `coverage` and
+#'   `effective_coverage`; and with `se`, an `_se` layer for each but
+#'   `coverage`, which is exact.
 #'   With a `destination`, this set of layers twice, prefixed `origin_` and
 #'   `destination_`. With `contact`, a last layer `contact`. Attributes:
 #'   `"relative_se"`, each layer's median relative standard error over the
@@ -140,6 +186,11 @@
 #' terra::plot(result)
 #' attr(result, "relative_se")
 #'
+#' # Compared with ideal continuous habitat of resistance 1
+#' covered <- dp_isolation(resistance, radius = 15, normalize = FALSE,
+#'                         coverage = TRUE, seed = 1)
+#' terra::plot(covered[[c("coverage", "effective_coverage")]])
+#'
 #' # Isolation between two distributions, in both directions
 #' origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
 #' destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
@@ -153,7 +204,8 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
                          destination = NULL, site_radius = NULL, source_threshold = 0.01,
                          radius_units = c("pixels", "km"),
                          resistance_is = "resistances", normalize = TRUE,
-                         n_draws = 64, seed = NULL, se = FALSE, contact = FALSE,
+                         n_draws = 64, seed = NULL, se = FALSE, coverage = FALSE,
+                         reference_resistance = 1, contact = FALSE,
                          progress = TRUE) {
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
@@ -161,11 +213,23 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
   normalize <- isTRUE(normalize)
   se <- isTRUE(se)
   contact <- isTRUE(contact)
+  coverage <- isTRUE(coverage)
   dp_check_site_radius(site_radius)
+  if (coverage) {
+    if (!is.numeric(reference_resistance) || length(reference_resistance) != 1 ||
+        is.na(reference_resistance) || reference_resistance <= 0 ||
+        !is.finite(reference_resistance)) {
+      stop("`reference_resistance` must be a positive number.", call. = FALSE)
+    }
+    if (is.numeric(radius) && length(radius) == 1 && isTRUE(is.infinite(radius))) {
+      stop("`coverage` needs a finite `radius`: with no distance limit there is ",
+           "no ideal neighbourhood to compare with.", call. = FALSE)
+    }
+  }
 
   input <- dp_circuit_input(resistance, resistance_is)
   p <- dp_progressor(progress, dp_factor_steps(input, normalize) +
-                       dp_draw_steps(input, n_draws, 1 + normalize))
+                       dp_draw_steps(input, n_draws, 1 + normalize) + coverage)
   circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   site <- dp_site_kernel(circuit$env$template, site_radius, radius_units)
@@ -187,11 +251,17 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
          call. = FALSE)
   }
 
+  ideal <- if (coverage) {
+    ref <- dp_call("ideal_reference", env$id, kernel$dr0, kernel$hw, kernel$rowmap,
+                   site$dr0, site$hw, site$rowmap, dp_julia_progress(p))
+    list(reach = ref$reach, resistance = ref$resistance * reference_resistance)
+  }
+
   prefixes <- if (is.null(destination)) "" else names(targets)
   layers <- lapply(seq_along(prefixes), function(k) {
     m <- dp_isolation_layers(list(resistance = res$dist[[k]],
                                   mean_resistance = res$mean[[k]]),
-                             res$reach[[k]], n_draws, normalize, se)
+                             res$reach[[k]], n_draws, normalize, se, ideal)
     colnames(m) <- paste0(prefixes[k], colnames(m))
     m
   })
@@ -211,11 +281,15 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
 #'   sums over draws of x, x^2, u, u^2 and x u, with u the same statistic on
 #'   the uniform circuit.
 #' @param reach Summed target weight within reach; cells with none are NA.
+#' @param ideal `NULL`, or a list of per-node `reach` and `resistance` in
+#'   ideal habitat (Julia's `ideal_reference()`, the resistance scaled to
+#'   the reference resistance), for the coverage layers.
 #' @return A matrix of layers: each statistic, then with `normalize` each
-#'   normalized statistic, then with `se` their standard errors. The
+#'   normalized statistic, then with `ideal` the coverage layers, then with
+#'   `se` the standard errors of all but `coverage` (which is exact). The
 #'   normalized standard error is the delta method's for a ratio of means.
 #' @noRd
-dp_isolation_layers <- function(sums, reach, n, normalize, se) {
+dp_isolation_layers <- function(sums, reach, n, normalize, se, ideal = NULL) {
   none <- !(reach > 0)
   est <- list()
   err <- list()
@@ -237,13 +311,23 @@ dp_isolation_layers <- function(sums, reach, n, normalize, se) {
       err[[key]] <- sqrt(pmax(z2, 0) / (n - 1) / n) / mu
     }
   }
+  if (!is.null(ideal)) {
+    cover <- reach / ideal$reach
+    # 1 / R from the mean of draws is biased up by about (SE / R)^2
+    R <- est$resistance
+    rel <- err$resistance / R
+    eff <- ifelse(R > 0, cover * ideal$resistance / R / (1 + rel^2), NA_real_)
+    est$coverage <- cover
+    est$effective_coverage <- eff
+    err$effective_coverage <- eff * rel
+  }
   values <- do.call(cbind, est)
   if (se) {
     errs <- do.call(cbind, err)
     colnames(errs) <- paste0(names(err), "_se")
     values <- cbind(values, errs)
   }
-  attr(values, "relative_se") <- vapply(names(est), function(k) {
+  attr(values, "relative_se") <- vapply(names(err), function(k) {
     ok <- !none & is.finite(est[[k]]) & est[[k]] > 0
     stats::median(err[[k]][ok] / est[[k]][ok])
   }, 0)
