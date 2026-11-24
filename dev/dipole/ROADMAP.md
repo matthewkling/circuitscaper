@@ -31,9 +31,19 @@ Items move here from `background.md`'s old "Next steps" and from design discussi
     - normalized layers and optional per-cell SEs;
     - `origin_`/`destination_` layers when there's a `destination`.
   - **Contact resistance:** single-cell resistance turned out to be dominated by the cell's own links (ρ 0.93 with local resistance on the example). Each cell therefore stands for a site of radius `site_radius` (default 2 px). `site_radius = 0` gives the single-cell reading, and `contact = TRUE` adds the exact contact layer. Subtracting contact was considered and is left to users; dividing by it flips the bias.
-  - **Follow-ups:**
-    - an exact per-site mode (one solve per site), deferred;
-    - check whether `dp_omni()`'s `power` layer is also partly driven by contact resistance at source cells.
+  - **Follow-up:** an exact per-site mode (one solve per site), deferred.
+- [ ] **`site_radius` for the random-dipole maps** (`dp_omni()`, and possibly `dp_pairwise()` and `dp_directionality()`).
+  - **The problem:** the `power` layer has the same contact issue as single-cell isolation. A source cell's power includes its own pairs' dissipation on its own links, which scales with strength × resistance. A dense exact check on the example landscape (radius 15) split power into contact and pass-through parts:
+
+    | Sources | Contact share of total power | Top-5% overlap with pass-through power |
+    |---|---|---|
+    | Default (conductance) | 8% | 0.98 |
+    | Uniform | 38% | 0.64 |
+    | Smooth habitat unrelated to resistance | 38% | 0.79 |
+
+    Squared current is affected too, in the other direction: endpoint convergence is a median 17–29% of squared current at source cells.
+  - **The fix:** spread each dipole endpoint over a site (the adjoint of `dp_isolation()`'s site averaging: one window pass per draw on the injections). It changes every layer, so the default would be 0 to keep current results.
+  - **Done so far:** documented the caveat in `?dp_omni` ("Power") and the article.
 - [ ] **Per-cell uncertainty layer.** The per-parity sums already exist, so a per-cell error map comes almost free (SPEC §4, "Uncertainty"). Today only the `"halves"` summary is returned. Decide the form: an SE of current, a relative SE, or a halves-difference layer.
 - [ ] **(Matt) Make `normalized_power` unitless?** It currently has units of resistance, because power on the uniform circuit uses unit conductance. A reference resistance, such as the mean cell resistance, would make it unitless.
 - [ ] **(Matt) Weight `dp_directionality()`'s ratio by power?** Today it compares squared current only.

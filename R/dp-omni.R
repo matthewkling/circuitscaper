@@ -85,6 +85,17 @@
 #' and its estimate is unbiased with about twice the relative noise of
 #' `current`.
 #'
+#' A source cell's power includes its contact dissipation: what its own
+#' pairs dissipate on its own links as current leaves or arrives, which
+#' scales with its source strength times its resistance (see "Sites" in
+#' [dp_isolation()]). With the default source strength (conductance),
+#' high-resistance cells are weak sources and this is small (8% of the
+#' total power on the package's example landscape). But where source
+#' strength doesn't track resistance, as with a habitat-suitability surface
+#' that includes high-resistance cells, it can be a third or more of the
+#' total and make strong, high-resistance source cells look like choke
+#' points.
+#'
 #' This is not `current` squared times the cell's resistance. A link's
 #' resistance depends on both cells it joins (with Circuitscape's averaged
 #' conductances, it approaches twice the lower of the two resistances where

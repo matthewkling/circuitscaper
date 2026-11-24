@@ -145,6 +145,18 @@ plot(c(p$current, log10(p[[c("power", "normalized_power")]])), nc = 3,
      main = c("current", "log10 power", "log10 normalized power"))
 ```
 
+One caveat: a source cell's power includes what its own pairs dissipate on
+its own links as current leaves or arrives, its *contact* dissipation (see
+[Isolation of each cell](#isolation-of-each-cell)). That scales with the
+cell's source strength times its resistance. With the default source
+strength (conductance), high-resistance cells are weak sources, so this is
+small: about 8% of the total power here, and the hottest 5% of cells are
+nearly the same without it. But where source strength doesn't track
+resistance, as with a habitat-suitability surface that includes
+high-resistance cells, it can reach a third or more of the total and put
+high-resistance source cells among the apparent choke points. Read high
+power on strong, high-resistance source cells with that in mind.
+
 ## Accuracy and reproducibility
 
 The maps are estimates with some sampling noise, which falls as
