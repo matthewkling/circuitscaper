@@ -54,14 +54,35 @@ test_that("dp_isolation converges to the exact values, across components", {
     ok <- !is.na(ex[, 1])
     for (nm in colnames(ex)) {
       z <- (v[ok, nm] - ex[ok, nm]) / v[ok, paste0(nm, "_se")]
-      expect_lt(abs(mean(v[ok, nm]) / mean(ex[ok, nm]) - 1), 0.03)
+      # Cells share their draws, so their errors don't average out: the
+      # mean's error is up to about 2% here (8 seeds)
+      expect_lt(abs(mean(v[ok, nm]) / mean(ex[ok, nm]) - 1), 0.05)
       expect_gt(cor(v[ok, nm], ex[ok, nm], method = "spearman"), 0.995)
       expect_gt(mean(abs(z) < 4), 0.99)
-      # Standard errors match the spread of the errors
-      expect_lt(abs(stats::sd(z) - 1), 0.25)
     }
     # Mean resistance is at least the resistance to the distribution
     expect_true(all(ex[ok, "mean_resistance"] >= ex[ok, "resistance"] - 1e-12))
+  }
+})
+
+test_that("standard errors match the spread across independent runs", {
+  skip_if_no_julia(circuitscape = FALSE)
+  x <- dipole_test_grid()
+  circuit <- dp_circuit(x$conductance, resistance_is = "conductances")
+  # Within one run, cells share their draws, so their errors move together;
+  # calibration shows across runs. 30 runs give each cell's SD to about 13%.
+  runs <- lapply(1:30, function(s) {
+    node_values(dp_isolation(circuit, 6, x$suitability, n_draws = 40, seed = s,
+                             se = TRUE), circuit)
+  })
+  ok <- !is.na(runs[[1]][, "resistance"])
+  for (nm in c("resistance", "mean_resistance", "normalized_resistance",
+               "normalized_mean_resistance")) {
+    est <- sapply(runs, function(v) v[ok, nm])
+    se <- sapply(runs, function(v) v[ok, paste0(nm, "_se")])
+    ratio <- stats::median(apply(est, 1, stats::sd) / apply(se, 1, mean))
+    expect_gt(ratio, 0.8)
+    expect_lt(ratio, 1.25)
   }
 })
 
