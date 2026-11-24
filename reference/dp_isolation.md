@@ -18,6 +18,8 @@ dp_isolation(
   n_draws = 64,
   seed = NULL,
   se = FALSE,
+  coverage = FALSE,
+  reference_resistance = 1,
   contact = FALSE,
   progress = TRUE
 )
@@ -105,6 +107,18 @@ dp_isolation(
   Logical. Also return each layer's per-cell standard error, as layers
   with an `_se` suffix. Default `FALSE`.
 
+- coverage:
+
+  Logical. Also return the `coverage` and `effective_coverage` layers,
+  which compare each cell with ideal continuous habitat (see
+  "Coverage"). Default `FALSE`.
+
+- reference_resistance:
+
+  Positive number. The resistance of the ideal habitat for
+  `effective_coverage`, in the units of the input's resistance (also
+  when `resistance_is = "conductances"`). Default `1`.
+
 - contact:
 
   Logical. Also return each cell's contact resistance, the resistance of
@@ -123,11 +137,13 @@ dp_isolation(
 A
 [terra::SpatRaster](https://rspatial.github.io/terra/reference/SpatRaster-class.html)
 with layers `resistance` and `mean_resistance`; with `normalize`,
-`normalized_resistance` and `normalized_mean_resistance`; and with `se`,
-an `_se` layer for each. With a `destination`, this set of layers twice,
-prefixed `origin_` and `destination_`. With `contact`, a last layer
-`contact`. Attributes: `"relative_se"`, each layer's median relative
-standard error over the cells with values, and `"seed"`.
+`normalized_resistance` and `normalized_mean_resistance`; with
+`coverage`, `coverage` and `effective_coverage`; and with `se`, an `_se`
+layer for each but `coverage`, which is exact. With a `destination`,
+this set of layers twice, prefixed `origin_` and `destination_`. With
+`contact`, a last layer `contact`. Attributes: `"relative_se"`, each
+layer's median relative standard error over the cells with values, and
+`"seed"`.
 
 ## Details
 
@@ -208,6 +224,47 @@ resistance beyond the cell's own links, but the subtraction doesn't
 remove any noise, so where contact is most of the value (high-resistance
 cells), the remainder is very noisy.
 
+### Coverage
+
+`resistance` responds to where the targets are, not to how much of them
+there is: \\q\\ is a share, so thinning every target to a tenth of its
+strength leaves it unchanged. With `coverage = TRUE`, two layers compare
+each cell with ideal continuous habitat: every cell a target of strength
+1 and of resistance `reference_resistance`, at the same `radius` and
+`site_radius`, and with no edges.
+
+- `coverage`:
+
+  Target strength in reach as a share of the ideal's, \\A_i / A^\*\\,
+  where \\A^\*\\ is the number of other cells within `radius`: the focal
+  mean of target strength over the radius, the cell itself left out,
+  with cells that are NA, off the grid or in another component counting
+  as zero. It is exact, and in units of target strength, so it runs from
+  0 to 1 for strengths that do (such as suitability). It ignores
+  resistance.
+
+- `effective_coverage`:
+
+  Coverage discounted by how much harder the targets are to reach than
+  in ideal habitat, \\(A_i / A^\*) (R^\* / R_i)\\, where \\R_i\\ is
+  `resistance` and \\R^\*\\ is its ideal value: target strength in reach
+  per unit resistance, relative to ideal habitat. 1 is as connected as
+  ideal habitat; it responds to the amount of targets, their arrangement
+  and the resistance surface together. Its relative noise is that of
+  `resistance`, and it is corrected for the bias of inverting a noisy
+  estimate.
+
+\\R^\*\\ is solved exactly, once per kernel, on a uniform grid wide
+enough that its edges don't matter. It is proportional to
+`reference_resistance`, so effective coverage depends on the units of
+resistance: set `reference_resistance` to the resistance of good
+habitat, so that 1 means as connected as continuous good habitat. On
+lon/lat grids with `radius_units = "km"`, cells narrow towards the
+poles, so the kernel, and with it \\A^\*\\ and \\R^\*\\, vary by row.
+Rows within reach of the top or bottom of the grid use the nearest row
+whose kernel fits, so that there, as at other edges, the grid's edge
+lowers coverage. Coverage needs a finite `radius`.
+
 ### Method
 
 Each draw injects a random-sign dipole across every link of the circuit,
@@ -244,6 +301,7 @@ layer's median relative standard error either way.
 Reproducibility, performance and progress are as for
 [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md):
 one factorization (two with `normalize`), then about `n_draws` solves.
+Coverage adds a small factorization and one solve per kernel.
 
 ## See also
 
@@ -260,6 +318,11 @@ resistance <- terra::rast(system.file("extdata/resistance.tif",
 result <- dp_isolation(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "relative_se")
+
+# Compared with ideal continuous habitat of resistance 1
+covered <- dp_isolation(resistance, radius = 15, normalize = FALSE,
+                        coverage = TRUE, seed = 1)
+terra::plot(covered[[c("coverage", "effective_coverage")]])
 
 # Isolation between two distributions, in both directions
 origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))

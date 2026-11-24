@@ -71,7 +71,13 @@
     links; `site_radius = 0` gives the single-cell reading, and
     `contact = TRUE` adds each cell’s exact contact resistance. Random
     dipoles across every link give these for all cells at once, with
-    per-cell standard errors (`se = TRUE`).
+    per-cell standard errors (`se = TRUE`). With `coverage = TRUE`, two
+    more layers compare each cell with ideal continuous habitat at the
+    same radius: `coverage`, the target strength in reach as a share of
+    the ideal’s, and `effective_coverage`, coverage discounted by how
+    much harder the targets are to reach than in ideal habitat, which
+    responds to the amount of targets as well as their arrangement and
+    resistance.
   - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
     prepares a circuit whose factorizations several runs can reuse.
   - The `dp_*()` functions report progress through the ‘progressr’

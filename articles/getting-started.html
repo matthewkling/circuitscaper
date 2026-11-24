@@ -308,8 +308,11 @@ and targets with compatible present and future conditions.</p>
 <code><a href="../reference/dp_isolation.html">dp_isolation()</a></code> scores every cell by its effective
 resistance to the habitat within reach, or to and from another
 distribution, so it also shows how connected a site would be at each
-place. For discrete sites, <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance
-matrix answers the same question exactly.</p>
+place. With <code>coverage = TRUE</code>, it also compares each cell
+with ideal continuous habitat, so the amount of habitat in reach counts
+as well as the resistance to it. For discrete sites,
+<code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix answers the same question
+exactly.</p>
 <div class="section level3">
 <h3 id="circuitscape-and-omniscape-or-dipole-methods">Circuitscape and Omniscape, or dipole methods?<a class="anchor" aria-label="anchor" href="#circuitscape-and-omniscape-or-dipole-methods"></a>
 </h3>

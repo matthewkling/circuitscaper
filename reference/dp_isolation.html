@@ -63,6 +63,8 @@
 <span>  n_draws <span class="op">=</span> <span class="fl">64</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  se <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  coverage <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  reference_resistance <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  contact <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -144,6 +146,18 @@ as the <code>"seed"</code> attribute.</p></dd>
 layers with an <code>_se</code> suffix. Default <code>FALSE</code>.</p></dd>
 
 
+<dt id="arg-coverage">coverage<a class="anchor" aria-label="anchor" href="#arg-coverage"></a></dt>
+<dd><p>Logical. Also return the <code>coverage</code> and
+<code>effective_coverage</code> layers, which compare each cell with ideal
+continuous habitat (see "Coverage"). Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-reference-resistance">reference_resistance<a class="anchor" aria-label="anchor" href="#arg-reference-resistance"></a></dt>
+<dd><p>Positive number. The resistance of the ideal
+habitat for <code>effective_coverage</code>, in the units of the input's
+resistance (also when <code>resistance_is = "conductances"</code>). Default <code>1</code>.</p></dd>
+
+
 <dt id="arg-contact">contact<a class="anchor" aria-label="anchor" href="#arg-contact"></a></dt>
 <dd><p>Logical. Also return each cell's contact resistance, the
 resistance of its own links in parallel, as the <code>contact</code> layer (see
@@ -160,7 +174,9 @@ when a 'progressr' handler is active.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <a href="https://rspatial.github.io/terra/reference/SpatRaster-class.html" class="external-link">terra::SpatRaster</a> with layers <code>resistance</code> and
 <code>mean_resistance</code>; with <code>normalize</code>, <code>normalized_resistance</code> and
-<code>normalized_mean_resistance</code>; and with <code>se</code>, an <code>_se</code> layer for each.
+<code>normalized_mean_resistance</code>; with <code>coverage</code>, <code>coverage</code> and
+<code>effective_coverage</code>; and with <code>se</code>, an <code>_se</code> layer for each but
+<code>coverage</code>, which is exact.
 With a <code>destination</code>, this set of layers twice, prefixed <code>origin_</code> and
 <code>destination_</code>. With <code>contact</code>, a last layer <code>contact</code>. Attributes:
 <code>"relative_se"</code>, each layer's median relative standard error over the
@@ -237,6 +253,48 @@ cells), the remainder is very noisy.</p>
 </div>
 
 <div class="section">
+<h3 id="coverage">Coverage<a class="anchor" aria-label="anchor" href="#coverage"></a></h3>
+
+
+<p><code>resistance</code> responds to where the targets are, not to how much of them
+there is: \(q\) is a share, so thinning every target to a tenth of its
+strength leaves it unchanged. With <code>coverage = TRUE</code>, two layers compare
+each cell with ideal continuous habitat: every cell a target of strength
+1 and of resistance <code>reference_resistance</code>, at the same <code>radius</code> and
+<code>site_radius</code>, and with no edges.</p><dl><dt><code>coverage</code></dt>
+<dd><p>Target strength in reach as a share of the ideal's,
+\(A_i / A^*\), where \(A^*\) is the number of other cells
+within <code>radius</code>: the focal mean of target strength over the
+radius, the cell itself left out, with cells that are NA, off the
+grid or in another component counting as zero. It is exact, and in
+units of target strength, so it runs from 0 to 1 for strengths that
+do (such as suitability). It ignores resistance.</p></dd>
+
+<dt><code>effective_coverage</code></dt>
+<dd><p>Coverage discounted by how much harder
+the targets are to reach than in ideal habitat,
+\((A_i / A^*) (R^* / R_i)\), where \(R_i\) is <code>resistance</code> and
+\(R^*\) is its ideal value: target strength in reach per unit
+resistance, relative to ideal habitat. 1 is as connected as ideal
+habitat; it responds to the amount of targets, their arrangement
+and the resistance surface together. Its relative noise is that of
+<code>resistance</code>, and it is corrected for the bias of inverting a noisy
+estimate.</p></dd>
+
+
+</dl><p>\(R^*\) is solved exactly, once per kernel, on a uniform grid wide
+enough that its edges don't matter. It is proportional to
+<code>reference_resistance</code>, so effective coverage depends on the units of
+resistance: set <code>reference_resistance</code> to the resistance of good
+habitat, so that 1 means as connected as continuous good habitat. On
+lon/lat grids with <code>radius_units = "km"</code>, cells narrow towards the
+poles, so the kernel, and with it \(A^*\) and \(R^*\), vary by row.
+Rows within reach of the top or bottom of the grid use the nearest row
+whose kernel fits, so that there, as at other edges, the grid's edge
+lowers coverage. Coverage needs a finite <code>radius</code>.</p>
+</div>
+
+<div class="section">
 <h3 id="method">Method<a class="anchor" aria-label="anchor" href="#method"></a></h3>
 
 
@@ -272,7 +330,8 @@ varies by orders of magnitude it doesn't. With <code>se = TRUE</code>, the resul
 standard error, from the spread of the draws; the <code>"relative_se"</code>
 attribute gives each layer's median relative standard error either way.</p>
 <p>Reproducibility, performance and progress are as for <code><a href="dp_omni.html">dp_omni()</a></code>: one
-factorization (two with <code>normalize</code>), then about <code>n_draws</code> solves.</p>
+factorization (two with <code>normalize</code>), then about <code>n_draws</code> solves.
+Coverage adds a small factorization and one solve per kernel.</p>
 </div>
 
     </div>
@@ -289,6 +348,11 @@ factorization (two with <code>normalize</code>), then about <code>n_draws</code>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">dp_isolation</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">15</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">result</span>, <span class="st">"relative_se"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compared with ideal continuous habitat of resistance 1</span></span></span>
+<span class="r-in"><span><span class="va">covered</span> <span class="op">&lt;-</span> <span class="fu">dp_isolation</span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>                        coverage <span class="op">=</span> <span class="cn">TRUE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">covered</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"coverage"</span>, <span class="st">"effective_coverage"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Isolation between two distributions, in both directions</span></span></span>
 <span class="r-in"><span><span class="va">origin</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata/source.tif"</span>, package <span class="op">=</span> <span class="st">"circuitscaper"</span><span class="op">)</span><span class="op">)</span></span></span>
