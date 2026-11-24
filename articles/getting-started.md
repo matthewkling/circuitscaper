@@ -159,7 +159,7 @@ Start from the question you’re asking:
 | How does movement flow between a defined source area and a destination? | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) |  |
 | Where are the corridors and barriers across the whole landscape? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) |
 | How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) with `os_condition(future = )`, for climate | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md), `dp_omni(destination = )`, [`dp_directionality()`](https://matthewkling.github.io/circuitscaper/reference/dp_directionality.md) |
-| How isolated is each place from its habitat, or from another distribution? | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) resistances, for focal nodes only | [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md) |
+| How much habitat, or of another distribution, can each place reach? | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) resistances, for focal nodes only | [`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md) |
 
 **Pairwise** analyses treat discrete sites (habitat patches,
 populations) and ask how well they’re connected to each other.
@@ -195,17 +195,16 @@ it runs both ways. For climate change,
 offers a related Omniscape analysis, restricting connections to sources
 and targets with compatible present and future conditions.
 
-**Isolation** asks how well connected each *place* is, rather than where
-movement passes.
-[`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
-scores every cell by its effective resistance to the habitat within
-reach, or to and from another distribution, so it also shows how
-connected a site would be at each place. With `accessibility = TRUE`, it
-also measures the habitat in reach as area, counted by how easily it is
-reached, so the amount of habitat counts as well as the resistance to
-it. For discrete sites,
+**Accessibility** asks how well connected each *place* is, rather than
+where movement passes.
+[`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md)
+maps, for every cell, the area of habitat within reach, counted by how
+easily it is reached, and the effective conductance to it; with another
+distribution, it does the same in both directions. Every cell gets a
+value, so it also shows how connected a site would be at each place. For
+discrete sites,
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
-resistance matrix answers the same question exactly.
+resistance matrix gives the pairwise resistances exactly.
 
 ### Circuitscape and Omniscape, or dipole methods?
 

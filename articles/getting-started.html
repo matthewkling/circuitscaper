@@ -267,11 +267,11 @@ climate</td>
 </td>
 </tr>
 <tr class="even">
-<td>How isolated is each place from its habitat, or from another
-distribution?</td>
+<td>How much habitat, or of another distribution, can each place
+reach?</td>
 <td>
 <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code> resistances, for focal nodes only</td>
-<td><code><a href="../reference/dp_isolation.html">dp_isolation()</a></code></td>
+<td><code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code></td>
 </tr>
 </tbody>
 </table>
@@ -303,16 +303,15 @@ maps both, with their ratio, showing where movement is one-way and where
 it runs both ways. For climate change, <code><a href="../reference/os_condition.html">os_condition()</a></code>
 offers a related Omniscape analysis, restricting connections to sources
 and targets with compatible present and future conditions.</p>
-<p><strong>Isolation</strong> asks how well connected each
+<p><strong>Accessibility</strong> asks how well connected each
 <em>place</em> is, rather than where movement passes.
-<code><a href="../reference/dp_isolation.html">dp_isolation()</a></code> scores every cell by its effective
-resistance to the habitat within reach, or to and from another
-distribution, so it also shows how connected a site would be at each
-place. With <code>accessibility = TRUE</code>, it also measures the
-habitat in reach as area, counted by how easily it is reached, so the
-amount of habitat counts as well as the resistance to it. For discrete
-sites, <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix answers the same
-question exactly.</p>
+<code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code> maps, for every cell, the area of
+habitat within reach, counted by how easily it is reached, and the
+effective conductance to it; with another distribution, it does the same
+in both directions. Every cell gets a value, so it also shows how
+connected a site would be at each place. For discrete sites,
+<code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix gives the pairwise
+resistances exactly.</p>
 <div class="section level3">
 <h3 id="circuitscape-and-omniscape-or-dipole-methods">Circuitscape and Omniscape, or dipole methods?<a class="anchor" aria-label="anchor" href="#circuitscape-and-omniscape-or-dipole-methods"></a>
 </h3>

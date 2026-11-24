@@ -57,29 +57,26 @@
     current is weighted by that link’s resistance, which squaring a
     current map and multiplying by cell resistance can’t do; it costs no
     extra solves.
-  - [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
-    maps how isolated each cell is from its targets, as effective
-    resistance: to the habitat within a radius, or with a `destination`,
-    between two distributions in both directions (each cell’s resistance
-    to the destination as an origin, and from the origin as a
-    destination). Two layers summarise a cell’s targets: the resistance
-    to them as a set, and the mean resistance to them, each with a
-    normalized version that removes the effect of geometry. Every cell
-    with targets in reach gets a value, habitat or not. Each cell stands
-    for a site of the cells within `site_radius` (2 pixels by default),
-    since a single cell’s effective resistance is dominated by its own
-    links; a cell’s targets are the habitat beyond its site.
-    `site_radius = 0` gives the single-cell reading, and
-    `contact = TRUE` adds each cell’s exact contact resistance. Random
-    dipoles across every link give these for all cells at once, with
-    per-cell standard errors (`se = TRUE`). With `accessibility = TRUE`,
-    two more layers measure the targets in reach as area (square
-    kilometres, or cells on grids without a CRS): `target_area`, the
-    strength-weighted area of the targets in reach, and
-    `accessible_area`, that area counted by how easily it is reached
-    compared with continuous habitat at the same radius, which responds
-    to the amount of targets as well as their arrangement and
-    resistance.
+  - [`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md)
+    maps how much of its targets each cell can reach: the habitat within
+    a radius, or with a `destination`, another distribution, in both
+    directions (as an origin reaching the destination, and as a
+    destination reached from the origin). Three layers:
+    `accessible_area`, the area of targets in reach counted by how
+    easily they are reached compared with continuous habitat at the same
+    radius, which responds to the amount of targets as well as their
+    arrangement and resistance; `target_area`, the strength-weighted
+    area of targets in reach (exact); and `conductance`, the effective
+    conductance to them as a set, with a normalized version that removes
+    the effect of geometry. Areas are in square kilometres, or cells on
+    grids without a CRS. Every cell gets a value, habitat or not, and
+    cells with no targets in reach score 0. Each cell stands for a site
+    of the cells within `site_radius` pixels (2 by default), since a
+    single cell’s value is dominated by its own links; a cell’s targets
+    are the habitat beyond its site. `site_radius = 0` gives the
+    single-cell reading, and `contact = TRUE` adds each cell’s exact
+    contact conductance. Random dipoles across every link give these for
+    all cells at once, with per-cell standard errors (`se = TRUE`).
   - [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md)
     prepares a circuit whose factorizations several runs can reuse.
   - The `dp_*()` functions report progress through the ‘progressr’

@@ -21,7 +21,7 @@ covers.
 | [`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md) | Omnidirectional connectivity among habitat within a dispersal radius; with a `destination`, the routes linking two distributions | [`os_run()`](https://matthewkling.github.io/circuitscaper/reference/os_run.md) |
 | [`dp_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/dp_pairwise.md) | Connectivity among every pair of a set of focal nodes | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md) (cumulative current) |
 | [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md) | Net flow from an origin to a destination distribution, with direction | [`cs_advanced()`](https://matthewkling.github.io/circuitscaper/reference/cs_advanced.md) with sources at the origin and grounds at the destination |
-| [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md) | How isolated each cell is from its targets (habitat in reach, or the other distribution), as effective resistance | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s resistance matrix, for focal nodes only |
+| [`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md) | How much of its targets (habitat in reach, or the other distribution) each cell can reach, as area, and its effective conductance to them | [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s resistance matrix, for focal nodes only |
 | [`dp_circuit()`](https://matthewkling.github.io/circuitscaper/reference/dp_circuit.md) | A factored circuit, to reuse across runs |  |
 
 The first half of this article shows how to use them; the second
@@ -178,13 +178,13 @@ plot of chunk power
 
 One caveat: a source cell’s power includes what its own pairs dissipate
 on its own links as current leaves or arrives, its *contact* dissipation
-(see [Isolation of each cell](#isolation-of-each-cell)). That scales
-with the cell’s source strength times its resistance. With the default
-source strength (conductance), high-resistance cells are weak sources,
-so this is small: about 8% of the total power here, and the hottest 5%
-of cells are nearly the same without it. But where source strength
-doesn’t track resistance, as with a habitat-suitability surface that
-includes high-resistance cells, it can reach a third or more of the
+(see [Accessibility of each cell](#accessibility-of-each-cell)). That
+scales with the cell’s source strength times its resistance. With the
+default source strength (conductance), high-resistance cells are weak
+sources, so this is small: about 8% of the total power here, and the
+hottest 5% of cells are nearly the same without it. But where source
+strength doesn’t track resistance, as with a habitat-suitability surface
+that includes high-resistance cells, it can reach a third or more of the
 total and put high-resistance source cells among the apparent choke
 points. Read high power on strong, high-resistance source cells with
 that in mind.
@@ -470,144 +470,124 @@ pairs all focal nodes.
 
 All of these map where movement *passes*. To ask instead how well
 connected each *place* is, see
-[`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md),
+[`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md),
 next.
 
-## Isolation of each cell
+## Accessibility of each cell
 
-[`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
-scores every cell by its effective resistance to its targets: the
-habitat within `radius`, weighted by strength, or with a `destination`,
-the other distribution. Every cell with targets in reach gets a value,
-habitat or not, so the map also shows how connected a site would be at
-each place: for siting reserves, translocations or restoration. Two
-layers summarise a cell’s targets:
+[`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md)
+maps how much of its targets each cell can reach: the habitat within
+`radius`, weighted by strength, or with a `destination`, the other
+distribution. Every cell gets a value, habitat or not, so the map also
+shows how connected a site would be at each place: for siting reserves,
+translocations or restoration. Three layers describe a cell’s targets:
 
-- `resistance`, the resistance to the target distribution: one unit of
-  current leaves the cell and is withdrawn across its targets in
-  proportion to their strength. Many targets in reach act like parallel
-  paths and lower it, so it measures how well the cell is connected to
-  its targets as a set.
-- `mean_resistance`, the mean effective resistance to the targets: how
-  hard it is to reach a typical one. The hardest-to-reach targets weigh
-  most in it, and it is at least `resistance`.
-
-Each cell stands for a **site**: the cells within `site_radius` of it (2
-pixels by default), across which the current is spread. This matters. On
-a grid, the effective resistance from a single cell grows only with the
-log of distance, so much of it sits in the first rings of links around
-the cell. A single cell’s value is then dominated by its own *contact
-resistance*, that of its own links in parallel, and the map mostly shows
-the resistance surface back. Spreading the current over a site, as
-Circuitscape’s focal regions do, lets the landscape around it show
-through. A site is never its own target: a cell’s targets are the
-habitat beyond its site, out to `radius`, as a single cell’s are the
-other cells. Choose `site_radius` for the area a population or site
-occupies, and compare runs at the same site radius:
-
-``` r
-
-single <- dp_isolation(circuit, radius = 15, site_radius = 0, normalize = FALSE, seed = 1)
-sites <- dp_isolation(circuit, radius = 15, normalize = FALSE, seed = 1)
-wide <- dp_isolation(circuit, radius = 15, site_radius = 4, normalize = FALSE, seed = 1)
-plot(log10(c(single$resistance, sites$resistance, wide$resistance)), nc = 3,
-     main = c("single cells", "2-pixel sites", "4-pixel sites"))
-```
-
-![plot of chunk isolation-sites](figures/dp-isolation-sites-1.png)
-
-plot of chunk isolation-sites
-
-`site_radius = 0` gives the single-cell reading, where a cell’s own
-resistance is part of its isolation: for a single point of interest.
-`contact = TRUE` adds each cell’s contact resistance, exactly, as a
-layer; it is a lower bound on the single-cell `resistance`. Subtracting
-it leaves the resistance beyond the cell’s own links, but not less
-noise, so the remainder is noisy where contact is most of the value.
-
-With `normalize` (the default), the normalized layers divide by the same
-quantities on the uniform circuit, which removes the effect of geometry
-(distance to the targets, the domain’s edges, how many targets are in
-reach). They are in the units of the input’s resistance: the resistance
-of a uniform landscape that would leave the site just as isolated:
-
-``` r
-
-iso <- dp_isolation(circuit, radius = 15, seed = 1)
-plot(log10(iso[[c("resistance", "normalized_resistance")]]), nc = 2,
-     main = c("resistance (log10)", "normalized (log10)"))
-```
-
-![plot of chunk isolation](figures/dp-isolation-1.png)
-
-plot of chunk isolation
-
-``` r
-
-attr(iso, "relative_se")
-#>                 resistance            mean_resistance 
-#>                  0.1679503                  0.1131591 
-#>      normalized_resistance normalized_mean_resistance 
-#>                  0.1878162                  0.1207290
-```
-
-Each draw scores every cell, so the per-cell noise is known: the
-`"relative_se"` attribute gives each layer’s median relative standard
-error, and `se = TRUE` adds per-cell standard-error layers. `resistance`
-has a relative error of about \\\sqrt{2 / \mathrm{n\\draws}}\\ at any
-grid size, 18% at the default 64 draws, and `mean_resistance` usually
-less. Both circuits see the same draws, so on landscapes of modest
-contrast the normalized layers’ noise largely cancels; on this one,
-where resistance spans three orders of magnitude, it doesn’t.
-
-`resistance` responds to where a cell’s targets are, but not to how much
-of them there is: a cell with a sliver of habitat close by can score as
-well as one surrounded by it. With `accessibility = TRUE`, two more
-layers measure the targets in reach as area:
-
-- `target_area`, the area of the targets beyond the site and within the
-  radius, each cell’s area weighted by its target strength. For a 0-1
-  suitability it is the area of suitable habitat in reach. It is exact,
-  and ignores resistance.
-- `accessible_area`, that area counted by how easily it is reached:
-  `target_area` times \\R^\* / R\\, where \\R\\ is the cell’s
-  `resistance` and \\R^\*\\ is the resistance a site would have in
+- `accessible_area`, the targets in reach counted by how easily they are
+  reached: `target_area` times \\C / C^\*\\, where \\C\\ is the cell’s
+  `conductance` and \\C^\*\\ is the conductance a site would have in
   continuous habitat (every cell a target, with resistance
   `reference_resistance`, default 1) at the same radius and site radius.
   Targets as easy to reach as in continuous habitat count in full, and
   harder ones proportionally less. It responds to the amount of targets,
   their arrangement and the resistance between them together.
+- `target_area`, the area of the targets beyond the site and within the
+  radius, each cell’s area weighted by its target strength. For a 0-1
+  suitability it is the area of suitable habitat in reach. It is exact,
+  and ignores resistance.
+- `conductance`, the effective conductance to the targets as a set: one
+  unit of current leaves the cell and is withdrawn across its targets in
+  proportion to their strength. Many targets in reach act like parallel
+  paths and raise it. It responds to where a cell’s targets are, but not
+  to how much of them there is, which is what `accessible_area` adds.
 
-Both are in square kilometres where the grid’s CRS gives cell areas, and
-in cells otherwise (the `"area_units"` attribute says which). The
+Areas are in square kilometres where the grid’s CRS gives cell areas,
+and in cells otherwise (the `"area_units"` attribute says which). The
 example grid is tagged lon/lat with 1° cells, so they are in square
-kilometres, and cells shrink northwards. Here the habitat has resistance
-1, so the default reference is continuous habitat:
+kilometres, and cells shrink northwards. Cells with no targets in reach
+score 0.
+
+Each cell stands for a **site**: the cells within `site_radius` pixels
+of it (2 by default), across which the current is spread. Sites correct
+for the grid. On a grid, the effective resistance from a single cell
+grows only with the log of distance, so much of it sits in the first
+rings of links around the cell. A single cell’s value is then dominated
+by its own *contact resistance*, that of its own links in parallel, and
+the map mostly shows the resistance surface back. Spreading the current
+over a site, as Circuitscape’s focal regions do, lets the landscape
+around it show through. Because the problem is the grid’s, `site_radius`
+is in pixels whatever `radius_units`; the dispersal scale is `radius`. A
+site is never its own target: a cell’s targets are the habitat beyond
+its site, out to `radius`. Values depend on the site, so compare runs at
+the same one; across resolutions, scale `site_radius` to keep the same
+ground distance:
 
 ``` r
 
-access <- dp_isolation(circuit, radius = 15, normalize = FALSE,
-                       accessibility = TRUE, seed = 1)
-attr(access, "area_units")
-#> [1] "km2"
-plot(c(access$target_area, access$accessible_area), nc = 2,
-     main = c("target area", "accessible area"))
+single <- dp_accessibility(circuit, radius = 15, site_radius = 0, normalize = FALSE, seed = 1)
+sites <- dp_accessibility(circuit, radius = 15, normalize = FALSE, seed = 1)
+wide <- dp_accessibility(circuit, radius = 15, site_radius = 4, normalize = FALSE, seed = 1)
+plot(log10(c(single$conductance, sites$conductance, wide$conductance)), nc = 3,
+     main = c("single cells", "2-pixel sites", "4-pixel sites"))
 ```
 
 ![plot of chunk
-isolation-accessibility](figures/dp-isolation-accessibility-1.png)
+accessibility-sites](figures/dp-accessibility-sites-1.png)
 
-plot of chunk isolation-accessibility
+plot of chunk accessibility-sites
 
-\\R^\*\\ scales with `reference_resistance`, so accessible area depends
-on the units of resistance; set it to the resistance of good habitat. On
-lon/lat grids with a radius in km, the kernel changes with latitude, and
-\\R^\*\\ with it, row by row. A larger radius raises target area
-everywhere and accessible area in most places, but not at every cell:
-`resistance` withdraws from the targets in fixed proportions, so where a
-wider radius adds mostly hard-to-reach targets, accessible area can
-fall. To compare resolutions, give `site_radius` in km as well as
-`radius`.
+`site_radius = 0` gives the single-cell reading, where a cell’s own
+resistance is part of its value: for a single point of interest.
+`contact = TRUE` adds each cell’s contact conductance, exactly, as a
+layer; it is an upper bound on the single-cell `conductance`.
+
+Here the habitat has resistance 1, so the default reference is
+continuous habitat:
+
+``` r
+
+access <- dp_accessibility(circuit, radius = 15, seed = 1)
+attr(access, "area_units")
+#> [1] "km2"
+plot(access[[c("target_area", "accessible_area")]], nc = 2,
+     main = c("target area", "accessible area"))
+```
+
+![plot of chunk accessibility](figures/dp-accessibility-1.png)
+
+plot of chunk accessibility
+
+``` r
+
+attr(access, "relative_se")
+#>        accessible_area            conductance normalized_conductance 
+#>              0.1679503              0.1679503              0.1878162
+```
+
+\\C^\*\\ scales with one over `reference_resistance`, so accessible area
+depends on the units of resistance; set it to the resistance of good
+habitat. On lon/lat grids with a radius in km, the kernel changes with
+latitude, and \\C^\*\\ with it, row by row. With no distance limit
+(`radius = Inf`) there is no finite reference, and no `accessible_area`
+layer. A larger radius raises target area everywhere and accessible area
+in most places, but not at every cell: the current is withdrawn from the
+targets in fixed proportions, so where a wider radius adds mostly
+hard-to-reach targets, accessible area can fall.
+
+With `normalize` (the default), `normalized_conductance` divides by the
+same quantity on the uniform circuit, which removes the effect of
+geometry (distance to the targets, the domain’s edges, how many targets
+are in reach). It is in the units of the input’s conductance: the
+conductance of a uniform landscape that would leave the site just as
+connected.
+
+Each draw scores every cell, so the per-cell noise is known: the
+`"relative_se"` attribute gives each estimated layer’s median relative
+standard error, and `se = TRUE` adds per-cell standard-error layers.
+`conductance` and `accessible_area` have a relative error of about
+\\\sqrt{2 / \mathrm{n\\draws}}\\ at any grid size, 18% at the default 64
+draws. Both circuits see the same draws, so on landscapes of modest
+contrast the normalized layer’s noise largely cancels; on this one,
+where resistance spans three orders of magnitude, it doesn’t.
 
 With a `destination`, each cell is scored in both directions. The
 `origin_` layers take the cell as an origin, with the destination as its
@@ -618,15 +598,15 @@ the future range can be reached:
 
 ``` r
 
-shift <- dp_isolation(circuit, radius = 15, source_strength = origin,
-                      destination = destination, normalize = FALSE, seed = 1)
-plot(log10(shift[[c("origin_resistance", "destination_resistance")]]), nc = 2,
-     main = c("to destination (log10)", "from origin (log10)"))
+shift <- dp_accessibility(circuit, radius = 15, source_strength = origin,
+                          destination = destination, normalize = FALSE, seed = 1)
+plot(shift[[c("origin_accessible_area", "destination_accessible_area")]], nc = 2,
+     main = c("to destination", "from origin"))
 ```
 
-![plot of chunk isolation-two](figures/dp-isolation-two-1.png)
+![plot of chunk accessibility-two](figures/dp-accessibility-two-1.png)
 
-plot of chunk isolation-two
+plot of chunk accessibility-two
 
 ## Radius units
 
@@ -894,7 +874,7 @@ random factor, and the ratio would be off by the same amount (about
 centering, the ratio also can’t exceed 1. With one surface, the mean
 dipole is zero and nothing changes.
 
-### Isolation
+### Accessibility
 
 For cell \\i\\, with target strength \\t\\, the targets are the cells
 \\j\\ of its component within the radius and beyond its site \\S_i\\,
@@ -902,49 +882,44 @@ the valid cells within `site_radius` in its component (\\S_i = \\i\\\\
 for a single cell), weighted \\q_j = t_j k(d\_{ij}) / A_i\\, where \\A_i
 = \sum\_{j \notin S_i} t_j k(d\_{ij})\\. Each cell stands for its site,
 \\p_i\\, uniform over \\S_i\\ (\\p_i = e_i\\ for a single cell). With
-\\L^+\\ the pseudo-inverse of the Laplacian and \\R\_{ij}\\ the
-effective resistance between sites \\i\\ and \\j\\,
+\\L^+\\ the pseudo-inverse of the Laplacian, the resistance to the
+targets is
 
-\\\text{resistance}\_i = \big(p_i - \textstyle\sum_j q_j p_j\big)^\top
-L^+ \big(p_i - \textstyle\sum_j q_j p_j\big), \qquad
-\text{mean\\resistance}\_i = \textstyle\sum_j q_j R\_{ij}.\\
+\\R_i = \big(p_i - \textstyle\sum_j q_j p_j\big)^\top L^+ \big(p_i -
+\textstyle\sum_j q_j p_j\big),\\
 
-The first is the resistance of
+the resistance of
 [`dp_flux()`](https://matthewkling.github.io/circuitscaper/reference/dp_flux.md)’s
-injection with site \\i\\ as the only origin. For single cells, the
-second, summed over cells with weights \\w_i A_i\\, is the total
-effective resistance over
-[`dp_omni()`](https://matthewkling.github.io/circuitscaper/reference/dp_omni.md)’s
-pairs, which is also the total of its `power` layer (Thomson’s principle
-again).
+injection with site \\i\\ as the only origin, and `conductance` is \\C_i
+= 1 / R_i\\.
 
-Both come from a different kind of random draw. Each draw injects a
+\\R_i\\ comes from a different kind of random draw. Each draw injects a
 random-sign dipole across every link \\e\\, scaled by \\\sqrt{g_e}\\:
 \\b = \sum_e s_e \sqrt{g_e}\\(e_a - e_b)\\. Since \\\sum_e g_e (e_a -
 e_b)(e_a - e_b)^\top = L\\, the solution \\y = L^{-1} b\\ has
-\\\mathbb{E}\[(y_i - y_j)^2\] = R\_{ij}\\ for every pair at once, and
-\\\mathbb{E}\[(y_i - q^\top y)^2\]\\ is the first quantity above. This
+\\\mathbb{E}\[(y_i - y_j)^2\] = R\_{ij}\\, the effective resistance, for
+every pair at once, and \\\mathbb{E}\[(y_i - q^\top y)^2\] = R_i\\. This
 is the random projection of Spielman & Srivastava (2011). Averaging
-\\y\\ over each site gives the same for sites. Per draw, both layers
-then need only \\q^\top y\\ and \\q^\top y^2\\, which are sums over each
-cell’s kernel window less its site window (both from row-wise prefix
-sums), so the cost is a solve plus \\O(\text{cells} \times \text{kernel
-rows})\\ per draw, and no draws are stored. The uniform circuit sees the
-same signs, so the normalized layers’ noise partly cancels.
+\\y\\ over each site gives the same for sites. Per draw, \\q^\top y\\ is
+a sum over each cell’s kernel window less its site window (both from
+row-wise prefix sums), so the cost is a solve plus \\O(\text{cells}
+\times \text{kernel rows})\\ per draw, and no draws are stored. The mean
+over draws, \\\hat R_i\\, is unbiased; the inverse is corrected for its
+first-order bias, \\\hat C_i = 1 / \big(\hat R_i (1 +
+\widehat{\mathrm{SE}}\_i^2 / \hat R_i^2)\big)\\. The uniform circuit
+sees the same signs, so the normalized layer’s noise partly cancels.
 
-For the accessibility layers, the continuous-habitat reference \\R^\*\\
-is `resistance` for the centre of a uniform grid of conductance 1, with
-every cell within the radius and beyond the centre’s site a target of
-strength 1, solved exactly: one factorization of a grid reaching the
-kernel’s extent beyond its outermost sites (a wider margin changes it by
-under 0.1%), and one solve per distinct kernel, so per row on lon/lat
-grids. With \\a_j\\ the area of cell \\j\\, \\\text{target\\area}\_i =
-\sum\_{j \notin S_i} t_j a_j k(d\_{ij})\\, from the same window sums,
-and \\\text{accessible\\area}\_i = \text{target\\area}\_i\\(R^\* / \hat
-R_i) / (1 + \widehat{\mathrm{SE}}\_i^2 / \hat R_i^2)\\, where the last
-factor removes the first-order bias of inverting the noisy estimate
-\\\hat R_i\\. Cell areas on lon/lat grids are those of a sphere of
-radius 6371 km.
+The continuous-habitat reference \\C^\* = 1 / R^\*\\ comes from
+\\R^\*\\, the resistance for the centre of a uniform grid of conductance
+1, with every cell within the radius and beyond the centre’s site a
+target of strength 1, solved exactly: one factorization of a grid
+reaching the kernel’s extent beyond its outermost sites (a wider margin
+changes it by under 0.1%), and one solve per distinct kernel, so per row
+on lon/lat grids. With \\a_j\\ the area of cell \\j\\,
+\\\text{target\\area}\_i = \sum\_{j \notin S_i} t_j a_j k(d\_{ij})\\,
+from the same window sums, and \\\text{accessible\\area}\_i =
+\text{target\\area}\_i\\\hat C_i / C^\*\\. Cell areas on lon/lat grids
+are those of a sphere of radius 6371 km.
 
 Two related quantities, for comparison. For focal nodes,
 [`cs_pairwise()`](https://matthewkling.github.io/circuitscaper/reference/cs_pairwise.md)’s
@@ -952,8 +927,8 @@ resistance matrix gives the pairwise \\R\_{ij}\\ exactly, from which a
 node’s mean resistance to the others follows. Omniscape solves, for each
 target cell, a circuit in which the sources in its window inject in
 proportion to their strength and the target is grounded. That circuit’s
-resistance is `resistance` with the roles of source and target swapped,
-but on Omniscape’s clipped window. Omniscape doesn’t report it.
+resistance is \\R_i\\ with the roles of source and target swapped, but
+on Omniscape’s clipped window. Omniscape doesn’t report it.
 
 ### How the results differ from Circuitscape and Omniscape
 
@@ -1006,8 +981,8 @@ The implementation is tested against exact answers:
   and the random method converges to it.
 - The circuit, injections and per-link sums reproduce an independent R
   implementation to within \\10^{-9}\\.
-- [`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)
-  converges per cell to both layers computed exactly from a dense solve,
+- [`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md)’s
+  conductance converges per cell to its exact value from a dense solve,
   across components and with and without a radius, and its standard
   errors match the spread of its errors.
 - The continuous-habitat reference matches a dense exact solve, target

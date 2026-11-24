@@ -127,9 +127,10 @@ direction</td>
 the destination</td>
 </tr>
 <tr class="even">
-<td><code><a href="../reference/dp_isolation.html">dp_isolation()</a></code></td>
-<td>How isolated each cell is from its targets (habitat in reach, or the
-other distribution), as effective resistance</td>
+<td><code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code></td>
+<td>How much of its targets (habitat in reach, or the other
+distribution) each cell can reach, as area, and its effective
+conductance to them</td>
 <td>
 <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix, for focal nodes
 only</td>
@@ -272,13 +273,13 @@ so it is easiest to see on a log scale:</p>
 </div>
 <p>One caveat: a source cell’s power includes what its own pairs
 dissipate on its own links as current leaves or arrives, its
-<em>contact</em> dissipation (see <a href="#isolation-of-each-cell">Isolation of each cell</a>). That scales
-with the cell’s source strength times its resistance. With the default
-source strength (conductance), high-resistance cells are weak sources,
-so this is small: about 8% of the total power here, and the hottest 5%
-of cells are nearly the same without it. But where source strength
-doesn’t track resistance, as with a habitat-suitability surface that
-includes high-resistance cells, it can reach a third or more of the
+<em>contact</em> dissipation (see <a href="#accessibility-of-each-cell">Accessibility of each cell</a>). That
+scales with the cell’s source strength times its resistance. With the
+default source strength (conductance), high-resistance cells are weak
+sources, so this is small: about 8% of the total power here, and the
+hottest 5% of cells are nearly the same without it. But where source
+strength doesn’t track resistance, as with a habitat-suitability surface
+that includes high-resistance cells, it can reach a third or more of the
 total and put high-resistance source cells among the apparent choke
 points. Read high power on strong, high-resistance source cells with
 that in mind.</p>
@@ -533,137 +534,119 @@ on the same scale, which is what makes its ratio a share between 0 and
 <code><a href="../reference/dp_flux.html">dp_flux()</a></code> and <code><a href="../reference/dp_directionality.html">dp_directionality()</a></code>, the default
 is no limit); <code><a href="../reference/dp_pairwise.html">dp_pairwise()</a></code> pairs all focal nodes.</p>
 <p>All of these map where movement <em>passes</em>. To ask instead how
-well connected each <em>place</em> is, see <code><a href="../reference/dp_isolation.html">dp_isolation()</a></code>,
-next.</p>
+well connected each <em>place</em> is, see
+<code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code>, next.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="isolation-of-each-cell">Isolation of each cell<a class="anchor" aria-label="anchor" href="#isolation-of-each-cell"></a>
+<h2 id="accessibility-of-each-cell">Accessibility of each cell<a class="anchor" aria-label="anchor" href="#accessibility-of-each-cell"></a>
 </h2>
-<p><code><a href="../reference/dp_isolation.html">dp_isolation()</a></code> scores every cell by its effective
-resistance to its targets: the habitat within <code>radius</code>,
-weighted by strength, or with a <code>destination</code>, the other
-distribution. Every cell with targets in reach gets a value, habitat or
-not, so the map also shows how connected a site would be at each place:
-for siting reserves, translocations or restoration. Two layers summarise
-a cell’s targets:</p>
+<p><code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code> maps how much of its targets each
+cell can reach: the habitat within <code>radius</code>, weighted by
+strength, or with a <code>destination</code>, the other distribution.
+Every cell gets a value, habitat or not, so the map also shows how
+connected a site would be at each place: for siting reserves,
+translocations or restoration. Three layers describe a cell’s
+targets:</p>
 <ul>
 <li>
-<code>resistance</code>, the resistance to the target distribution:
-one unit of current leaves the cell and is withdrawn across its targets
-in proportion to their strength. Many targets in reach act like parallel
-paths and lower it, so it measures how well the cell is connected to its
-targets as a set.</li>
-<li>
-<code>mean_resistance</code>, the mean effective resistance to the
-targets: how hard it is to reach a typical one. The hardest-to-reach
-targets weigh most in it, and it is at least
-<code>resistance</code>.</li>
-</ul>
-<p>Each cell stands for a <strong>site</strong>: the cells within
-<code>site_radius</code> of it (2 pixels by default), across which the
-current is spread. This matters. On a grid, the effective resistance
-from a single cell grows only with the log of distance, so much of it
-sits in the first rings of links around the cell. A single cell’s value
-is then dominated by its own <em>contact resistance</em>, that of its
-own links in parallel, and the map mostly shows the resistance surface
-back. Spreading the current over a site, as Circuitscape’s focal regions
-do, lets the landscape around it show through. A site is never its own
-target: a cell’s targets are the habitat beyond its site, out to
-<code>radius</code>, as a single cell’s are the other cells. Choose
-<code>site_radius</code> for the area a population or site occupies, and
-compare runs at the same site radius:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">single</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, site_radius <span class="op">=</span> <span class="fl">0</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">sites</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, site_radius <span class="op">=</span> <span class="fl">4</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">single</span><span class="op">$</span><span class="va">resistance</span>, <span class="va">sites</span><span class="op">$</span><span class="va">resistance</span>, <span class="va">wide</span><span class="op">$</span><span class="va">resistance</span><span class="op">)</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"single cells"</span>, <span class="st">"2-pixel sites"</span>, <span class="st">"4-pixel sites"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="figures/dp-isolation-sites-1.png" alt="plot of chunk isolation-sites"><div class="figcaption">plot of chunk isolation-sites</div>
-</div>
-<p><code>site_radius = 0</code> gives the single-cell reading, where a
-cell’s own resistance is part of its isolation: for a single point of
-interest. <code>contact = TRUE</code> adds each cell’s contact
-resistance, exactly, as a layer; it is a lower bound on the single-cell
-<code>resistance</code>. Subtracting it leaves the resistance beyond the
-cell’s own links, but not less noise, so the remainder is noisy where
-contact is most of the value.</p>
-<p>With <code>normalize</code> (the default), the normalized layers
-divide by the same quantities on the uniform circuit, which removes the
-effect of geometry (distance to the targets, the domain’s edges, how
-many targets are in reach). They are in the units of the input’s
-resistance: the resistance of a uniform landscape that would leave the
-site just as isolated:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">iso</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"resistance"</span>, <span class="st">"normalized_resistance"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"resistance (log10)"</span>, <span class="st">"normalized (log10)"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="figures/dp-isolation-1.png" alt="plot of chunk isolation"><div class="figcaption">plot of chunk isolation</div>
-</div>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">iso</span>, <span class="st">"relative_se"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 resistance            mean_resistance </span></span>
-<span><span class="co">#&gt;                  0.1679503                  0.1131591 </span></span>
-<span><span class="co">#&gt;      normalized_resistance normalized_mean_resistance </span></span>
-<span><span class="co">#&gt;                  0.1878162                  0.1207290</span></span></code></pre></div>
-<p>Each draw scores every cell, so the per-cell noise is known: the
-<code>"relative_se"</code> attribute gives each layer’s median relative
-standard error, and <code>se = TRUE</code> adds per-cell standard-error
-layers. <code>resistance</code> has a relative error of about <span class="math inline">\(\sqrt{2 / \mathrm{n\_draws}}\)</span> at any grid
-size, 18% at the default 64 draws, and <code>mean_resistance</code>
-usually less. Both circuits see the same draws, so on landscapes of
-modest contrast the normalized layers’ noise largely cancels; on this
-one, where resistance spans three orders of magnitude, it doesn’t.</p>
-<p><code>resistance</code> responds to where a cell’s targets are, but
-not to how much of them there is: a cell with a sliver of habitat close
-by can score as well as one surrounded by it. With
-<code>accessibility = TRUE</code>, two more layers measure the targets
-in reach as area:</p>
-<ul>
+<code>accessible_area</code>, the targets in reach counted by how
+easily they are reached: <code>target_area</code> times <span class="math inline">\(C / C^*\)</span>, where <span class="math inline">\(C\)</span> is the cell’s <code>conductance</code>
+and <span class="math inline">\(C^*\)</span> is the conductance a site
+would have in continuous habitat (every cell a target, with resistance
+<code>reference_resistance</code>, default 1) at the same radius and
+site radius. Targets as easy to reach as in continuous habitat count in
+full, and harder ones proportionally less. It responds to the amount of
+targets, their arrangement and the resistance between them
+together.</li>
 <li>
 <code>target_area</code>, the area of the targets beyond the site
 and within the radius, each cell’s area weighted by its target strength.
 For a 0-1 suitability it is the area of suitable habitat in reach. It is
 exact, and ignores resistance.</li>
 <li>
-<code>accessible_area</code>, that area counted by how easily it is
-reached: <code>target_area</code> times <span class="math inline">\(R^*
-/ R\)</span>, where <span class="math inline">\(R\)</span> is the cell’s
-<code>resistance</code> and <span class="math inline">\(R^*\)</span> is
-the resistance a site would have in continuous habitat (every cell a
-target, with resistance <code>reference_resistance</code>, default 1) at
-the same radius and site radius. Targets as easy to reach as in
-continuous habitat count in full, and harder ones proportionally less.
-It responds to the amount of targets, their arrangement and the
-resistance between them together.</li>
+<code>conductance</code>, the effective conductance to the targets
+as a set: one unit of current leaves the cell and is withdrawn across
+its targets in proportion to their strength. Many targets in reach act
+like parallel paths and raise it. It responds to where a cell’s targets
+are, but not to how much of them there is, which is what
+<code>accessible_area</code> adds.</li>
 </ul>
-<p>Both are in square kilometres where the grid’s CRS gives cell areas,
+<p>Areas are in square kilometres where the grid’s CRS gives cell areas,
 and in cells otherwise (the <code>"area_units"</code> attribute says
 which). The example grid is tagged lon/lat with 1° cells, so they are in
-square kilometres, and cells shrink northwards. Here the habitat has
-resistance 1, so the default reference is continuous habitat:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">access</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>                       accessibility <span class="op">=</span> <span class="cn">TRUE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+square kilometres, and cells shrink northwards. Cells with no targets in
+reach score 0.</p>
+<p>Each cell stands for a <strong>site</strong>: the cells within
+<code>site_radius</code> pixels of it (2 by default), across which the
+current is spread. Sites correct for the grid. On a grid, the effective
+resistance from a single cell grows only with the log of distance, so
+much of it sits in the first rings of links around the cell. A single
+cell’s value is then dominated by its own <em>contact resistance</em>,
+that of its own links in parallel, and the map mostly shows the
+resistance surface back. Spreading the current over a site, as
+Circuitscape’s focal regions do, lets the landscape around it show
+through. Because the problem is the grid’s, <code>site_radius</code> is
+in pixels whatever <code>radius_units</code>; the dispersal scale is
+<code>radius</code>. A site is never its own target: a cell’s targets
+are the habitat beyond its site, out to <code>radius</code>. Values
+depend on the site, so compare runs at the same one; across resolutions,
+scale <code>site_radius</code> to keep the same ground distance:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">single</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_accessibility.html">dp_accessibility</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, site_radius <span class="op">=</span> <span class="fl">0</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">sites</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_accessibility.html">dp_accessibility</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">wide</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_accessibility.html">dp_accessibility</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, site_radius <span class="op">=</span> <span class="fl">4</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">single</span><span class="op">$</span><span class="va">conductance</span>, <span class="va">sites</span><span class="op">$</span><span class="va">conductance</span>, <span class="va">wide</span><span class="op">$</span><span class="va">conductance</span><span class="op">)</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"single cells"</span>, <span class="st">"2-pixel sites"</span>, <span class="st">"4-pixel sites"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="float">
+<img src="figures/dp-accessibility-sites-1.png" alt="plot of chunk accessibility-sites"><div class="figcaption">plot of chunk accessibility-sites</div>
+</div>
+<p><code>site_radius = 0</code> gives the single-cell reading, where a
+cell’s own resistance is part of its value: for a single point of
+interest. <code>contact = TRUE</code> adds each cell’s contact
+conductance, exactly, as a layer; it is an upper bound on the
+single-cell <code>conductance</code>.</p>
+<p>Here the habitat has resistance 1, so the default reference is
+continuous habitat:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">access</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_accessibility.html">dp_accessibility</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">access</span>, <span class="st">"area_units"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "km2"</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">access</span><span class="op">$</span><span class="va">target_area</span>, <span class="va">access</span><span class="op">$</span><span class="va">accessible_area</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">access</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target_area"</span>, <span class="st">"accessible_area"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target area"</span>, <span class="st">"accessible area"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figures/dp-isolation-accessibility-1.png" alt="plot of chunk isolation-accessibility"><div class="figcaption">plot of chunk isolation-accessibility</div>
+<img src="figures/dp-accessibility-1.png" alt="plot of chunk accessibility"><div class="figcaption">plot of chunk accessibility</div>
 </div>
-<p><span class="math inline">\(R^*\)</span> scales with
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">access</span>, <span class="st">"relative_se"</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        accessible_area            conductance normalized_conductance </span></span>
+<span><span class="co">#&gt;              0.1679503              0.1679503              0.1878162</span></span></code></pre></div>
+<p><span class="math inline">\(C^*\)</span> scales with one over
 <code>reference_resistance</code>, so accessible area depends on the
 units of resistance; set it to the resistance of good habitat. On
 lon/lat grids with a radius in km, the kernel changes with latitude, and
-<span class="math inline">\(R^*\)</span> with it, row by row. A larger
-radius raises target area everywhere and accessible area in most places,
-but not at every cell: <code>resistance</code> withdraws from the
-targets in fixed proportions, so where a wider radius adds mostly
-hard-to-reach targets, accessible area can fall. To compare resolutions,
-give <code>site_radius</code> in km as well as <code>radius</code>.</p>
+<span class="math inline">\(C^*\)</span> with it, row by row. With no
+distance limit (<code>radius = Inf</code>) there is no finite reference,
+and no <code>accessible_area</code> layer. A larger radius raises target
+area everywhere and accessible area in most places, but not at every
+cell: the current is withdrawn from the targets in fixed proportions, so
+where a wider radius adds mostly hard-to-reach targets, accessible area
+can fall.</p>
+<p>With <code>normalize</code> (the default),
+<code>normalized_conductance</code> divides by the same quantity on the
+uniform circuit, which removes the effect of geometry (distance to the
+targets, the domain’s edges, how many targets are in reach). It is in
+the units of the input’s conductance: the conductance of a uniform
+landscape that would leave the site just as connected.</p>
+<p>Each draw scores every cell, so the per-cell noise is known: the
+<code>"relative_se"</code> attribute gives each estimated layer’s median
+relative standard error, and <code>se = TRUE</code> adds per-cell
+standard-error layers. <code>conductance</code> and
+<code>accessible_area</code> have a relative error of about <span class="math inline">\(\sqrt{2 / \mathrm{n\_draws}}\)</span> at any grid
+size, 18% at the default 64 draws. Both circuits see the same draws, so
+on landscapes of modest contrast the normalized layer’s noise largely
+cancels; on this one, where resistance spans three orders of magnitude,
+it doesn’t.</p>
 <p>With a <code>destination</code>, each cell is scored in both
 directions. The <code>origin_</code> layers take the cell as an origin,
 with the destination as its targets; the <code>destination_</code>
@@ -671,13 +654,13 @@ layers take it as a destination, with the origin as its targets. For a
 shifting range, the first asks where movement could reach the future
 range from, the second which parts of the future range can be
 reached:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">shift</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_isolation.html">dp_isolation</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, source_strength <span class="op">=</span> <span class="va">origin</span>,</span>
-<span>                      destination <span class="op">=</span> <span class="va">destination</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">shift</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"origin_resistance"</span>, <span class="st">"destination_resistance"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"to destination (log10)"</span>, <span class="st">"from origin (log10)"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">shift</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_accessibility.html">dp_accessibility</a></span><span class="op">(</span><span class="va">circuit</span>, radius <span class="op">=</span> <span class="fl">15</span>, source_strength <span class="op">=</span> <span class="va">origin</span>,</span>
+<span>                          destination <span class="op">=</span> <span class="va">destination</span>, normalize <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">shift</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"origin_accessible_area"</span>, <span class="st">"destination_accessible_area"</span><span class="op">)</span><span class="op">]</span><span class="op">]</span>, nc <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>     main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"to destination"</span>, <span class="st">"from origin"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="float">
-<img src="figures/dp-isolation-two-1.png" alt="plot of chunk isolation-two"><div class="figcaption">plot of chunk isolation-two</div>
+<img src="figures/dp-accessibility-two-1.png" alt="plot of chunk accessibility-two"><div class="figcaption">plot of chunk accessibility-two</div>
 </div>
 </div>
 <div class="section level2">
@@ -689,7 +672,7 @@ distance in kilometres: great-circle distance between cell centres on
 longitude/latitude grids, where the kernel narrows in degrees of
 longitude towards the poles, or distance in the coordinate system’s
 units on projected grids.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">suitability</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="st">"path/to/suitability.tif"</span><span class="op">)</span>   <span class="co"># e.g. lon/lat, 2 km cells</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dp_omni.html">dp_omni</a></span><span class="op">(</span><span class="va">resistance</span>, radius <span class="op">=</span> <span class="fl">50</span>, radius_units <span class="op">=</span> <span class="st">"km"</span>,</span>
 <span>                  source_strength <span class="op">=</span> <span class="va">suitability</span><span class="op">)</span></span></code></pre></div>
@@ -977,7 +960,7 @@ the whole region. With centering, the ratio also can’t exceed 1. With
 one surface, the mean dipole is zero and nothing changes.</p>
 </div>
 <div class="section level3">
-<h3 id="isolation">Isolation<a class="anchor" aria-label="anchor" href="#isolation"></a>
+<h3 id="accessibility">Accessibility<a class="anchor" aria-label="anchor" href="#accessibility"></a>
 </h3>
 <p>For cell <span class="math inline">\(i\)</span>, with target strength
 <span class="math inline">\(t\)</span>, the targets are the cells <span class="math inline">\(j\)</span> of its component within the radius and
@@ -986,51 +969,51 @@ cells within <code>site_radius</code> in its component (<span class="math inline
 <span class="math inline">\(q_j = t_j k(d_{ij}) / A_i\)</span>, where
 <span class="math inline">\(A_i = \sum_{j \notin S_i} t_j
 k(d_{ij})\)</span>. Each cell stands for its site, <span class="math inline">\(p_i\)</span>, uniform over <span class="math inline">\(S_i\)</span> (<span class="math inline">\(p_i =
-e_i\)</span> for a single cell). With <span class="math inline">\(L^+\)</span> the pseudo-inverse of the Laplacian
-and <span class="math inline">\(R_{ij}\)</span> the effective resistance
-between sites <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>,</p>
-<p><span class="math display">\[\text{resistance}_i = \big(p_i -
-\textstyle\sum_j q_j p_j\big)^\top L^+
-\big(p_i - \textstyle\sum_j q_j p_j\big), \qquad
-\text{mean\_resistance}_i = \textstyle\sum_j q_j R_{ij}.\]</span></p>
-<p>The first is the resistance of <code><a href="../reference/dp_flux.html">dp_flux()</a></code>’s injection
-with site <span class="math inline">\(i\)</span> as the only origin. For
-single cells, the second, summed over cells with weights <span class="math inline">\(w_i A_i\)</span>, is the total effective
-resistance over <code><a href="../reference/dp_omni.html">dp_omni()</a></code>’s pairs, which is also the total
-of its <code>power</code> layer (Thomson’s principle again).</p>
-<p>Both come from a different kind of random draw. Each draw injects a
-random-sign dipole across every link <span class="math inline">\(e\)</span>, scaled by <span class="math inline">\(\sqrt{g_e}\)</span>: <span class="math inline">\(b
+e_i\)</span> for a single cell). With <span class="math inline">\(L^+\)</span> the pseudo-inverse of the Laplacian,
+the resistance to the targets is</p>
+<p><span class="math display">\[R_i = \big(p_i - \textstyle\sum_j q_j
+p_j\big)^\top L^+
+\big(p_i - \textstyle\sum_j q_j p_j\big),\]</span></p>
+<p>the resistance of <code><a href="../reference/dp_flux.html">dp_flux()</a></code>’s injection with site <span class="math inline">\(i\)</span> as the only origin, and
+<code>conductance</code> is <span class="math inline">\(C_i = 1 /
+R_i\)</span>.</p>
+<p><span class="math inline">\(R_i\)</span> comes from a different kind
+of random draw. Each draw injects a random-sign dipole across every link
+<span class="math inline">\(e\)</span>, scaled by <span class="math inline">\(\sqrt{g_e}\)</span>: <span class="math inline">\(b
 = \sum_e s_e \sqrt{g_e}\,(e_a - e_b)\)</span>. Since <span class="math inline">\(\sum_e g_e (e_a - e_b)(e_a - e_b)^\top =
 L\)</span>, the solution <span class="math inline">\(y = L^{-1}
 b\)</span> has <span class="math inline">\(\mathbb{E}[(y_i - y_j)^2] =
-R_{ij}\)</span> for every pair at once, and <span class="math inline">\(\mathbb{E}[(y_i - q^\top y)^2]\)</span> is the
-first quantity above. This is the random projection of Spielman &amp;
-Srivastava (2011). Averaging <span class="math inline">\(y\)</span> over
-each site gives the same for sites. Per draw, both layers then need only
-<span class="math inline">\(q^\top y\)</span> and <span class="math inline">\(q^\top y^2\)</span>, which are sums over each
-cell’s kernel window less its site window (both from row-wise prefix
-sums), so the cost is a solve plus <span class="math inline">\(O(\text{cells} \times \text{kernel rows})\)</span>
-per draw, and no draws are stored. The uniform circuit sees the same
-signs, so the normalized layers’ noise partly cancels.</p>
-<p>For the accessibility layers, the continuous-habitat reference <span class="math inline">\(R^*\)</span> is <code>resistance</code> for the
-centre of a uniform grid of conductance 1, with every cell within the
-radius and beyond the centre’s site a target of strength 1, solved
-exactly: one factorization of a grid reaching the kernel’s extent beyond
-its outermost sites (a wider margin changes it by under 0.1%), and one
-solve per distinct kernel, so per row on lon/lat grids. With <span class="math inline">\(a_j\)</span> the area of cell <span class="math inline">\(j\)</span>, <span class="math inline">\(\text{target\_area}_i = \sum_{j \notin S_i} t_j
+R_{ij}\)</span>, the effective resistance, for every pair at once, and
+<span class="math inline">\(\mathbb{E}[(y_i - q^\top y)^2] =
+R_i\)</span>. This is the random projection of Spielman &amp; Srivastava
+(2011). Averaging <span class="math inline">\(y\)</span> over each site
+gives the same for sites. Per draw, <span class="math inline">\(q^\top
+y\)</span> is a sum over each cell’s kernel window less its site window
+(both from row-wise prefix sums), so the cost is a solve plus <span class="math inline">\(O(\text{cells} \times \text{kernel rows})\)</span>
+per draw, and no draws are stored. The mean over draws, <span class="math inline">\(\hat R_i\)</span>, is unbiased; the inverse is
+corrected for its first-order bias, <span class="math inline">\(\hat C_i
+= 1 / \big(\hat R_i (1 + \widehat{\mathrm{SE}}_i^2 / \hat
+R_i^2)\big)\)</span>. The uniform circuit sees the same signs, so the
+normalized layer’s noise partly cancels.</p>
+<p>The continuous-habitat reference <span class="math inline">\(C^* = 1
+/ R^*\)</span> comes from <span class="math inline">\(R^*\)</span>, the
+resistance for the centre of a uniform grid of conductance 1, with every
+cell within the radius and beyond the centre’s site a target of strength
+1, solved exactly: one factorization of a grid reaching the kernel’s
+extent beyond its outermost sites (a wider margin changes it by under
+0.1%), and one solve per distinct kernel, so per row on lon/lat grids.
+With <span class="math inline">\(a_j\)</span> the area of cell <span class="math inline">\(j\)</span>, <span class="math inline">\(\text{target\_area}_i = \sum_{j \notin S_i} t_j
 a_j k(d_{ij})\)</span>, from the same window sums, and <span class="math inline">\(\text{accessible\_area}_i =
-\text{target\_area}_i\,(R^* / \hat R_i)
-/ (1 + \widehat{\mathrm{SE}}_i^2 / \hat R_i^2)\)</span>, where the last
-factor removes the first-order bias of inverting the noisy estimate
-<span class="math inline">\(\hat R_i\)</span>. Cell areas on lon/lat
+\text{target\_area}_i\,\hat C_i / C^*\)</span>. Cell areas on lon/lat
 grids are those of a sphere of radius 6371 km.</p>
 <p>Two related quantities, for comparison. For focal nodes,
 <code><a href="../reference/cs_pairwise.html">cs_pairwise()</a></code>’s resistance matrix gives the pairwise <span class="math inline">\(R_{ij}\)</span> exactly, from which a node’s mean
 resistance to the others follows. Omniscape solves, for each target
 cell, a circuit in which the sources in its window inject in proportion
 to their strength and the target is grounded. That circuit’s resistance
-is <code>resistance</code> with the roles of source and target swapped,
-but on Omniscape’s clipped window. Omniscape doesn’t report it.</p>
+is <span class="math inline">\(R_i\)</span> with the roles of source and
+target swapped, but on Omniscape’s clipped window. Omniscape doesn’t
+report it.</p>
 </div>
 <div class="section level3">
 <h3 id="how-the-results-differ-from-circuitscape-and-omniscape">How the results differ from Circuitscape and Omniscape<a class="anchor" aria-label="anchor" href="#how-the-results-differ-from-circuitscape-and-omniscape"></a>
@@ -1085,8 +1068,8 @@ over pairs, and the random method converges to it.</li>
 <li>The circuit, injections and per-link sums reproduce an independent R
 implementation to within <span class="math inline">\(10^{-9}\)</span>.</li>
 <li>
-<code><a href="../reference/dp_isolation.html">dp_isolation()</a></code> converges per cell to both layers
-computed exactly from a dense solve, across components and with and
+<code><a href="../reference/dp_accessibility.html">dp_accessibility()</a></code>’s conductance converges per cell to
+its exact value from a dense solve, across components and with and
 without a radius, and its standard errors match the spread of its
 errors.</li>
 <li>The continuous-habitat reference matches a dense exact solve, target

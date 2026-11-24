@@ -215,7 +215,7 @@ and its estimate is unbiased with about twice the relative noise of
 A source cell's power includes its contact dissipation: what its own
 pairs dissipate on its own links as current leaves or arrives, which
 scales with its source strength times its resistance (see "Sites" in
-[`dp_isolation()`](https://matthewkling.github.io/circuitscaper/reference/dp_isolation.md)).
+[`dp_accessibility()`](https://matthewkling.github.io/circuitscaper/reference/dp_accessibility.md)).
 With the default source strength (conductance), high-resistance cells
 are weak sources and this is small (8% of the total power on the
 package's example landscape). But where source strength doesn't track
