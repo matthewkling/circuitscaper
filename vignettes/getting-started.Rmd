@@ -151,7 +151,7 @@ Start from the question you're asking:
 | How does movement flow between a defined source area and a destination? | `cs_advanced()` | |
 | Where are the corridors and barriers across the whole landscape? | `os_run()` | `dp_omni()` |
 | How does movement link two distributions (such as seasonal ranges, or present and future habitat), and which way does it flow? | `os_run()` with `os_condition(future = )`, for climate | `dp_flux()`, `dp_omni(destination = )`, `dp_directionality()` |
-| How isolated is each place from its habitat, or from another distribution? | `cs_pairwise()` resistances, for focal nodes only | `dp_isolation()` |
+| How much habitat, or of another distribution, can each place reach? | `cs_pairwise()` resistances, for focal nodes only | `dp_accessibility()` |
 
 **Pairwise** analyses treat discrete sites (habitat patches, populations) and
 ask how well they're connected to each other. `cs_pairwise()` also returns
@@ -182,14 +182,13 @@ runs both ways. For climate change,
 connections to sources and targets with compatible present and future
 conditions.
 
-**Isolation** asks how well connected each *place* is, rather than where
-movement passes. `dp_isolation()` scores every cell by its effective
-resistance to the habitat within reach, or to and from another
-distribution, so it also shows how connected a site would be at each
-place. With `accessibility = TRUE`, it also measures the habitat in reach
-as area, counted by how easily it is reached, so the amount of habitat
-counts as well as the resistance to it. For discrete sites, `cs_pairwise()`'s resistance matrix
-answers the same question exactly.
+**Accessibility** asks how well connected each *place* is, rather than
+where movement passes. `dp_accessibility()` maps, for every cell, the area
+of habitat within reach, counted by how easily it is reached, and the
+effective conductance to it; with another distribution, it does the same
+in both directions. Every cell gets a value, so it also shows how connected
+a site would be at each place. For discrete sites, `cs_pairwise()`'s
+resistance matrix gives the pairwise resistances exactly.
 
 ### Circuitscape and Omniscape, or dipole methods?
 

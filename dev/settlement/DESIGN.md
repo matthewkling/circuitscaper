@@ -1,6 +1,6 @@
 # Settlement methods: design note (draft)
 
-Status: exploratory, 2026-11-24. Nothing here is decided, except that `dp_isolation()`'s amount-aware layers are now `target_area` and `accessible_area` (§6). The API layout in §6 is one idea among several. The prototype is in `prototype/` (plain R + Matrix, independent of the Julia engine), and every number below comes from its scripts.
+Status: exploratory, 2026-11-24. Nothing here is decided, except that `dp_isolation()` became `dp_accessibility()`, with `accessible_area`, `target_area` and `conductance` layers (§6). Names below are as they were when written. The API layout in §6 is one idea among several. The prototype is in `prototype/` (plain R + Matrix, independent of the Julia engine), and every number below comes from its scripts.
 
 ## 1. Why this came up
 
@@ -106,7 +106,7 @@ Package prefixes name method families (`cs_`, `os_`, `dp_`). The settlement meth
 
 **Shared engine.** The grounds are extra terms on the diagonal (where the 1e-12 floor sits today), and the factorization, solves, per-link sums and random signs carry over.
 
-**`dp_isolation()` under any layout.** An earlier version of this note proposed slimming it to its resistance layers. Instead (2026-11-24), `coverage` and `effective_coverage` were replaced by two absolute layers, `target_area` (Σ t a over the targets in reach, exact) and `accessible_area` (target_area × R\*/R, against continuous habitat at the same radius). They meet goals 1, 2, 4 (with `site_radius` in km), 5 and 6 with a single reach parameter, which suits TreeShift. They fail goal 3 at some cells: accessible area can still fall with radius (8% of core cells, 20 → 40 km), from the fixed-proportion withdrawal. The settlement model stays a candidate for demographic, SAMC-style analyses, where its second parameter is natural.
+**`dp_isolation()` under any layout.** An earlier version of this note proposed slimming it to its resistance layers. Instead (2026-11-24), `coverage` and `effective_coverage` were replaced by two absolute layers, `target_area` (Σ t a over the targets in reach, exact) and `accessible_area` (target_area × R\*/R, against continuous habitat at the same radius). They meet goals 1, 2, 4 (with `site_radius` in km), 5 and 6 with a single reach parameter, which suits TreeShift. They fail goal 3 at some cells: accessible area can still fall with radius (8% of core cells, 20 → 40 km), from the fixed-proportion withdrawal. The settlement model stays a candidate for demographic, SAMC-style analyses, where its second parameter is natural. The function was then renamed `dp_accessibility()`, with `accessible_area` as its headline layer, conductance in place of resistance, `mean_resistance` dropped and `site_radius` required.
 
 ## 7. Open questions
 
