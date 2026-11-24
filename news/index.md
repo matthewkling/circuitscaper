@@ -68,7 +68,8 @@
     with targets in reach gets a value, habitat or not. Each cell stands
     for a site of the cells within `site_radius` (2 pixels by default),
     since a single cell’s effective resistance is dominated by its own
-    links; `site_radius = 0` gives the single-cell reading, and
+    links; a cell’s targets are the habitat beyond its site.
+    `site_radius = 0` gives the single-cell reading, and
     `contact = TRUE` adds each cell’s exact contact resistance. Random
     dipoles across every link give these for all cells at once, with
     per-cell standard errors (`se = TRUE`). With `coverage = TRUE`, two

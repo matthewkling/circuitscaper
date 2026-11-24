@@ -157,13 +157,14 @@ map where movement passes, this maps how isolated each place is. Every
 cell with targets in reach gets a value, not only habitat, so it also
 shows how connected a site would be there.
 
-A cell's targets are the other cells of its connected component within
-`radius`, each weighted by its share \\q_j\\ of the cell's target
-strength in reach, \\A_i = \sum\_{j \ne i} t_j k(d\_{ij})\\, where \\t\\
-is the target strength and \\k\\ is 1 within `radius` and 0 otherwise.
-With \\R\_{ij}\\ the effective resistance between the sites around cells
-\\i\\ and \\j\\ (see "Sites") on the whole circuit, two layers summarise
-the targets:
+A cell's targets are the cells of its connected component within
+`radius` and beyond its own site (see "Sites"; for single cells, the
+other cells), each weighted by its share \\q_j\\ of the cell's target
+strength in reach, \\A_i = \sum\_{j \notin S_i} t_j k(d\_{ij})\\, where
+\\t\\ is the target strength, \\S_i\\ is the cell's site, and \\k\\ is 1
+within `radius` and 0 otherwise. With \\R\_{ij}\\ the effective
+resistance between the sites around cells \\i\\ and \\j\\ (see "Sites")
+on the whole circuit, two layers summarise the targets:
 
 - `resistance`:
 
@@ -196,24 +197,28 @@ populations can track their habitat, the second which future habitat can
 be colonised. Effective resistance is symmetric, so the two differ only
 in their targets.
 
-Cells without targets in reach (none within `radius` in the same
-component) are NA. A cell is never its own target.
+Cells without targets in reach (none within `radius` and beyond their
+site, in the same component) are NA. These include cells of pieces of
+the circuit not much wider than a site, such as small islands, whose
+site holds the whole piece.
 
 ### Sites
 
 Each cell stands for a site: the cells within `site_radius` of it (2
 pixels by default), across which the current is spread evenly. Targets
 are sites too, so \\R\_{ij}\\ above is the effective resistance between
-the sites around \\i\\ and \\j\\. This matters because on a grid, the
-effective resistance from a single cell grows only with the log of
-distance, so most of it is in the first few rings of links around the
-cell. A single cell's value is then dominated by its own contact
-resistance, the resistance of its own links in parallel, and maps the
-cell's own resistance more than its place in the landscape. Spreading
-the current over a site keeps that local term from dominating, as
-Circuitscape's focal regions do. Choose `site_radius` for the area a
-population or site occupies; values depend on it, so compare runs at the
-same site radius.
+the sites around \\i\\ and \\j\\. A site is never its own target: a
+cell's targets are the habitat beyond its site, as a single cell's are
+the other cells, so `radius` must reach beyond `site_radius`. This
+matters because on a grid, the effective resistance from a single cell
+grows only with the log of distance, so most of it is in the first few
+rings of links around the cell. A single cell's value is then dominated
+by its own contact resistance, the resistance of its own links in
+parallel, and maps the cell's own resistance more than its place in the
+landscape. Spreading the current over a site keeps that local term from
+dominating, as Circuitscape's focal regions do. Choose `site_radius` for
+the area a population or site occupies; values depend on it, so compare
+runs at the same site radius.
 
 With `site_radius = 0`, each site is its single cell, and its own
 resistance is part of its isolation: the reading for a single point of
@@ -236,12 +241,12 @@ each cell with ideal continuous habitat: every cell a target of strength
 - `coverage`:
 
   Target strength in reach as a share of the ideal's, \\A_i / A^\*\\,
-  where \\A^\*\\ is the number of other cells within `radius`: the focal
-  mean of target strength over the radius, the cell itself left out,
-  with cells that are NA, off the grid or in another component counting
-  as zero. It is exact, and in units of target strength, so it runs from
-  0 to 1 for strengths that do (such as suitability). It ignores
-  resistance.
+  where \\A^\*\\ is the number of cells within `radius` and beyond the
+  site: the mean target strength over the ring between the site and the
+  radius, with cells that are NA, off the grid or in another component
+  counting as zero. It is exact, and in units of target strength, so it
+  runs from 0 to 1 for strengths that do (such as suitability). It
+  ignores resistance.
 
 - `effective_coverage`:
 

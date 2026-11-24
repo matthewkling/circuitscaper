@@ -568,7 +568,9 @@ sits in the first rings of links around the cell. A single cell’s value
 is then dominated by its own <em>contact resistance</em>, that of its
 own links in parallel, and the map mostly shows the resistance surface
 back. Spreading the current over a site, as Circuitscape’s focal regions
-do, lets the landscape around it show through. Choose
+do, lets the landscape around it show through. A site is never its own
+target: a cell’s targets are the habitat beyond its site, out to
+<code>radius</code>, as a single cell’s are the other cells. Choose
 <code>site_radius</code> for the area a population or site occupies, and
 compare runs at the same site radius:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
@@ -603,9 +605,9 @@ site just as isolated:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">iso</span>, <span class="st">"relative_se"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                 resistance            mean_resistance </span></span>
-<span><span class="co">#&gt;                  0.1679588                  0.1130933 </span></span>
+<span><span class="co">#&gt;                  0.1679503                  0.1131591 </span></span>
 <span><span class="co">#&gt;      normalized_resistance normalized_mean_resistance </span></span>
-<span><span class="co">#&gt;                  0.1877111                  0.1204568</span></span></code></pre></div>
+<span><span class="co">#&gt;                  0.1878162                  0.1207290</span></span></code></pre></div>
 <p>Each draw scores every cell, so the per-cell noise is known: the
 <code>"relative_se"</code> attribute gives each layer’s median relative
 standard error, and <code>se = TRUE</code> adds per-cell standard-error
@@ -624,9 +626,9 @@ same radius and site radius:</p>
 <ul>
 <li>
 <code>coverage</code>, the target strength in reach as a share of
-the ideal’s: the focal mean of target strength over the radius, with
-cells that are NA, off the grid or cut off counting as zero. It is
-exact, and ignores resistance.</li>
+the ideal’s: the mean target strength over the ring between the site and
+the radius, with cells that are NA, off the grid or cut off counting as
+zero. It is exact, and ignores resistance.</li>
 <li>
 <code>effective_coverage</code>, coverage discounted by how much
 harder the targets are to reach than in ideal habitat: coverage times
@@ -966,12 +968,13 @@ one surface, the mean dipole is zero and nothing changes.</p>
 <h3 id="isolation">Isolation<a class="anchor" aria-label="anchor" href="#isolation"></a>
 </h3>
 <p>For cell <span class="math inline">\(i\)</span>, with target strength
-<span class="math inline">\(t\)</span>, the targets are the other cells
-<span class="math inline">\(j\)</span> of its component within the
-radius, weighted <span class="math inline">\(q_j = t_j k(d_{ij}) /
-A_i\)</span>, where <span class="math inline">\(A_i = \sum_{j \ne i} t_j
-k(d_{ij})\)</span>. Each cell stands for its site, <span class="math inline">\(p_i\)</span>, uniform over the valid cells within
-<code>site_radius</code> in its component (<span class="math inline">\(p_i = e_i\)</span> for a single cell). With <span class="math inline">\(L^+\)</span> the pseudo-inverse of the Laplacian
+<span class="math inline">\(t\)</span>, the targets are the cells <span class="math inline">\(j\)</span> of its component within the radius and
+beyond its site <span class="math inline">\(S_i\)</span>, the valid
+cells within <code>site_radius</code> in its component (<span class="math inline">\(S_i = \{i\}\)</span> for a single cell), weighted
+<span class="math inline">\(q_j = t_j k(d_{ij}) / A_i\)</span>, where
+<span class="math inline">\(A_i = \sum_{j \notin S_i} t_j
+k(d_{ij})\)</span>. Each cell stands for its site, <span class="math inline">\(p_i\)</span>, uniform over <span class="math inline">\(S_i\)</span> (<span class="math inline">\(p_i =
+e_i\)</span> for a single cell). With <span class="math inline">\(L^+\)</span> the pseudo-inverse of the Laplacian
 and <span class="math inline">\(R_{ij}\)</span> the effective resistance
 between sites <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>,</p>
 <p><span class="math display">\[\text{resistance}_i = \big(p_i -
@@ -993,18 +996,16 @@ first quantity above. This is the random projection of Spielman &amp;
 Srivastava (2011). Averaging <span class="math inline">\(y\)</span> over
 each site gives the same for sites. Per draw, both layers then need only
 <span class="math inline">\(q^\top y\)</span> and <span class="math inline">\(q^\top y^2\)</span>, which are sums over each
-cell’s kernel window (from row-wise prefix sums), so the cost is a solve
-plus <span class="math inline">\(O(\text{cells} \times \text{kernel
-rows})\)</span> per draw, and no draws are stored. The uniform circuit
-sees the same signs, so the normalized layers’ noise partly cancels.</p>
+cell’s kernel window less its site window (both from row-wise prefix
+sums), so the cost is a solve plus <span class="math inline">\(O(\text{cells} \times \text{kernel rows})\)</span>
+per draw, and no draws are stored. The uniform circuit sees the same
+signs, so the normalized layers’ noise partly cancels.</p>
 <p>For the coverage layers, the ideal reference <span class="math inline">\(R^*\)</span> is <code>resistance</code> for the
 centre of a uniform grid of conductance 1, with every cell within the
-radius a target of strength 1, solved exactly: one factorization of a
-grid reaching the kernel’s extent beyond its outermost sites (a wider
-margin changes it by under 0.1%), and one solve per distinct kernel, so
-per row on lon/lat grids. With <span class="math inline">\(A^*\)</span>
-the ideal’s reach, <span class="math inline">\(\text{coverage}_i = A_i /
-A^*\)</span> and <span class="math inline">\(\text{effective\_coverage}_i = (A_i / A^*)\,(R^* /
+radius and beyond the centre’s site a target of strength 1, solved
+exactly: one factorization of a grid reaching the kernel’s extent beyond
+its outermost sites (a wider margin changes it by under 0.1%), and one
+solve per distinct kernel, so per row on lon/lat grids. With <span class="math inline">\(A^*\)</span> the ideal’s reach, <span class="math inline">\(\text{coverage}_i = A_i / A^*\)</span> and <span class="math inline">\(\text{effective\_coverage}_i = (A_i / A^*)\,(R^* /
 \hat R_i)
 / (1 + \widehat{\mathrm{SE}}_i^2 / \hat R_i^2)\)</span>, where the last
 factor removes the first-order bias of inverting the noisy estimate
