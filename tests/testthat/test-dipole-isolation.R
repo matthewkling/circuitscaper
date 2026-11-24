@@ -2,8 +2,9 @@
 
 # Exact layers from a dense solve: resistance to the target distribution and
 # mean resistance to targets, for target weights t within a pixel `radius`
-# (Inf: no limit), each cell's own pair left out, with each cell standing
-# for the site of valid cells within `site` pixels in its component. Also
+# (Inf: no limit), with each cell standing for the site of valid cells
+# within `site` pixels in its component, and the targets in its own site
+# (the cell itself, for single cells) left out. Also
 # returns the reach A and the cells' contact resistance.
 isolation_exact <- function(circuit, t, radius, site = 0, uniform = FALSE) {
   gi <- dipole_graph_info(circuit, uniform)
@@ -19,13 +20,16 @@ isolation_exact <- function(circuit, t, radius, site = 0, uniform = FALSE) {
     keep <- nodes[-1]
     X[keep, keep] <- solve(L[keep, keep])
   }
-  # Row i: t_j k_ij over j != i in i's component
+  # Sites: row i marks i's site, the valid cells within `site` in its
+  # component
+  S <- dipole_pair_weights(circuit, gi, rep(1, n), site)
+  diag(S) <- 1
+  # Row i: t_j k_ij over j in i's component, beyond i's site
   P <- dipole_pair_weights(circuit, gi, rep(1, n), radius) * rep(t, each = n)
+  P[S > 0] <- 0
   A <- rowSums(P)
   Q <- P / ifelse(A > 0, A, 1)
   # Site averaging: row i is uniform over i's site
-  S <- dipole_pair_weights(circuit, gi, rep(1, n), site)
-  diag(S) <- 1
   S <- S / rowSums(S)
   M <- S - Q %*% S
   XS <- S %*% X %*% t(S)
@@ -220,7 +224,8 @@ test_that("coverage layers compare targets in reach with ideal habitat", {
   s <- dp_site_kernel(tmpl, 2, "pixels")
   ref <- dp_call("ideal_reference", circuit$env$id, k$dr0, k$hw, k$rowmap, s$dr0, s$hw,
                  s$rowmap, NULL)
-  expect_equal(unique(ref$reach), sum(2 * k$hw + 1) - 1)
+  # The kernel's cells beyond the 13-cell site
+  expect_equal(unique(ref$reach), sum(2 * k$hw + 1) - 13)
   ex <- isolation_exact(circuit, t, 5, site = 2)
   ok <- !is.na(ex$values[, 1])
 
@@ -265,7 +270,8 @@ test_that("coverage layers compare targets in reach with ideal habitat", {
   f <- dp_isolation(flat, 5, flat, n_draws = 400, seed = 1, coverage = TRUE,
                     normalize = FALSE)
   inner <- terra::as.matrix(f$effective_coverage, wide = TRUE)[10:32, 10:32]
-  expect_lt(abs(mean(inner) - 1), 0.02)
+  # Cells share their draws: across 12 seeds this mean is 1.000, SD 0.010
+  expect_lt(abs(mean(inner) - 1), 0.04)
   expect_equal(range(terra::as.matrix(f$coverage, wide = TRUE)[6:36, 6:36]), c(1, 1))
 })
 
@@ -286,8 +292,9 @@ test_that("on lon/lat grids, the ideal reference follows latitude", {
   # Rows whose kernel and sites fit in the grid use their own kernel ...
   ext <- abs(k$dr0) + abs(s$dr0)
   full <- (1 + ext):(60 - ext)
+  cells <- function(hw) sum(pmax(2 * hw + 1, 0))
   expect_equal(as.numeric(A[full]),
-               vapply(full, function(r) sum(pmax(2 * k$hw[, r] + 1, 0)) - 1, 0))
+               vapply(full, function(r) cells(k$hw[, r]) - cells(s$hw[, r]), 0))
   # ... and rows near the top and bottom borrow the nearest full row's
   expect_equal(as.numeric(A[1:ext]), rep(as.numeric(A[min(full)]), ext))
   expect_equal(as.numeric(R[(60 - ext + 1):60]), rep(as.numeric(R[max(full)]), ext))
@@ -299,6 +306,43 @@ test_that("on lon/lat grids, the ideal reference follows latitude", {
   inner <- terra::as.matrix(f$effective_coverage, wide = TRUE)[(1 + 2 * ext):(60 - 2 * ext),
                                                                10:31]
   expect_lt(abs(mean(inner) - 1), 0.03)
+})
+
+test_that("a cell's targets are those beyond its own site", {
+  skip_if_no_julia(circuitscape = FALSE)
+  tmpl <- terra::rast(nrows = 20, ncols = 30, xmin = 0, xmax = 30, ymin = 0, ymax = 20)
+  cond <- terra::setValues(tmpl, 1)
+  cond[terra::cellFromRowColCombine(tmpl, 5:9, 20:29)] <- NA   # a lake
+  cond[terra::cellFromRowColCombine(tmpl, 6:8, 22:24)] <- 1    # a 3 x 3 island
+  cond[terra::cellFromRowColCombine(tmpl, 7, 26:28)] <- 1      # a 1 x 3 islet
+  circuit <- dp_circuit(cond, resistance_is = "conductances")
+  r <- dp_isolation(circuit, 8, cond, n_draws = 8, seed = 1, coverage = TRUE)
+  v <- terra::values(r)
+  # Every site on the islet is the whole islet, and the island's centre
+  # site is the whole island: no targets beyond them. (Counting the targets
+  # within the site gave a resistance of 0 up to rounding.)
+  islet <- terra::cellFromRowCol(tmpl, 7, 26:28)
+  centre <- terra::cellFromRowCol(tmpl, 7, 23)
+  expect_true(all(is.na(v[c(islet, centre), ])))
+  # The island's other cells have targets beyond their sites
+  island <- terra::cellFromRowColCombine(tmpl, 6:8, 22:24)
+  expect_false(anyNA(v[setdiff(island, centre), ]))
+  # Single cells keep them: their targets are the other cells
+  r0 <- dp_isolation(circuit, 8, cond, n_draws = 8, seed = 1, site_radius = 0)
+  expect_false(anyNA(terra::values(r0)[c(islet, island), ]))
+  # The dense oracle agrees, and coverage counts only targets beyond the site
+  t <- dp_weights(circuit, cond, 0.01, "source_strength")
+  ex <- isolation_exact(circuit, t, 8, site = 2)
+  nv <- node_values(r, circuit)
+  expect_identical(is.na(nv[, "resistance"]), is.na(ex$values[, "resistance"]))
+  ok <- !is.na(ex$values[, 1])
+  k <- dp_kernel(tmpl, 8)
+  expect_equal(nv[ok, "coverage"], ex$A[ok] / (sum(2 * k$hw + 1) - 13))
+
+  # A radius within the site leaves no targets anywhere
+  expect_error(dp_isolation(circuit, 2, cond, site_radius = 2), "reach beyond")
+  expect_error(dp_isolation(circuit, 1.5, cond, site_radius = 2), "reach beyond")
+  expect_no_error(dp_isolation(circuit, 2.5, cond, site_radius = 2, n_draws = 2))
 })
 
 test_that("dp_isolation is reproducible and doesn't depend on batching", {

@@ -832,10 +832,13 @@ end
 # uniform twin (zero without one)
 function isolation_stats!(dist::Matrix{Float64}, mean::Matrix{Float64},
                           ys::Vector{Vector{Float64}}, t::Vector{Float64}, A::Vector{Float64},
-                          gr::Graph, K, members)
+                          gr::Graph, K, KS, members)
+    # Sums over the targets: the kernel less the site (or the cell itself)
+    beyond(x) = window_sums(gr, x, K, members) .-
+                (KS === nothing ? x : window_sums(gr, x, KS, members))
     vals = map(ys) do y
-        s1 = window_sums(gr, t .* y, K, members) .- t .* y
-        s2 = window_sums(gr, t .* y .^ 2, K, members) .- t .* y .^ 2
+        s1 = beyond(t .* y)
+        s2 = beyond(t .* y .^ 2)
         d = zeros(length(y))
         m = zeros(length(y))
         for i in eachindex(y)
@@ -861,7 +864,8 @@ function isolation_stats!(dist::Matrix{Float64}, mean::Matrix{Float64},
 end
 
 # Isolation of every cell from each set of target weights (the columns of
-# `targets`), on a circuit and optionally its uniform twin (`ids`). Returns
+# `targets`), on a circuit and optionally its uniform twin (`ids`). A cell's
+# targets are those within the kernel and beyond its site. Returns
 # per target set the reach A (summed target weight within reach) and, for
 # each statistic, the per-cell sums over draws (nodes x 5; see
 # isolation_stats!).
@@ -889,7 +893,18 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
         gsum[gr.b[e]] += first(circs).g[e]
     end
     ts = [T[:, k] for k in axes(T, 2)]
-    reach = [window_sums(gr, t, K, members) .- t for t in ts]
+    # A cell's targets are the cells within reach beyond its own site: a
+    # site is never its own target, as a single cell isn't
+    KS = S === nothing ? nothing : K === nothing ? S : intersect_kernels(K, S, gr.nr)
+    reach = [window_sums(gr, t, K, members) .-
+             (KS === nothing ? t : window_sums(gr, t, KS, members)) for t in ts]
+    # Where no target is beyond the site, the difference is rounding, at most
+    # a few ulps of the row prefix sums over the window's rows
+    span_cells = K === nothing ? n : gr.nc * size(K.hw, 1)
+    for (A, t) in zip(reach, ts)
+        tol = 16 * eps() * maximum(t; init = 0.0) * span_cells
+        A[A .<= tol] .= 0.0
+    end
     dist = [zeros(n, 5) for _ in ts]
     mean = [zeros(n, 5) for _ in ts]
     nd = Int(n_draws)
@@ -909,7 +924,7 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
         for j in eachindex(draws)
             ys = [site(Y[:, j]) for Y in Ys]
             for (k, t) in enumerate(ts)
-                isolation_stats!(dist[k], mean[k], ys, t, reach[k], gr, K, members)
+                isolation_stats!(dist[k], mean[k], ys, t, reach[k], gr, K, KS, members)
             end
         end
         tick(progress, "", 1)
@@ -917,11 +932,26 @@ function isolation(ids, targets, dr0::Real, hw, rowmap, sdr0::Real, shw, srowmap
     (reach = reach, dist = dist, mean = mean, contact = 1 ./ gsum)
 end
 
+# The cells in both of two kernels around the same cell, per grid row. Both
+# are centred runs on each row offset, so their intersection is too.
+function intersect_kernels(K::Kernel, S::Kernel, nr::Int)
+    lo = max(K.dr0, S.dr0)
+    hi = min(K.dr0 + size(K.hw, 1), S.dr0 + size(S.hw, 1)) - 1
+    hi < lo && return Kernel(0, fill(-1, 1, nr), collect(1:nr))
+    hw = Matrix{Int}(undef, hi - lo + 1, nr)
+    for r in 1:nr, dr in lo:hi
+        hw[dr - lo + 1, r] = min(K.hw[dr - K.dr0 + 1, K.rowmap[r]],
+                                 S.hw[dr - S.dr0 + 1, S.rowmap[r]])
+    end
+    Kernel(lo, hw, collect(1:nr))
+end
+
 # Exact isolation of a cell in ideal continuous habitat, the reference for
-# coverage: conductance 1 on every cell, and every cell within the kernel a
-# target of strength 1, with the same kernel and sites. Returns per node of
-# circuit `id` the ideal reach A (the kernel's cell count less the cell
-# itself) and the ideal `resistance`, for the kernel of the node's row.
+# coverage: conductance 1 on every cell, and every cell within the kernel
+# and beyond the centre's site a target of strength 1, with the same kernel
+# and sites. Returns per node of circuit `id` the ideal reach A (the number
+# of those targets) and the ideal `resistance`, for the kernel of the
+# node's row (NaN where the kernel reaches no further than the site).
 #
 # The unbounded plane is approximated by a grid with a margin of the
 # kernel's extent beyond the outermost sites, insulated at its edge. One
@@ -996,22 +1026,31 @@ function ideal_reference(id::Real, dr0::Real, hw, rowmap, sdr0::Real, shw, srowm
         B = zeros(n, length(ks))
         for (j, k) in enumerate(ks)
             kh, sh = specs[k]
-            m = sum(h -> h >= 0 ? 2h + 1 : 0, kh) - 1
-            A[k] = m
-            b = view(B, :, j)
-            add_site!(b, cr, cc, 1.0, sh)
+            # Targets: the kernel's cells beyond the centre's own site
+            own = sh[kR + sR + 1]
+            in_site(r, c) = own === nothing ? (r == cr && c == cc) :
+                (S.dr0 <= r - cr < S.dr0 + length(own) &&
+                 abs(c - cc) <= own[r - cr - S.dr0 + 1])
+            cells = Tuple{Int, Int}[]
             for d in eachindex(kh)
                 kh[d] < 0 && continue
                 r = cr + K.dr0 + d - 1
                 for c in (cc - kh[d]):(cc + kh[d])
-                    (r == cr && c == cc) && continue
-                    add_site!(b, r, c, -1 / m, sh)
+                    in_site(r, c) || push!(cells, (r, c))
                 end
+            end
+            m = length(cells)
+            A[k] = m
+            m == 0 && continue
+            b = view(B, :, j)
+            add_site!(b, cr, cc, 1.0, sh)
+            for (r, c) in cells
+                add_site!(b, r, c, -1 / m, sh)
             end
         end
         X = ideal.fac \ B
         for (j, k) in enumerate(ks)
-            Rr[k] = dot(view(B, :, j), view(X, :, j))
+            Rr[k] = A[k] > 0 ? dot(view(B, :, j), view(X, :, j)) : NaN
         end
     end
     tick(progress, "", 1)

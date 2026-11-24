@@ -10,11 +10,12 @@
 #' not only habitat, so it also shows how connected a site would be there.
 #'
 #' @details
-#' A cell's targets are the other cells of its connected component within
-#' `radius`, each weighted by its share \eqn{q_j} of the cell's target
-#' strength in reach, \eqn{A_i = \sum_{j \ne i} t_j k(d_{ij})}, where
-#' \eqn{t} is the target strength and \eqn{k} is 1 within `radius` and 0
-#' otherwise. With \eqn{R_{ij}} the effective resistance between the sites
+#' A cell's targets are the cells of its connected component within
+#' `radius` and beyond its own site (see "Sites"; for single cells, the
+#' other cells), each weighted by its share \eqn{q_j} of the cell's target
+#' strength in reach, \eqn{A_i = \sum_{j \notin S_i} t_j k(d_{ij})}, where
+#' \eqn{t} is the target strength, \eqn{S_i} is the cell's site, and
+#' \eqn{k} is 1 within `radius` and 0 otherwise. With \eqn{R_{ij}} the effective resistance between the sites
 #' around cells \eqn{i} and \eqn{j} (see "Sites") on the whole circuit, two
 #' layers summarise the targets:
 #' \describe{
@@ -44,14 +45,18 @@
 #' which future habitat can be colonised. Effective resistance is
 #' symmetric, so the two differ only in their targets.
 #'
-#' Cells without targets in reach (none within `radius` in the same
-#' component) are NA. A cell is never its own target.
+#' Cells without targets in reach (none within `radius` and beyond their
+#' site, in the same component) are NA. These include cells of pieces of
+#' the circuit not much wider than a site, such as small islands, whose
+#' site holds the whole piece.
 #'
 #' ## Sites
 #' Each cell stands for a site: the cells within `site_radius` of it (2
 #' pixels by default), across which the current is spread evenly. Targets
 #' are sites too, so \eqn{R_{ij}} above is the effective resistance between
-#' the sites around \eqn{i} and \eqn{j}. This matters because on a grid,
+#' the sites around \eqn{i} and \eqn{j}. A site is never its own target:
+#' a cell's targets are the habitat beyond its site, as a single cell's are
+#' the other cells, so `radius` must reach beyond `site_radius`. This matters because on a grid,
 #' the effective resistance from a single cell grows only with the log of
 #' distance, so most of it is in the first few rings of links around the
 #' cell. A single cell's value is then dominated by its own contact
@@ -80,9 +85,9 @@
 #' `site_radius`, and with no edges.
 #' \describe{
 #'   \item{`coverage`}{Target strength in reach as a share of the ideal's,
-#'     \eqn{A_i / A^*}, where \eqn{A^*} is the number of other cells
-#'     within `radius`: the focal mean of target strength over the
-#'     radius, the cell itself left out, with cells that are NA, off the
+#'     \eqn{A_i / A^*}, where \eqn{A^*} is the number of cells within
+#'     `radius` and beyond the site: the mean target strength over the ring
+#'     between the site and the radius, with cells that are NA, off the
 #'     grid or in another component counting as zero. It is exact, and in
 #'     units of target strength, so it runs from 0 to 1 for strengths that
 #'     do (such as suitability). It ignores resistance.}
@@ -233,6 +238,10 @@ dp_isolation <- function(resistance, radius, source_strength = NULL,
   circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
   site <- dp_site_kernel(circuit$env$template, site_radius, radius_units)
+  if (!dp_kernel_beyond(kernel, site)) {
+    stop("`radius` must reach beyond `site_radius`: a cell's targets are the ",
+         "cells within `radius` beyond its own site.", call. = FALSE)
+  }
   w <- dp_weights(circuit, source_strength, source_threshold, "source_strength")
   targets <- if (is.null(destination)) {
     list(w)
@@ -333,6 +342,27 @@ dp_isolation_layers <- function(sums, reach, n, normalize, se, ideal = NULL) {
   }, 0)
   values[none, ] <- NA_real_
   values
+}
+
+#' Does a Kernel Reach Beyond the Site, on Some Grid Row?
+#'
+#' Both kernels are centred runs of columns on each row offset, so the
+#' kernel reaches beyond the site where, on some row offset, its run is
+#' wider than the site's (or the site has none).
+#' @noRd
+dp_kernel_beyond <- function(kernel, site) {
+  if (length(kernel$hw) == 0 || length(site$hw) == 0) return(TRUE)
+  rows <- which(!duplicated(cbind(kernel$rowmap, site$rowmap)))
+  for (r in rows) {
+    hk <- kernel$hw[, kernel$rowmap[r]]
+    dr <- kernel$dr0 + seq_along(hk) - 1
+    d <- dr - site$dr0 + 1
+    hs <- rep(-1L, length(hk))
+    ok <- d >= 1 & d <= nrow(site$hw)
+    hs[ok] <- site$hw[d[ok], site$rowmap[r]]
+    if (any(hk > hs)) return(TRUE)
+  }
+  FALSE
 }
 
 #' Check `site_radius`: `NULL`, or a finite number of at least 0
