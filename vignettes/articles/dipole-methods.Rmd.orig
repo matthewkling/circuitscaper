@@ -398,22 +398,23 @@ in cells otherwise (the `"area_units"` attribute says which). The example
 grid is tagged lon/lat with 1° cells, so they are in square kilometres, and
 cells shrink northwards. Cells with no targets in reach score 0.
 
-Each cell stands for a **site**: the cells within `site_radius` of it,
-across which the current is spread. `site_radius` has no default, since
-every layer depends on it. On a grid, the effective resistance from a
-single cell grows only with the log of distance, so much of it sits in the
-first rings of links around the cell. A single cell's value is then
-dominated by its own *contact resistance*, that of its own links in
-parallel, and the map mostly shows the resistance surface back. Spreading
-the current over a site at least 2 cells in radius, as Circuitscape's focal
-regions do, lets the landscape around it show through. A site is never its
-own target: a cell's targets are the habitat beyond its site, out to
-`radius`. Choose `site_radius` for the area a population or site occupies,
-and give it in km, like `radius`, to compare grids of different resolution:
+Each cell stands for a **site**: the cells within `site_radius` pixels of
+it (2 by default), across which the current is spread. Sites correct for
+the grid. On a grid, the effective resistance from a single cell grows only
+with the log of distance, so much of it sits in the first rings of links
+around the cell. A single cell's value is then dominated by its own
+*contact resistance*, that of its own links in parallel, and the map mostly
+shows the resistance surface back. Spreading the current over a site, as
+Circuitscape's focal regions do, lets the landscape around it show through.
+Because the problem is the grid's, `site_radius` is in pixels whatever
+`radius_units`; the dispersal scale is `radius`. A site is never its own
+target: a cell's targets are the habitat beyond its site, out to `radius`.
+Values depend on the site, so compare runs at the same one; across
+resolutions, scale `site_radius` to keep the same ground distance:
 
 ```{r accessibility-sites, fig.height = 3}
 single <- dp_accessibility(circuit, radius = 15, site_radius = 0, normalize = FALSE, seed = 1)
-sites <- dp_accessibility(circuit, radius = 15, site_radius = 2, normalize = FALSE, seed = 1)
+sites <- dp_accessibility(circuit, radius = 15, normalize = FALSE, seed = 1)
 wide <- dp_accessibility(circuit, radius = 15, site_radius = 4, normalize = FALSE, seed = 1)
 plot(log10(c(single$conductance, sites$conductance, wide$conductance)), nc = 3,
      main = c("single cells", "2-pixel sites", "4-pixel sites"))
@@ -428,7 +429,7 @@ Here the habitat has resistance 1, so the default reference is continuous
 habitat:
 
 ```{r accessibility, fig.height = 3}
-access <- dp_accessibility(circuit, radius = 15, site_radius = 2, seed = 1)
+access <- dp_accessibility(circuit, radius = 15, seed = 1)
 attr(access, "area_units")
 plot(access[[c("target_area", "accessible_area")]], nc = 2,
      main = c("target area", "accessible area"))
@@ -469,7 +470,7 @@ the future range from, the second which parts of the future range can be
 reached:
 
 ```{r accessibility-two, fig.height = 3}
-shift <- dp_accessibility(circuit, radius = 15, site_radius = 2, source_strength = origin,
+shift <- dp_accessibility(circuit, radius = 15, source_strength = origin,
                           destination = destination, normalize = FALSE, seed = 1)
 plot(shift[[c("origin_accessible_area", "destination_accessible_area")]], nc = 2,
      main = c("to destination", "from origin"))

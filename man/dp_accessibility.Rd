@@ -7,9 +7,9 @@
 dp_accessibility(
   resistance,
   radius,
-  site_radius,
   source_strength = NULL,
   destination = NULL,
+  site_radius = 2,
   source_threshold = 0.01,
   radius_units = c("pixels", "km"),
   resistance_is = "resistances",
@@ -31,9 +31,6 @@ factorization.}
 if their centres are at most this far apart. In pixels by default (see
 \code{radius_units}). \code{Inf} counts all pairs.}
 
-\item{site_radius}{Number. The radius of the site each cell stands for
-(see "Sites"), in \code{radius_units}. \code{0} is the cell alone. Required.}
-
 \item{source_strength}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path on the
 same grid: target strength, e.g. habitat suitability. If \code{NULL}
 (default), the conductance surface is used, as in \code{\link[=dp_omni]{dp_omni()}}. With a
@@ -43,6 +40,10 @@ same grid: target strength, e.g. habitat suitability. If \code{NULL}
 \item{destination}{Optional \link[terra:SpatRaster]{terra::SpatRaster} or file path on the same
 grid: destination strength, the targets of the \code{origin_} layers.
 Default \code{NULL}: one set of targets.}
+
+\item{site_radius}{Number. The radius of the site each cell stands for
+(see "Sites"), in pixels, whatever \code{radius_units}. \code{0} is the cell
+alone. Default \code{2}.}
 
 \item{source_threshold}{Numeric. Cells with source (or destination)
 strength below this are not sources (or destinations). Default \code{0.01}.}
@@ -158,22 +159,27 @@ which future habitat can be colonised. Effective resistance is
 symmetric, so the two differ only in their targets.
 \subsection{Sites}{
 
-Each cell stands for a site: the cells within \code{site_radius} of it,
-across which the current is spread evenly. Targets are sites too, so
-conductances are between the sites around cells. A site is never its own
-target: a cell's targets are the habitat beyond its site, so \code{radius}
-must reach beyond \code{site_radius}. Choose \code{site_radius} for the area a
-population or site occupies. It has no default, because every layer
-depends on it: give it in km, like \code{radius}, to compare grids of
-different resolution.
+Each cell stands for a site: the cells within \code{site_radius} pixels of
+it (2 by default), across which the current is spread evenly. Targets
+are sites too, so conductances are between the sites around cells. A
+site is never its own target: a cell's targets are the habitat beyond
+its site, so \code{radius} must reach beyond the site.
 
-Sites matter because on a grid the effective resistance from a single
-cell grows only with the log of distance, so most of it is in the first
-few rings of links around the cell. A single cell's value is then
+Sites correct for the grid. On a grid, the effective resistance from a
+single cell grows only with the log of distance, so most of it is in the
+first few rings of links around the cell. A single cell's value is then
 dominated by its own contact resistance, the resistance of its own links
 in parallel, and maps the cell's own resistance more than its place in
-the landscape. A site at least 2 cells in radius keeps that local term
-from dominating, as Circuitscape's focal regions do.
+the landscape. A site a couple of cells in radius keeps that local term
+from dominating, as Circuitscape's focal regions do. Because the problem
+is the grid's, \code{site_radius} is in pixels whatever \code{radius_units}, and is
+not the dispersal scale: that is \code{radius}.
+
+Values depend on the site, so compare runs at the same site. On grids of
+different resolution, the same number of pixels is a different site
+(between 2 km and 0.5 km grids, median accessible area shifted by about
+10\%, and more in core habitat); to compare resolutions, scale
+\code{site_radius} to keep the same ground distance.
 
 With \code{site_radius = 0}, each site is its single cell, and its own
 resistance is part of its value: the reading for a single point of
@@ -248,7 +254,7 @@ small factorization and one solve per kernel for the reference.
 \dontshow{if (circuitscaper::cs_julia_available(circuitscape = FALSE)) withAutoprint(\{ # examplesIf}
 resistance <- terra::rast(system.file("extdata/resistance.tif",
                                       package = "circuitscaper"))
-result <- dp_accessibility(resistance, radius = 15, site_radius = 2, seed = 1)
+result <- dp_accessibility(resistance, radius = 15, seed = 1)
 terra::plot(result)
 attr(result, "area_units")
 attr(result, "relative_se")
@@ -256,9 +262,8 @@ attr(result, "relative_se")
 # Between two distributions, in both directions
 origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
 destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
-between <- dp_accessibility(resistance, radius = 45, site_radius = 2,
-                            source_strength = origin, destination = destination,
-                            normalize = FALSE, seed = 1)
+between <- dp_accessibility(resistance, radius = 45, source_strength = origin,
+                            destination = destination, normalize = FALSE, seed = 1)
 terra::plot(between)
 \dontshow{JuliaConnectoR::stopJulia()}
 \dontshow{\}) # examplesIf}

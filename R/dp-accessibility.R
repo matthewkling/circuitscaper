@@ -62,22 +62,27 @@
 #' symmetric, so the two differ only in their targets.
 #'
 #' ## Sites
-#' Each cell stands for a site: the cells within `site_radius` of it,
-#' across which the current is spread evenly. Targets are sites too, so
-#' conductances are between the sites around cells. A site is never its own
-#' target: a cell's targets are the habitat beyond its site, so `radius`
-#' must reach beyond `site_radius`. Choose `site_radius` for the area a
-#' population or site occupies. It has no default, because every layer
-#' depends on it: give it in km, like `radius`, to compare grids of
-#' different resolution.
+#' Each cell stands for a site: the cells within `site_radius` pixels of
+#' it (2 by default), across which the current is spread evenly. Targets
+#' are sites too, so conductances are between the sites around cells. A
+#' site is never its own target: a cell's targets are the habitat beyond
+#' its site, so `radius` must reach beyond the site.
 #'
-#' Sites matter because on a grid the effective resistance from a single
-#' cell grows only with the log of distance, so most of it is in the first
-#' few rings of links around the cell. A single cell's value is then
+#' Sites correct for the grid. On a grid, the effective resistance from a
+#' single cell grows only with the log of distance, so most of it is in the
+#' first few rings of links around the cell. A single cell's value is then
 #' dominated by its own contact resistance, the resistance of its own links
 #' in parallel, and maps the cell's own resistance more than its place in
-#' the landscape. A site at least 2 cells in radius keeps that local term
-#' from dominating, as Circuitscape's focal regions do.
+#' the landscape. A site a couple of cells in radius keeps that local term
+#' from dominating, as Circuitscape's focal regions do. Because the problem
+#' is the grid's, `site_radius` is in pixels whatever `radius_units`, and is
+#' not the dispersal scale: that is `radius`.
+#'
+#' Values depend on the site, so compare runs at the same site. On grids of
+#' different resolution, the same number of pixels is a different site
+#' (between 2 km and 0.5 km grids, median accessible area shifted by about
+#' 10%, and more in core habitat); to compare resolutions, scale
+#' `site_radius` to keep the same ground distance.
 #'
 #' With `site_radius = 0`, each site is its single cell, and its own
 #' resistance is part of its value: the reading for a single point of
@@ -143,7 +148,8 @@
 #'
 #' @inheritParams dp_omni
 #' @param site_radius Number. The radius of the site each cell stands for
-#'   (see "Sites"), in `radius_units`. `0` is the cell alone. Required.
+#'   (see "Sites"), in pixels, whatever `radius_units`. `0` is the cell
+#'   alone. Default `2`.
 #' @param source_strength Optional [terra::SpatRaster] or file path on the
 #'   same grid: target strength, e.g. habitat suitability. If `NULL`
 #'   (default), the conductance surface is used, as in [dp_omni()]. With a
@@ -181,7 +187,7 @@
 #' @examplesIf circuitscaper::cs_julia_available(circuitscape = FALSE)
 #' resistance <- terra::rast(system.file("extdata/resistance.tif",
 #'                                       package = "circuitscaper"))
-#' result <- dp_accessibility(resistance, radius = 15, site_radius = 2, seed = 1)
+#' result <- dp_accessibility(resistance, radius = 15, seed = 1)
 #' terra::plot(result)
 #' attr(result, "area_units")
 #' attr(result, "relative_se")
@@ -189,25 +195,18 @@
 #' # Between two distributions, in both directions
 #' origin <- terra::rast(system.file("extdata/source.tif", package = "circuitscaper"))
 #' destination <- terra::rast(system.file("extdata/ground.tif", package = "circuitscaper"))
-#' between <- dp_accessibility(resistance, radius = 45, site_radius = 2,
-#'                             source_strength = origin, destination = destination,
-#'                             normalize = FALSE, seed = 1)
+#' between <- dp_accessibility(resistance, radius = 45, source_strength = origin,
+#'                             destination = destination, normalize = FALSE, seed = 1)
 #' terra::plot(between)
 #' \dontshow{JuliaConnectoR::stopJulia()}
 #'
 #' @export
-dp_accessibility <- function(resistance, radius, site_radius, source_strength = NULL,
-                             destination = NULL, source_threshold = 0.01,
+dp_accessibility <- function(resistance, radius, source_strength = NULL,
+                             destination = NULL, site_radius = 2, source_threshold = 0.01,
                              radius_units = c("pixels", "km"),
                              resistance_is = "resistances", reference_resistance = 1,
                              normalize = TRUE, n_draws = 64, seed = NULL, se = FALSE,
                              contact = FALSE, progress = TRUE) {
-  if (missing(site_radius)) {
-    stop("`site_radius` is required: the radius, in `radius_units`, of the site ",
-         "each cell stands for, such as the area a population occupies. ",
-         "A site at least 2 cells in radius keeps a cell's own links from ",
-         "dominating its value; give it in km to compare resolutions.", call. = FALSE)
-  }
   radius_units <- match.arg(radius_units)
   n_draws <- dp_count(n_draws, "n_draws", min = 2)
   seed <- dp_seed(seed)
@@ -227,7 +226,7 @@ dp_accessibility <- function(resistance, radius, site_radius, source_strength = 
                        dp_draw_steps(input, n_draws, 1 + normalize) + kernel_finite)
   circuit <- dp_as_circuit(input, uniform = normalize, p = p)
   kernel <- dp_kernel(circuit$env$template, radius, radius_units)
-  site <- dp_site_kernel(circuit$env$template, site_radius, radius_units)
+  site <- dp_site_kernel(circuit$env$template, site_radius)
   if (!dp_kernel_beyond(kernel, site)) {
     stop("`radius` must reach beyond `site_radius`: a cell's targets are the ",
          "cells within `radius` beyond its own site.", call. = FALSE)
@@ -397,19 +396,13 @@ dp_check_site_radius <- function(site_radius) {
   invisible()
 }
 
-#' The Site Kernel: Cells Within `site_radius`
+#' The Site Kernel: Cells Within `site_radius` Pixels
 #'
-#' A radius under one cell is the cell alone, passed to Julia as an empty kernel (no
-#' averaging).
+#' A radius under one cell is the cell alone, passed to Julia as an empty
+#' kernel (no averaging).
 #' @noRd
-dp_site_kernel <- function(template, site_radius, units) {
-  k <- if (units == "pixels") {
-    dp_kernel_pixels(site_radius, terra::nrow(template))
-  } else if (isTRUE(suppressWarnings(terra::is.lonlat(template)))) {
-    dp_kernel_lonlat(template, site_radius)
-  } else {
-    dp_kernel_projected(template, site_radius)
-  }
+dp_site_kernel <- function(template, site_radius) {
+  k <- dp_kernel_pixels(site_radius, terra::nrow(template))
   # Only the cell itself on every row: no averaging
   own <- 1 - k$dr0
   alone <- all(k$hw[-own, , drop = FALSE] < 0) && all(k$hw[own, ] <= 0)

@@ -100,7 +100,7 @@ test_that("dp_accessibility reports a step per factorization, solve and summing"
   x <- dipole_test_grid()
   # 40 draws: 2 batches of 3 steps (current and uniform solves, summing),
   # then one for the continuous-habitat references
-  p <- capture_progress(dp_accessibility(x$conductance, 5, 2, x$suitability,
+  p <- capture_progress(dp_accessibility(x$conductance, 5, x$suitability, site_radius = 2,
                                          resistance_is = "conductances", n_draws = 40,
                                          seed = 1))
   expect_steps(p, 2 + 6 + 1)
@@ -108,7 +108,7 @@ test_that("dp_accessibility reports a step per factorization, solve and summing"
                                  "Solving link dipoles on the uniform circuit: draws 1-32 of 40",
                                  "Summing over targets: draws 1-32 of 40"))
   # With no distance limit there is no reference
-  p <- capture_progress(dp_accessibility(x$conductance, Inf, 2, x$suitability,
+  p <- capture_progress(dp_accessibility(x$conductance, Inf, x$suitability, site_radius = 2,
                                          resistance_is = "conductances", n_draws = 40,
                                          seed = 1))
   expect_steps(p, 2 + 6)

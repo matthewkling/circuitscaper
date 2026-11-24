@@ -52,9 +52,9 @@
     the effect of geometry. Areas are in square kilometres, or cells on
     grids without a CRS. Every cell gets a value, habitat or not, and cells
     with no targets in reach score 0. Each cell stands for a site of the
-    cells within `site_radius`, which is required (give it in km to
-    compare resolutions), since a single cell's value is dominated by its
-    own links; a cell's targets are the habitat beyond its site.
+    cells within `site_radius` pixels (2 by default), since a single
+    cell's value is dominated by its own links; a cell's targets are the
+    habitat beyond its site.
     `site_radius = 0` gives the single-cell reading, and `contact = TRUE`
     adds each cell's exact contact conductance. Random dipoles across every
     link give these for all cells at once, with per-cell standard errors
